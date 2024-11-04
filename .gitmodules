@@ -1,0 +1,3 @@
+[submodule "sdk/weatherapi"]
+	path = sdk/weatherapi
+	url = git@github.com:mcontrjr/weatherapi.git

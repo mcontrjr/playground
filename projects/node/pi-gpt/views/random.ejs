@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/js/random.js" defer></script>
+</head>
+
+<body>
+    <header class="bg-primary text-white text-center py-5">
+        <h1><%= title %></h1>
+        <nav>
+            <a href="/" class="btn btn-light">Home</a>
+            <a href="/info" class="btn btn-light">Server Info</a>
+        </nav>
+    </header>
+
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mt-4">
+                <div>
+                    <input type="string" id="user" class="form-control" style="width: 200px; margin: 0 auto;"/>
+                    <button class="btn btn-primary mt-3" onclick="getImage()">Generate</button>
+                </div>
+                <hr>
+                <img id="imageResult" src="https://loremflickr.com/480/480/random" alt="Random Image" class="img-fluid" style="max-width: 100%; height: auto;">
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-white text-center py-4">
+        <p> Powered by 
+            <a href="https://loremflickr.com">loremflicker</a>
+        
+        </p>
+        <p>&copy; 2024 My Web App. All Rights Reserved.</p>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

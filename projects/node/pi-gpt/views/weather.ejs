@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/js/weather.js" defer></script>
+</head>
+
+<body>
+    <header class="bg-primary text-white text-center py-5">
+        <h1><%= title %></h1>
+        <nav>
+            <a href="/" class="btn btn-light">Home</a>
+        </nav>
+    </header>
+
+    <div class="container text-center mt-5">
+        <strong> Enter City, Zip Code, or Latitude and Longitude </strong>
+        <div>
+            <input type="string" id="weatherData" class="form-control" style="width: 200px; margin: 0 auto;">
+            <button class="btn btn-primary mt-3" onclick="checkWeather()">What's the weather?</button>
+        </div>
+        <div id="result" class="mt-3"></div>
+        <hr>
+    </div>
+
+    <section class="py-5">
+        <div class="container">
+            <% if (weatherData) { %>
+                <h2 id="location" class="text-center"><%= weatherData.location.name %>, <%= weatherData.location.region %></h2>
+                <p class="text-center"><strong>Condition:</strong> <%= weatherData.current.condition.text %> <img src="<%= weatherData.current.condition.icon %>" alt="weather icon"></p>
+                <ul class="list-group">
+                    <li class="list-group-item"><strong>Latitude & Longitude:</strong> <%= weatherData.location.lat %>, <%= weatherData.location.lon %></li>
+                    <li class="list-group-item"><strong>Local Time:</strong> <%= weatherData.location.localtime %></li>
+                    <li class="list-group-item"><strong>Temperature:</strong> <%= weatherData.current.temp_c %> °C / <%= weatherData.current.temp_f %> °F</li>
+                    <li class="list-group-item"><strong>Wind:</strong> <%= weatherData.current.wind_mph %> mph / <%= weatherData.current.wind_kph %> kph, <%= weatherData.current.wind_dir %></li>
+                    <li class="list-group-item"><strong>Humidity:</strong> <%= weatherData.current.humidity %> %</li>
+                    <li class="list-group-item"><strong>Pressure:</strong> <%= weatherData.current.pressure_mb %> mb / <%= weatherData.current.pressure_in %> in</li>
+                    <li class="list-group-item"><strong>Visibility:</strong> <%= weatherData.current.vis_km %> km / <%= weatherData.current.vis_miles %> miles</li>
+                </ul>
+            <% } else { %>
+                <p class="text-center text-danger">Weather data not available for the specified location. Please try again.</p>
+            <% } %>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-white text-center py-4">
+        <p>
+            Powered by
+            <a href="https://www.weatherapi.com/">Weather API</a>
+        </p>
+        <p>&copy; 2024 My Web App. All Rights Reserved.</p>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

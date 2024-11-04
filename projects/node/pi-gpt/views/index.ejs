@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyPy</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+    <header class="bg-primary text-white text-center py-5">
+        <h1>MyPy Web App</h1>
+        <nav>
+            <a href="#features" class="btn btn-light">Learn More</a>
+            <a href="/info" class="btn btn-light">Server Specs</a> <!-- Link to server specs -->
+        </nav>
+    </header>
+
+    <section id="desc" class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="jumbotron text-center">
+                    <h1 class="display-4">What's this about?</h1>
+                    <p class="lead">
+                        This started with the hope to build a quick web app but is quickly turning into something very different...
+                        Now it's becoming a website with some features and things that I find kinda cool but they are mostly dumb, and that's okay.
+                        For now check out a sick picture I found of this guy and his dawg.
+                    </p>
+                    <hr class="my-4">
+                    <img src="./man_with_dog.jpg" class="img-fluid custom-img">
+                    <!-- <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a> -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="py-5">
+        <div class="container">
+            <h2 class="text-center">Playground</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <a href="/guess" class="card text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">Guess</h5>
+                            <p class="card-text">Go try to guess a number. See if you can get it in 1 attempt -- it's definitely possible!</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="/random" class="card text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">Random Image</h5>
+                            <p class="card-text">
+                                Genuinely some random ass pictures from IDK where but it's fun! See if you get a cool one!
+                            </p>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="/weather" class="card text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">What's the weather?</h5>
+                            <p class="card-text">Check local weather from server but also your own.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-white text-center py-4">
+        <p>&copy; 2024 My Web App. All Rights Reserved.</p>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
