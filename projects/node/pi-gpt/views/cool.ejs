@@ -14,22 +14,15 @@
         <h1><%= title %></h1>
         <nav>
             <a href="/" class="btn btn-light">Home</a>
+            <a href="/info" class="btn btn-light">Server Info</a>
         </nav>
     </header>
 
     <section class="py-5">
         <div class="container">
-            <h2 class="text-center">Server Specifications</h2>
-            <ul class="list-group">
-                <li class="list-group-item"><strong>Hostname:</strong> <%= serverSpecs.hostname %></li>
-                <li class="list-group-item"><strong>Platform:</strong> <%= serverSpecs.platform %></li>
-                <li class="list-group-item"><strong>Architecture:</strong> <%= serverSpecs.architecture %></li>
-                <li class="list-group-item"><strong>Model:</strong> <%= serverSpecs.cpu[0].model %></li>
-                <li class="list-group-item"><strong>CPU:</strong> <%= serverSpecs.cpu.length %> Core(s)</li>
-                <li class="list-group-item"><strong>Total Memory:</strong> <%= serverSpecs.totalMemory %></li>
-                <li class="list-group-item"><strong>Free Memory:</strong> <%= serverSpecs.freeMemory %></li>
-                <li class="list-group-item"><strong>Uptime:</strong> <%= serverSpecs.uptime %></li>
-            </ul>
+            <div class="text-center mt-4">
+                <img src="/man_with_dog.jpg" alt="Man with Dog" class="img-fluid" style="max-width: 100%; height: auto;">
+            </div>
         </div>
     </section>
 
@@ -43,4 +36,3 @@
 </body>
 
 </html>
-
