@@ -10,18 +10,6 @@
 </head>
 
 <body>
-    <div class="container text-center mt-5">
-        <h1>Number Guessing Game</h1>
-        <p>Guess a number between 1 and 100!</p>
-        <div>
-            <input type="number" id="guessInput" min="1" max="100" class="form-control" style="width: 200px; margin: 0 auto;">
-            <button class="btn btn-primary mt-3" onclick="checkGuess()">Submit Guess</button>
-        </div>
-        <div id="result" class="mt-3"></div>
-        <hr>
-        <a href="/" class="btn btn-secondary">Back to Home</a>
-    </div>
-
     <script>
         let randomNumber = <%= randomNumber %>;
 
@@ -35,7 +23,7 @@
             } else if (userGuess === randomNumber) {
                 message = "Congratulations! You guessed it right!";
             } else if (userGuess === altGuess) {
-                message = `Wack, you hella gave up. The correct number was ${randomNumber}`doc;
+                message = `Wack, you hella gave up. The correct number was ${randomNumber}`;
             } else if (userGuess < randomNumber) {
                 message = "Too low! Try again.";
             } else {
@@ -53,6 +41,17 @@
             });
         });
     </script>
+    <div class="container text-center mt-5">
+        <h1>Number Guessing Game</h1>
+        <p>Guess a number between 1 and 100!</p>
+        <div>
+            <input type="number" id="guessInput" min="1" max="100" class="form-control" style="width: 200px; margin: 0 auto;">
+            <button class="btn btn-primary mt-3" onclick="checkGuess()">Submit Guess</button>
+        </div>
+        <div id="result" class="mt-3"></div>
+        <hr>
+        <a href="/" class="btn btn-secondary">Back to Home</a>
+    </div>
 </body>
 
 </html>

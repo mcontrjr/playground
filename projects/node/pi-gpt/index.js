@@ -51,8 +51,11 @@ async function getWeather(city) {
     const WEATHER_TOKEN = process.env.WEATHER_TOKEN
     const url = `https://api.weatherapi.com/v1/current.json?key=${WEATHER_TOKEN}&q=${city}&aqi=no`;
 
+    console.log(`token: ${WEATHER_TOKEN}`);
+
     try {
         const response = await axios.get(url);
+        console.log(`Retrieved weather data: ${response}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching weather data:', error.response.data);
@@ -60,8 +63,10 @@ async function getWeather(city) {
 }
 
 app.get('/weather', async (req, res) => {;
+    console.log('Entering weather route');
     const myWeather = await getWeather('95128')
-    res.render('weather', { title: 'MyWeather', myWeather })
+    console.log('Rendering weather data: ' + `${myWeather}`);
+    res.render('weather', { title: 'MyWeather', myWeather });
 });
 
 // Start the server
