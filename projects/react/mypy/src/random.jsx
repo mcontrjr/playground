@@ -45,7 +45,6 @@ function Head() {
   )
 }
 
-const apiUrl = 'http://localhost:5170';
 
 async function getRandomImg( category ) {
   const apiUrl = 'http://localhost:5170';

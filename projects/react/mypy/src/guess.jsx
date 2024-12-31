@@ -67,7 +67,7 @@ export default function GuessPage() {
     if (Number(guess) === randomNum) {
         setMessage(`Can\'t believe it took you ${attempts} attempts`)
     } else if (guess < randomNum) {
-        setMessage('Your guess is too low. Try again!');
+        setMessage(`Your guess is too low. Try again! Your guess was ${guess}.`);
     } else {
         setMessage(`Your guess is too high. Try again! Your guess was ${guess}.`);
     }

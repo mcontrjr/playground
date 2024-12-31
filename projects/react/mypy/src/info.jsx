@@ -1,7 +1,7 @@
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, createTheme, ThemeProvider } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, createTheme, ThemeProvider, CircularProgress } from "@mui/material";
 import { useState, useEffect } from "react";
+import error_img from './assets/error.svg'
 
-// Create a custom theme for the app
 const theme = createTheme({
     typography: {
         fontFamily: '"Roboto Mono", monospace',
@@ -25,31 +25,62 @@ const theme = createTheme({
     },
 });
 
-export default function InfoPage() {
-    const [error, setError] = useState(null);
-    const [specs, setSpecs] = useState(null);
 
-    const apiUrl = import.meta.env.VITE_MYPY_API_URL;
+export default function InfoPage() {
+    const apiUrl = 'http://localhost:5170';
+    const [specs, setSpecs] = useState(null);
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${apiUrl}/specs`)
+        try {
+            fetch(`${apiUrl}/specs`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 return response.json();
             })
-            .then(data => setSpecs(data.response))
+            .then(data => {
+                setSpecs(data.response);
+                setLoading(false);
+            })
             .catch(error => setError(error));
+        } catch (e) {
+            setError(e);
+        }
+        
     }, []);
 
-    if (specs === null) return <Typography>Error</Typography>;
+    // console.log(`Error state: ${error}`)
+    if (loading) return (
+        <ThemeProvider theme={theme}>
+            <Box className="my-container" >
+                <CircularProgress color="#3789ad" />
+                <nav>
+                    <a href="/" className='my-button'>Home</a>
+                </nav>
+            </Box>
+        </ThemeProvider>
+    )
+
+    if (error) return (
+        <ThemeProvider theme={theme}>
+            <Box className="my-container">
+                <img src={error_img} alt="error" style={{ width: '480px', height: '480px' }}></img>
+                <Typography variant="body1">{error}</Typography>
+                <nav>
+                    <a href="/" className='my-button'>Home</a>
+                </nav>
+            </Box>
+        </ThemeProvider>
+    )
 
     return (
         <ThemeProvider theme={theme}>
-            <Box className="my-container">
+            <Box className="my-container" >
                 <Typography variant="h2">Server Stats</Typography>
-                <TableContainer component={Paper} className="custom-table-container">
+                <TableContainer component={Paper} className="custom-table-container" sx={{backgroundColor: '#3789ad'}}>
                     <Table>
                         <TableHead>
                             <TableRow>
@@ -75,7 +106,7 @@ export default function InfoPage() {
                 </TableContainer>
 
                 <Typography variant="h2" sx={{ margin: "10px" }}>CPU Info</Typography>
-                <TableContainer component={Paper} className="custom-table-container">
+                <TableContainer component={Paper} className="custom-table-container" sx={{backgroundColor: '#3789ad'}}>
                     <Table>
                         <TableHead>
                             <TableRow>
