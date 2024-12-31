@@ -1,0 +1,28 @@
+# Data Manipulation and Analysis
+pandas
+numpy
+matplotlib
+
+# Machine Learning and Data Science
+scikit-learn
+tensorflow
+
+# Web Development
+flask
+django
+
+# Natural Language Processing
+# nltk
+# spacy
+
+# Databases
+sqlalchemy
+pymysql
+
+# Testing
+pytest
+coverage
+mock
+
+# Tools
+PyPDF2
