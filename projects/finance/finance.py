@@ -1,14 +1,16 @@
 #!/usr/bin/python3
 import os
 import argparse
-
-# from utils import Bank, BankType, Discover, Amex, Citi
 import re
 import os
 import logging
+import psycopg2
+from datetime import datetime
 from PyPDF2 import PdfReader
-
+from dotenv import load_dotenv
 import pandas as pd
+
+load_dotenv()
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -37,6 +39,15 @@ class Config():
 Discover = Config('discover', start_index=2)
 Amex = Config('amex',  start_index=2)
 Citi = Config('citi', start_index=1)
+
+# Database Config
+db_config = {
+    'dbname': os.getenv('DB_NAME'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'host': 'localhost',
+    'port': os.getenv('PORT', '5432')
+}
 
 # Finance Parser
 class Parser:
@@ -72,7 +83,19 @@ class Parser:
         for category, keywords in Parser.keyword_to_category.items():
             if any(keyword in description for keyword in keywords):
                 return category
-        return 'Other'
+        return 'OTHER'
+    
+    @staticmethod
+    def convert_to_sql_date(date_str: str) -> str:
+        """
+        Converts a date string in MM/DD format to YYYY-MM-DD format.
+
+        :param date_str: str - Date in MM/DD format
+        :return: str - Date in YYYY-MM-DD format
+        """
+        current_year = datetime.now().year
+        converted_date = datetime.strptime(f"{current_year}/{date_str}", "%Y/%m/%d")
+        return converted_date.strftime("%Y-%m-%d")
         
     @staticmethod
     def _extract_currency(text: str):
@@ -93,7 +116,7 @@ class Parser:
         else:
             return 0.0
         
-    def extract_text_from_pdf(self, pdf_path):
+    def extract_text_from_pdf(self, pdf_path: str):
         log.info(f"Opening PDF file: {pdf_path}")
         try:
             text = ""
@@ -129,6 +152,7 @@ class Parser:
                         # combine lines and get relevant desc from match index
                         description = " ".join(lines[i:i+2]).strip()[:date.endpos]
                         date_str = date.group()
+                        sql_date = self.convert_to_sql_date(date_str)
                         amount_line = (lines[i] + " " + lines[i + 1]).strip()
 
                         amount = self._extract_currency(amount_line)
@@ -140,7 +164,7 @@ class Parser:
 
                         self.purchases.append({
                             'Bank': self.config.bank,
-                            'Date': date_str,
+                            'Date': sql_date,
                             'Description': description,
                             'Amount': amount,
                             'Category': category
@@ -152,7 +176,7 @@ class Parser:
             log.error(f"Error parsing purchases from text: {e}")
             raise
         
-    def save(self, output_path):
+    def save(self, output_path: str):
         try:
             df = pd.DataFrame(self.purchases)
             df.to_csv(os.path.join(current_dir, output_path), index=False)
@@ -161,6 +185,35 @@ class Parser:
             log.error(f"Error converting JSON to DataFrame or exporting CSV: {e}")
             log.error(e)
             return
+        
+    def save_to_database(self, db_config: dict):
+        """
+        Appends purchases from statements into a DB. DB is configured to only accept unique description entries.
+        :param db_config: Dictionary holding the configuration for the postgres database
+        """
+        conn = None
+        try:
+            conn = psycopg2.connect(**db_config)
+            cur = conn.cursor()
+
+            for purchase in self.purchases:
+                try:
+                    cur.execute("""
+                        INSERT INTO bank_statements (bank, date, description, amount, category) 
+                        VALUES (%s, %s, %s, %s, %s)""",
+                        (purchase['Bank'], purchase['Date'], purchase['Description'], purchase['Amount'], purchase['Category']))
+                except psycopg2.IntegrityError:
+                    log.info(f"Entry with description '{purchase['Description']}' already exists. Skipping insertion.")
+                    conn.rollback()
+                    continue
+            conn.commit()
+            cur.close()
+            log.info("Data successfully saved to database.")
+        except Exception as e:
+            log.error(f"Error saving to database: {e}")
+        finally:
+            if conn is not None:
+                conn.close()
 
 def main(args):
     
@@ -174,6 +227,7 @@ def main(args):
     bank.extract_text_from_pdf(args.pdf_path)
     bank.parse_purchases_from_text()
     bank.save(args.output_path)
+    bank.save_to_database(db_config)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract purchases from PDF and export to CSV.')

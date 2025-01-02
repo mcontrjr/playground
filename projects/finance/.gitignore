@@ -2,3 +2,4 @@ venv
 examples
 csvs
 logs
+backup.sql

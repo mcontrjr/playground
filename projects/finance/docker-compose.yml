@@ -1,0 +1,30 @@
+
+services:
+  db:
+    image: postgres:latest
+    container_name: finance_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "${PORT}:5432"
+
+volumes:
+  pg_data:
+
+  # app:
+  #   build: .
+  #   container_name: finance_parser
+  #   restart: always
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     - DB_HOST=localhost
+  #     - DB_USER=${DB_USER}
+  #     - DB_PASSWORD=${DB_PASSWORD}
+  #     - DB_NAME=${DB_NAME}

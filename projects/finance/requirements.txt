@@ -4,25 +4,25 @@ numpy
 matplotlib
 
 # Machine Learning and Data Science
-scikit-learn
-tensorflow
+# scikit-learn\
+# tensorflow
 
 # Web Development
-flask
-django
+#flask
+#django
 
 # Natural Language Processing
 # nltk
 # spacy
 
 # Databases
-sqlalchemy
-pymysql
+psycopg2
 
 # Testing
 pytest
-coverage
-mock
+#coverage
+#mock
 
 # Tools
 PyPDF2
+dotenv
