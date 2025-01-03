@@ -1,6 +1,7 @@
 import { Box, Button, Typography, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, createTheme, ThemeProvider, Stack, CircularProgress } from "@mui/material";
 import { useState, useEffect } from "react";
 import error_img from './assets/error.svg';
+import Footer from '../components/footer'
 
 const theme = createTheme({
     typography: {
@@ -28,7 +29,7 @@ const theme = createTheme({
 export default function WeatherPage() {
     const apiUrl = 'http://localhost:5170';
     const [weatherData, setWeatherData] = useState(null);
-    const [location, setLocation] = useState('95126');
+    const [location, setLocation] = useState('');
     const [message, setMessage] = useState('Enter Zip Code or City Name');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -39,14 +40,14 @@ export default function WeatherPage() {
 
     const fetchWeatherData = async () => {
         try {
-            const response = await fetch(`${apiUrl}/weather?location=${location}`); // Adjust endpoint as needed
+            const response = await fetch(`${apiUrl}/weather?location=95126`); // Adjust endpoint as needed
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
             console.log(`Weather Data: ${JSON.stringify(data.response)}`)
             setWeatherData(data.response);
-            console.log(JSON.stringify(weatherData))
+            console.log(`after setWeatherdata: ${JSON.stringify(data.response)}`)
             setLoading(false);
         } catch (error) {
             setError(error);
@@ -55,12 +56,12 @@ export default function WeatherPage() {
 
     const handleFindLocation = async (location) => {
         try {
+            console.log(`findLoc: ${location}`)
             const response = await fetch(`${apiUrl}/weather?location=${location}`); // Adjust endpoint as needed
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
-            console.log(`handle find Weather Data: ${data.response}`)
             setWeatherData(data.response);
             setLoading(false);
         } catch (error) {
@@ -116,6 +117,7 @@ export default function WeatherPage() {
                     sx={{
                         justifyContent: "center",
                         alignItems: "center",
+                        margin: 2
                     }}
                 >
                     <TextField
@@ -140,6 +142,7 @@ export default function WeatherPage() {
                     </Button>
                 </Stack>
 
+                <hr></hr>
                 <Stack 
                     direction="row" 
                     spacing={2} 
@@ -152,7 +155,7 @@ export default function WeatherPage() {
                     <img src={weatherData.current.condition.icon} alt={weatherData.current.condition.text} />
                 </Stack>
 
-                <hr></hr>
+            
 
                 <TableContainer component={Paper} sx={{margin: 2}}>
                     <Table>
@@ -192,6 +195,8 @@ export default function WeatherPage() {
                 </TableContainer>
                 
             </Box>
+            <Footer sx={{ margin: "50px" }} />
+            
         </ThemeProvider>
     );
 }
