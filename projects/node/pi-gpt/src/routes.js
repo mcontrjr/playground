@@ -51,6 +51,19 @@ router.get('/random', (req, res) => {
 });
 
 // Weather
+async function getWeather(city) {
+    const WEATHER_TOKEN = process.env.WEATHER_TOKEN
+    const url = `https://api.weatherapi.com/v1/current.json?key=${WEATHER_TOKEN}&q=${city}&aqi=no`;
+    console.log('Sending request to ', url)
+    try {
+        const response = await axios.get(url);
+        console.log('Received ', response.status);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching weather data:', error);
+    }
+}
+
 router.get('/weather', async (req, res) => {
     const location = req.query.location || '95126';
     console.log(`User requested weather for: ${location}`);

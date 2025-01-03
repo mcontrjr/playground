@@ -51,6 +51,28 @@ app.get('/get-loremflickr', async (req, res) => {
   }
 });
 
+// Weather
+async function getWeather(city) {
+  const WEATHER_TOKEN = process.env.WEATHER_TOKEN
+  const url = `https://api.weatherapi.com/v1/current.json?key=${WEATHER_TOKEN}&q=${city}&aqi=no`;
+  console.log('Sending request to ', url)
+  try {
+      const response = await axios.get(url);
+      console.log('Received ', response.status);
+      return response.data;
+  } catch (error) {
+      console.error('Error fetching weather data:', error);
+  }
+}
+
+app.get('/weather', async (req, res) => {
+  const location = req.query.location || '95126';
+  console.log(`User requested weather for: ${location}`);
+  const weatherData = await getWeather(location);
+  console.log('Data ', weatherData);
+  res.json({response: weatherData}, 200)
+})
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
