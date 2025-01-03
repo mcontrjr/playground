@@ -1,6 +1,6 @@
 import { Box, Button, Typography, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, createTheme, ThemeProvider, Stack, CircularProgress } from "@mui/material";
 import { useState, useEffect } from "react";
-import error_img from './assets/error.svg';
+import error_img from './assets/rainy.svg';
 import Footer from '../components/footer'
 
 const theme = createTheme({
@@ -29,7 +29,7 @@ const theme = createTheme({
 export default function WeatherPage() {
     const apiUrl = 'http://localhost:5170';
     const [weatherData, setWeatherData] = useState(null);
-    const [location, setLocation] = useState('');
+    const [location, setLocation] = useState('San Jose');
     const [message, setMessage] = useState('Enter Zip Code or City Name');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -40,38 +40,46 @@ export default function WeatherPage() {
 
     const fetchWeatherData = async () => {
         try {
-            const response = await fetch(`${apiUrl}/weather?location=95126`); // Adjust endpoint as needed
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+            if (typeof location !== 'string' || location === '') {
+                setMessage(`Not a valid location.`);
+                return
             }
-            const data = await response.json();
-            console.log(`Weather Data: ${JSON.stringify(data.response)}`)
-            setWeatherData(data.response);
-            console.log(`after setWeatherdata: ${JSON.stringify(data.response)}`)
-            setLoading(false);
-        } catch (error) {
-            setError(error);
-        }
-    };
-
-    const handleFindLocation = async (location) => {
-        try {
-            console.log(`findLoc: ${location}`)
             const response = await fetch(`${apiUrl}/weather?location=${location}`); // Adjust endpoint as needed
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
+            if (data.response === null || data.response === undefined) {
+                setMessage(`Could not find location \'${location}\'`)
+                return
+            }
+            console.log(`Weather Data: ${JSON.stringify(data.response)}`)
             setWeatherData(data.response);
+            console.log(`after setWeatherdata: ${JSON.stringify(data.response)}`)
             setLoading(false);
+            setMessage('Enter Zip Code or City Name');
         } catch (error) {
-            setError(error);
+            setError(`Error in fetchWeatherData: ${error.message}`);
         }
-    }
+    };
+
+    const handleFindLocation = async () => {
+        try {
+            console.log(`findLoc: ${location}`);
+            fetchWeatherData();
+            setLocation('');
+            setMessage('Enter Zip Code or City Name');
+        } catch (error) {
+            setError(error.message);
+        }
+    };
 
     const handleKeyPress = (event) => {
         if (event.key === 'Enter') {
-            handleFindLocation(location);
+            console.log(`keyPress location: ${location}`);
+            fetchWeatherData();
+            setLocation('');
+            setMessage('Enter Zip Code or City Name');
         }
     };
 
@@ -92,8 +100,8 @@ export default function WeatherPage() {
         return (
             <ThemeProvider theme={theme}>
                 <Box className="my-container">
-                    <img src={error_img} alt="error" style={{ width: '480px', height: '480px' }} />
-                    <Typography variant="body1">{error.message}</Typography>
+                    <img src={error_img} alt="error" style={{ width: '350px', height: '350px' }} />
+                    <Typography variant="body1">{error}</Typography>
                     <nav>
                         <a href="/" className='my-button'>Home</a>
                     </nav>
