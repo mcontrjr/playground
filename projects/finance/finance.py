@@ -36,9 +36,9 @@ class Config():
         self.bank = bank
         self.start_index = start_index
     
-Discover = Config('discover', start_index=2)
-Amex = Config('amex',  start_index=2)
-Citi = Config('citi', start_index=1)
+Discover = Config('DISCOVER', start_index=2)
+Amex = Config('AMEX',  start_index=2)
+Citi = Config('CITI', start_index=1)
 
 # Database Config
 db_config = {

@@ -26,3 +26,8 @@ pytest
 # Tools
 PyPDF2
 dotenv
+
+# API
+fastapi
+uvicorn
+python-multipart
