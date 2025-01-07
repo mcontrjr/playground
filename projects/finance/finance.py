@@ -3,51 +3,38 @@ import os
 import argparse
 import re
 import os
-import logging
 import psycopg2
 from datetime import datetime
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 import pandas as pd
 
+from handler import PostgresHandler
+from logger import log
+
 load_dotenv()
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Logging 
-logging.basicConfig(
-    level=logging.DEBUG,  # Set to DEBUG to ensure file handler can capture debug logs
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(os.path.join(current_dir, 'logs', 'pdf_to_csv.log')),
-        logging.StreamHandler()
-    ]
-)
-
-log = logging.getLogger()
-
-for handler in log.handlers:
-    if isinstance(handler, logging.StreamHandler):
-        handler.setLevel(logging.INFO)
-
 # Bank Configurations
-class Config():
+class BankConfig():
     def __init__(self, bank: str, start_index: int = 0):
         self.bank = bank
         self.start_index = start_index
-    
-Discover = Config('DISCOVER', start_index=2)
-Amex = Config('AMEX',  start_index=2)
-Citi = Config('CITI', start_index=1)
+        
+class DiscoverConfig(BankConfig):
+    def __init__(self):
+        super().__init__('DISCOVER', start_index=2)
+        
+class AmexConfig(BankConfig):
+    def __init__(self):
+        super().__init__('AMEX', start_index=2)
 
-# Database Config
-db_config = {
-    'dbname': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'host': 'localhost',
-    'port': os.getenv('PORT', '5432')
-}
+class CitiConfig(BankConfig):
+    def __init__(self):
+        super().__init__('CITI', start_index=1)
+        
+class DatabaseHandler:
+    def __init__(self, config: dict):
+        self.config = config
 
 # Finance Parser
 class Parser:
@@ -68,14 +55,19 @@ class Parser:
         'APPLE PAY': {'APLPAY'},
     }
     
-    def __init__(self, path: str, config: Config):
+    def __init__(self, path: str, config: BankConfig):
         self.path = path
+        self.text = None
         self.purchases = []
         self.config = config
-        if isinstance(config, Config):
+        if isinstance(config, BankConfig):
             self.config = config
         else:
             raise ValueError("Need a valid Config to parse!")
+        
+        self.extract_text_from_pdf(path)
+        self.parse_purchases_from_text()
+        
     
     @staticmethod
     def _determine_category(description: str):
@@ -122,7 +114,7 @@ class Parser:
             text = ""
             with open(pdf_path, 'rb') as file:
                 pdf_reader = PdfReader(file)
-                log.info(f"Found {len(pdf_reader.pages)} pages in statement. Starting on page {Discover.start_index + 1}")
+                log.info(f"Found {len(pdf_reader.pages)} pages in statement. Starting on page {self.config.start_index + 1}")
                 for page in pdf_reader.pages[self.config.start_index:]:
                     text += page.extract_text() + "\n"
             log.info(f"Successfully extracted text from PDF: {pdf_path}")
@@ -185,49 +177,28 @@ class Parser:
             log.error(f"Error converting JSON to DataFrame or exporting CSV: {e}")
             log.error(e)
             return
-        
-    def save_to_database(self, db_config: dict):
-        """
-        Appends purchases from statements into a DB. DB is configured to only accept unique description entries.
-        :param db_config: Dictionary holding the configuration for the postgres database
-        """
-        conn = None
-        try:
-            conn = psycopg2.connect(**db_config)
-            cur = conn.cursor()
 
-            for purchase in self.purchases:
-                try:
-                    cur.execute("""
-                        INSERT INTO bank_statements (bank, date, description, amount, category) 
-                        VALUES (%s, %s, %s, %s, %s)""",
-                        (purchase['Bank'], purchase['Date'], purchase['Description'], purchase['Amount'], purchase['Category']))
-                except psycopg2.IntegrityError:
-                    log.info(f"Entry with description '{purchase['Description']}' already exists. Skipping insertion.")
-                    conn.rollback()
-                    continue
-            conn.commit()
-            cur.close()
-            log.info("Data successfully saved to database.")
-        except Exception as e:
-            log.error(f"Error saving to database: {e}")
-        finally:
-            if conn is not None:
-                conn.close()
 
-def main(args):
+def parse(statement_file):
     
-    if Discover.bank in args.pdf_path:
-        bank = Parser(args.pdf_path, Discover)
-    if Amex.bank in args.pdf_path:
-        bank = Parser(args.pdf_path, Amex)
-    if Citi.bank in args.pdf_path:
-        bank = Parser(args.pdf_path, Citi)
+    bank_configs = {
+        'DISCOVER': DiscoverConfig(),
+        'AMEX': AmexConfig(),
+        'CITI': CitiConfig()
+    }
     
-    bank.extract_text_from_pdf(args.pdf_path)
-    bank.parse_purchases_from_text()
-    bank.save(args.output_path)
-    bank.save_to_database(db_config)
+    bank = None
+    for name, config in bank_configs.items():
+        if name in statement_file.upper():
+            bank = config
+    
+    if bank is None:
+        log.error(f"No bank config found for {statement_file.upper()}")
+    
+    my_parser = Parser(statement_file, bank)
+    
+    db = PostgresHandler()
+    db.save_to_database(my_parser.purchases)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract purchases from PDF and export to CSV.')
@@ -236,9 +207,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.output_path is None:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
         # Generate default output CSV path based on the input PDF file name
         base_filename = os.path.splitext(os.path.basename(args.pdf_path))[0]
         output_file = base_filename + '_purchases.csv'
         args.output_path = os.path.join(current_dir, 'csvs', output_file)
 
-    main(args)
+    main(args.pdf_path)
