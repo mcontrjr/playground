@@ -1,4 +1,5 @@
-import { Box, Button, Typography, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, createTheme, ThemeProvider, Stack, CircularProgress } from "@mui/material";
+import { Box, Button, Typography, TextField, Table, TableBody, TableCell, Tabs, Tab, TableContainer, TableHead, TableRow, Paper, createTheme, ThemeProvider, Stack, CircularProgress } from "@mui/material";
+import { TabPanel, TabContext } from '@mui/lab';
 import { useState, useEffect } from "react";
 import error_img from './assets/rainy.svg';
 import Footer from '../components/footer'
@@ -83,6 +84,12 @@ export default function WeatherPage() {
         }
     };
 
+    const [value, setValue] = useState('1');
+
+    const handleChange = (event, newValue) => {
+        setValue(newValue);
+    };
+
     if (loading) {
         return (
             <ThemeProvider theme={theme}>
@@ -163,44 +170,57 @@ export default function WeatherPage() {
                     <img src={weatherData.current.condition.icon} alt={weatherData.current.condition.text} />
                 </Stack>
 
-            
-
-                <TableContainer component={Paper} sx={{margin: 2}}>
-                    <Table>
-                        <TableHead>
-                            <TableRow sx={{backgroundColor: '#3789ad'}}>
-                                <TableCell>Metric</TableCell>
-                                <TableCell>Value</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell>Temperature (°C/°F)</TableCell>
-                                <TableCell>{weatherData.current.temp_c}°C / {weatherData.current.temp_f}°F</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Humidity</TableCell>
-                                <TableCell>{weatherData.current.humidity}%</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Wind</TableCell>
-                                <TableCell>{weatherData.current.wind_mph} mph / {weatherData.current.wind_kph} kph, {weatherData.current.wind_dir}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Pressure</TableCell>
-                                <TableCell>{weatherData.current.pressure_mb} mb / {weatherData.current.pressure_in} in</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>Visibility</TableCell>
-                                <TableCell>{weatherData.current.vis_km} km / {weatherData.current.vis_miles} miles</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>UV Index</TableCell>
-                                <TableCell>{weatherData.current.uv}</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                <Box sx={{ width: '100%', typography: 'body1' }}>
+                    <TabContext value={value} sx={{backgroundColor: '#3789ad'}}>
+                        <Box sx={{ borderBottom: 0, borderColor: 'divider' }}>
+                            <Tabs onChange={handleChange} aria-label="lab API tabs example" sx={{margin: 0}} >
+                                <Tab label="Metrics" value="1" sx={{backgroundColor: '#2b6c88'}} />
+                                <Tab label="Forecast" value="2" sx={{backgroundColor: '#2b6c88'}} />
+                                <Tab label="Historical" value="3" sx={{backgroundColor: '#2b6c88'}} />
+                            </Tabs>
+                        </Box>
+                        <TabPanel value="1">
+                            <TableContainer component={Paper} sx={{margin: 0}}>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow sx={{backgroundColor: '#2b6c88'}}>
+                                            <TableCell sx={{ textAlign: 'center' }}>Metric</TableCell>
+                                            <TableCell sx={{ textAlign: 'center' }}>Value</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        <TableRow>
+                                            <TableCell sx={{ textAlign: 'center' }}>Temperature (°C/°F)</TableCell>
+                                            <TableCell sx={{ textAlign: 'center' }}>{weatherData.current.temp_c}°C / {weatherData.current.temp_f}°F</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell sx={{ textAlign: 'center' }}>Humidity</TableCell>
+                                            <TableCell sx={{ textAlign: 'center' }}>{weatherData.current.humidity}%</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell sx={{ textAlign: 'center' }}>Wind</TableCell>
+                                            <TableCell sx={{ textAlign: 'center' }}>{weatherData.current.wind_mph} mph / {weatherData.current.wind_kph} kph, {weatherData.current.wind_dir}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell sx={{ textAlign: 'center' }}>Pressure</TableCell>
+                                            <TableCell sx={{ textAlign: 'center' }}>{weatherData.current.pressure_mb} mb / {weatherData.current.pressure_in} in</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell sx={{ textAlign: 'center' }}>Visibility</TableCell>
+                                            <TableCell sx={{ textAlign: 'center' }}>{weatherData.current.vis_km} km / {weatherData.current.vis_miles} miles</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell sx={{ textAlign: 'center' }}>UV Index</TableCell>
+                                            <TableCell sx={{ textAlign: 'center' }}>{weatherData.current.uv}</TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </TabPanel>
+                        <TabPanel value="2">Item Two</TabPanel>
+                        <TabPanel value="3">Item Three</TabPanel>
+                    </TabContext>
+                </Box>
                 
             </Box>
             <Footer sx={{ margin: "50px" }} />
