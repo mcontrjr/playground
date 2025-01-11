@@ -3,3 +3,7 @@ examples
 csvs
 logs
 backup.sql
+pgdata
+uploads
+__pycache__
+.env

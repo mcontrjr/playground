@@ -7,7 +7,6 @@ import psycopg2
 from datetime import datetime
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
-import pandas as pd
 
 from handler import PostgresHandler
 from logger import log
@@ -167,16 +166,7 @@ class Parser:
         except Exception as e:
             log.error(f"Error parsing purchases from text: {e}")
             raise
-        
-    def save(self, output_path: str):
-        try:
-            df = pd.DataFrame(self.purchases)
-            df.to_csv(os.path.join(current_dir, output_path), index=False)
-            log.info(f"Data exported to {os.path.join(current_dir, output_path)}")
-        except Exception as e:
-            log.error(f"Error converting JSON to DataFrame or exporting CSV: {e}")
-            log.error(e)
-            return
+
 
 
 def parse(statement_file):

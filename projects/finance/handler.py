@@ -10,8 +10,8 @@ class PostgresHandler:
             'dbname': os.getenv('DB_NAME'),
             'user': os.getenv('DB_USER'),
             'password': os.getenv('DB_PASSWORD'),
-            'host': 'localhost',
-            'port': os.getenv('PORT', '5432')
+            'host': os.getenv('DB_HOST', 'db'),
+            'port': os.getenv('DB_PORT', '5432')
         }
     
     def save_to_database(self, purchases: list):
@@ -35,7 +35,7 @@ class PostgresHandler:
                     continue
             conn.commit()
             cur.close()
-            log.info("Data successfully saved to database.")
+            log.info(f"{len(purchases)} purchases successfully saved to database.")
         except Exception as e:
             log.error(f"Error saving to database: {e}")
         finally:

@@ -32,6 +32,9 @@ services:
       - "${SERVER_PORT}:${SERVER_PORT}"
     depends_on:
       - db
+    volumes:
+      - .:/app  # Bind mount for live-reloading in development
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${SERVER_PORT}", "--reload"]
 
 volumes:
   pg_data:

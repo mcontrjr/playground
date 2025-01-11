@@ -19,6 +19,10 @@ async def get_records(bank_name: Optional[str] = Query(None)) -> List[dict]:
     :param bank_name: Optional; filter results by the bank name.
     :return: List of records matching the criteria.
     """
+    if bank_name is None:
+        bank_name = ""
+        log.info("No bank name passed in query. Returning all records...")
+    bank_name = bank_name.upper()
     records = []
     try:
         records = handler.get_records(bank_name)
@@ -41,31 +45,31 @@ async def get_records(bank_name: Optional[str] = Query(None)) -> List[dict]:
         raise HTTPException(status_code=500, detail="Error retrieving records from database.")
 
 @app.post("/parse/")
-async def parse_upload_file(bank_name: str = File(...), pdf_file: UploadFile = File(...)):
+async def parse_upload_file(bank_name: str = File(...), pdf_files: List[UploadFile] = File(...)):
+    log.info(f"Received bank name: '{bank_name}'")
+    bank_name = bank_name.upper()
+    
     bank_configs = {
         'DISCOVER': DiscoverConfig(),
         'AMEX': AmexConfig(),
         'CITI': CitiConfig()
     }
     
-    log.info(f"Received bank name: '{bank_name}'")
-    log.info(f"Received pdf file: {pdf_file.filename}")
+    log.info(f"Received {len(pdf_files)} files: {[file.filename for file in pdf_files]}")
     
     # Save the uploaded file
-    pdf_path = f"./uploads/{pdf_file.filename}"
-    with open(pdf_path, "wb") as buffer:
-        shutil.copyfileobj(pdf_file.file, buffer)
-        
-
-    log.info(f"Received bank name: {bank_name}")
-    # Determine the bank configuration
-    bank_config = None
-    if bank_name.upper() in bank_configs.keys():
-        bank_config = bank_configs[bank_name.upper()]
-    else:
-        raise HTTPException(status_code=400, detail="Invalid bank name.")
-
-    statement = Parser(pdf_path, bank_config)
-    handler.save_to_database(statement.purchases)
+    os.makedirs("./uploads", exist_ok=True)
     
+    for pdf_file in pdf_files:
+        log.info(f"Processing pdf file: {pdf_file.filename}")
+        
+        # Save the uploaded file
+        pdf_path = f"./uploads/{pdf_file.filename}"
+        with open(pdf_path, "wb") as buffer:
+            shutil.copyfileobj(pdf_file.file, buffer)
+        
+        # Process each PDF file
+        statement = Parser(pdf_path, bank_configs[bank_name])
+        handler.save_to_database(statement.purchases)
+        
     return {"status": "success", "message": "File processed and data saved to database"}

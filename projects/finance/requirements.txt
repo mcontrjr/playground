@@ -1,20 +1,3 @@
-# Data Manipulation and Analysis
-pandas
-numpy
-matplotlib
-
-# Machine Learning and Data Science
-# scikit-learn\
-# tensorflow
-
-# Web Development
-#flask
-#django
-
-# Natural Language Processing
-# nltk
-# spacy
-
 # Databases
 psycopg2
 
@@ -25,7 +8,7 @@ pytest
 
 # Tools
 PyPDF2
-dotenv
+python-dotenv
 
 # API
 fastapi
