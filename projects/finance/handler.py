@@ -2,6 +2,7 @@ import psycopg2
 import os
 from typing import Optional
 from logger import log
+from fastapi import HTTPException
 
 
 class PostgresHandler:
@@ -10,7 +11,7 @@ class PostgresHandler:
             'dbname': os.getenv('DB_NAME'),
             'user': os.getenv('DB_USER'),
             'password': os.getenv('DB_PASSWORD'),
-            'host': os.getenv('DB_HOST', 'db'),
+            'host': os.getenv('DB_HOST', 'localhost'),
             'port': os.getenv('DB_PORT', '5432')
         }
     
@@ -55,6 +56,7 @@ class PostgresHandler:
                 cur.execute(query, (bank_name,))
             else:
                 cur.execute(query)
+            log.info(f"Query: {query}")
             
             records = cur.fetchall()
             log.info(f"Retrieved {len(records)} records from the database.")

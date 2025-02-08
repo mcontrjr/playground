@@ -9,6 +9,7 @@ pytest
 # Tools
 PyPDF2
 python-dotenv
+matplotlib
 
 # API
 fastapi
