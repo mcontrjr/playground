@@ -7,7 +7,7 @@ pytest
 #mock
 
 # Tools
-PyPDF2
+pypdf
 python-dotenv
 matplotlib
 

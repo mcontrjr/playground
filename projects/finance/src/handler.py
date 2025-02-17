@@ -1,8 +1,9 @@
 import psycopg2
 import os
 from typing import Optional
-from logger import log
 from fastapi import HTTPException
+
+from src.logger import log
 
 
 class PostgresHandler:

@@ -3,13 +3,13 @@ import os
 import argparse
 import re
 import os
-import psycopg2
+from typing import List
 from datetime import datetime
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 from dotenv import load_dotenv
 
-from handler import PostgresHandler
-from logger import log
+from src.handler import PostgresHandler
+from src.logger import log
 
 load_dotenv()
 
@@ -38,8 +38,8 @@ class DatabaseHandler:
 # Finance Parser
 class Parser:
     keyword_to_category = {
-        'Gasoline': {'GAS', 'CHEVRON', 'SHELL'},
-        'Travel/Entertainment': {'TRIP', 'HOTEL'},
+        'GAS': {'GAS', 'CHEVRON', 'SHELL'},
+        'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS'},
         'PAYPAL': {'PAYPAL'},
         'AMAZON': {'AMAZON'},
         'GROCERIES': {'TARGET', 'TRADER JOE', 'WHOLEF', 'SPROUTS'},
@@ -52,6 +52,7 @@ class Parser:
         'INTERNET': {'INTERNET', 'XFINITY'},
         'LAUNDRY': {'KIOSOFT'},
         'APPLE PAY': {'APLPAY'},
+        'SKI': {'SNOW.COM/VAIL'},
     }
     
     def __init__(self, path: str, config: BankConfig):
@@ -64,8 +65,8 @@ class Parser:
         else:
             raise ValueError("Need a valid Config to parse!")
         
-        self.extract_text_from_pdf(path)
-        self.parse_purchases_from_text()
+        self.text = self.extract_text_from_pdf(path)
+        self.purchases = self.parse_purchases_from_text()
         
     
     @staticmethod
@@ -84,8 +85,7 @@ class Parser:
         :param date_str: str - Date in MM/DD format
         :return: str - Date in YYYY-MM-DD format
         """
-        current_year = datetime.now().year
-        converted_date = datetime.strptime(f"{current_year}/{date_str}", "%Y/%m/%d")
+        converted_date = datetime.strptime(f"{date_str}", "%m/%d/%y")
         return converted_date.strftime("%Y-%m-%d")
         
     @staticmethod
@@ -107,7 +107,7 @@ class Parser:
         else:
             return 0.0
         
-    def extract_text_from_pdf(self, pdf_path: str):
+    def extract_text_from_pdf(self, pdf_path: str) -> str:
         log.info(f"Opening PDF file: {pdf_path}")
         try:
             text = ""
@@ -115,14 +115,16 @@ class Parser:
                 pdf_reader = PdfReader(file)
                 log.info(f"Found {len(pdf_reader.pages)} pages in statement. Starting on page {self.config.start_index + 1}")
                 for page in pdf_reader.pages[self.config.start_index:]:
-                    text += page.extract_text() + "\n"
+                    new_text = page.extract_text()
+                    log.debug(f"New page: {new_text}")
+                    text += new_text + "\n"
             log.info(f"Successfully extracted text from PDF: {pdf_path}")
-            self.text = text
+            return text
         except Exception as e:
             log.error(f"Error extracting text from PDF: {e}")
             raise e
 
-    def parse_purchases_from_text(self):
+    def parse_purchases_from_text(self) -> List[dict]:
         """
         Parses purchases from extracted text.
 
@@ -130,18 +132,18 @@ class Parser:
         :return: JSON-like list of dictionaries with purchase details
         """
         log.info("Parsing extracted text...")
+        purchases = []
         try:
-            date_pattern = r'^\d{2}\/\d{2}'  # Regex pattern to match dates in MM/DD format
+            date_pattern = r'^\d{2}\/\d{2}\/\d{2}'  # Regex pattern to match dates in MM/DD format
             lines = self.text.split('\n') 
 
             for i, line in enumerate(lines):
-                log.debug(line)
                 if re.search(date_pattern, line):
                     date = re.search(date_pattern, line)
                     
                     if i + 2 < len(lines):
-                        # combine lines and get relevant desc from match index
-                        description = " ".join(lines[i:i+2]).strip()[:date.endpos]
+                        description = " ".join(lines[i:i+2])[date.end():date.endpos].strip()
+                        log.debug(f"Description: {description}. Lines: {lines[i:i+2]}. Date endpos: {date.endpos}")
                         date_str = date.group()
                         sql_date = self.convert_to_sql_date(date_str)
                         amount_line = (lines[i] + " " + lines[i + 1]).strip()
@@ -152,8 +154,8 @@ class Parser:
 
                         category = self._determine_category(description)
                         log.info(f"Found a purchase on {date_str} under {category} for ${amount} with description: \n\t{description}\n")
-
-                        self.purchases.append({
+                        log.debug(f"Current lines: {lines[i:i+2]}")
+                        purchases.append({
                             'Bank': self.config.bank,
                             'Date': sql_date,
                             'Description': description,
@@ -163,6 +165,7 @@ class Parser:
                     else:
                         log.warning("Not enough lines to parse description and amount for date: %s", line)
             log.info("Successfully parsed purchases from text")
+            return purchases
         except Exception as e:
             log.error(f"Error parsing purchases from text: {e}")
             raise
@@ -203,4 +206,4 @@ if __name__ == "__main__":
         output_file = base_filename + '_purchases.csv'
         args.output_path = os.path.join(current_dir, 'csvs', output_file)
 
-    main(args.pdf_path)
+    parse(args.pdf_path)

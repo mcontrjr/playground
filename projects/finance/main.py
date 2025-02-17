@@ -7,9 +7,10 @@ from typing import List, Optional
 import os
 import io
 from datetime import datetime
-from finance import Parser, DiscoverConfig, AmexConfig, CitiConfig
-from logger import log
-from handler import PostgresHandler
+
+from src.parser import Parser, DiscoverConfig, AmexConfig, CitiConfig
+from src.logger import log
+from src.handler import PostgresHandler
 
 app = FastAPI()
 handler = PostgresHandler()
