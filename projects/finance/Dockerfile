@@ -2,15 +2,11 @@
 FROM python:3.11-bullseye
 
 # Install build dependencies
-RUN pip install --no-cache-dir --upgrade pip setuptools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    build-essential \
-    pkg-config \
-    cmake \
-    libatlas-base-dev \
+    libopenblas-dev \
+    liblapack-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

@@ -39,11 +39,11 @@ class DatabaseHandler:
 class Parser:
     keyword_to_category = {
         'GAS': {'GAS', 'CHEVRON', 'SHELL'},
-        'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS'},
+        'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR'},
         'PAYPAL': {'PAYPAL'},
         'AMAZON': {'AMAZON'},
         'GROCERIES': {'TARGET', 'TRADER JOE', 'WHOLEF', 'SPROUTS'},
-        'FOOD': {'DISH', 'HOUSE OF BAGELS', 'THE MELT', 'DOORDASH', 'MENDOCINO'},
+        'FOOD': {'DISH', 'HOUSE OF BAGELS', 'THE MELT', 'DOORDASH', 'MENDOCINO', 'PRUNEYARD CINEMAS', 'PANDA EXPRESS', 'PIZZA', 'TACOS', 'BURGER'},
         'AUTO': {'GEICO', 'TOYOTA'},
         'COSTCO': {'COSTCO'},
         'STREAMING': {'NETFLIX', 'PARAMOUNT+', 'DISNEYPLUS', 'PEACOCKTV'},
@@ -105,7 +105,7 @@ class Parser:
             clean_value = match.group().replace('$', '').replace(',', '')
             return float(clean_value)
         else:
-            return 0.0
+            return None
         
     def extract_text_from_pdf(self, pdf_path: str) -> str:
         log.info(f"Opening PDF file: {pdf_path}")
@@ -135,7 +135,7 @@ class Parser:
         purchases = []
         try:
             date_pattern = r'^\d{2}\/\d{2}\/\d{2}'  # Regex pattern to match dates in MM/DD format
-            lines = self.text.split('\n') 
+            lines = self.text.split('\n')
 
             for i, line in enumerate(lines):
                 if re.search(date_pattern, line):
@@ -143,18 +143,21 @@ class Parser:
                     
                     if i + 2 < len(lines):
                         description = " ".join(lines[i:i+2])[date.end():date.endpos].strip()
+                        if re.search(date_pattern, description):
+                            log.debug(f"Found a date in description: {description}. Skipping...")
+                            continue
                         log.debug(f"Description: {description}. Lines: {lines[i:i+2]}. Date endpos: {date.endpos}")
                         date_str = date.group()
                         sql_date = self.convert_to_sql_date(date_str)
-                        amount_line = (lines[i] + " " + lines[i + 1]).strip()
+                        amount_line = " ".join([l for l in lines[i:i+10]]) # (lines[i] + " " + lines[i + 1]).strip()
+                        log.debug(f"Amount Line: {amount_line}")
 
                         amount = self._extract_currency(amount_line)
-                        if amount < 0:
+                        if amount is None or amount < 0:
                             continue
 
                         category = self._determine_category(description)
                         log.info(f"Found a purchase on {date_str} under {category} for ${amount} with description: \n\t{description}\n")
-                        log.debug(f"Current lines: {lines[i:i+2]}")
                         purchases.append({
                             'Bank': self.config.bank,
                             'Date': sql_date,
@@ -164,7 +167,7 @@ class Parser:
                         })
                     else:
                         log.warning("Not enough lines to parse description and amount for date: %s", line)
-            log.info("Successfully parsed purchases from text")
+            log.info(f"Successfully parsed purchases from text: {purchases}")
             return purchases
         except Exception as e:
             log.error(f"Error parsing purchases from text: {e}")

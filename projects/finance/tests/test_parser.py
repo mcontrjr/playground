@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
 from src.parser import Parser, AmexConfig
+from unittest import TestCase
 
 
 class TestAmexParser:
@@ -18,18 +19,32 @@ class TestAmexParser:
         assert Parser._determine_category("Unknown Merchant") == "OTHER"
 
     def test_convert_to_sql_date(self):
-        assert Parser.convert_to_sql_date("01/06/25") == f"2025-01-06"
+        assert Parser.convert_to_sql_date("01/06/25") == "2025-01-06"
 
     def test_extract_currency(self):
         assert Parser._extract_currency("$123.45") == 123.45
         assert Parser._extract_currency("-$1,234.56") == -1234.56
-        assert Parser._extract_currency("No currency here") == 0.0
+        assert Parser._extract_currency("No currency here") == None
 
     def test_parse_purchases_from_text(self, mock_extract_text):
         parser = Parser("tests/dummy_path.pdf", AmexConfig())
         purchases = parser.parse_purchases_from_text()
 
         expected_purchases = [
+            {
+                'Bank': 'AMEX',
+                'Date': "2024-07-22",
+                'Description': "PRUNEYARD CINEMAS ECOMM 000000001 CAMPBELL CA",
+                'Amount': 35.50,
+                'Category': "FOOD"
+            },
+            {
+                'Bank': 'AMEX',
+                'Date': "2024-07-23",
+                'Description': "DOUBLETREE NORWALK NORWALK CA",
+                'Amount': 852.49,
+                'Category': "TRAVEL"
+            },
             {
                 'Bank': 'AMEX',
                 'Date': "2024-12-16",
@@ -66,4 +81,4 @@ class TestAmexParser:
                 'Category': "SKI"
             }
         ]
-        assert purchases == expected_purchases
+        TestCase().assertCountEqual(purchases, expected_purchases)

@@ -1,5 +1,5 @@
 #!/bin/bash
-#
-sudo chmod 777 logs/
+sudo chown -R $(whoami):$(whoami) ./logs/pg_log
+sudo chmod -R 755 ./logs/pg_log
 
-uvicorn main:app --port 8000 --host 0.0.0.0
+docker compose -f docker-compose.yml up -d

@@ -5,6 +5,8 @@ from fastapi import HTTPException
 
 from src.logger import log
 
+## Class for a single record + objects for responses
+
 
 class PostgresHandler:
     def __init__(self):
@@ -24,27 +26,48 @@ class PostgresHandler:
         try:
             conn = psycopg2.connect(**self.config)
             cur = conn.cursor()
+            
+            existing_purchases = self.get_records(None).get('records', [])
+            log.debug(f"Existing purchases in database: {existing_purchases}")
+            inserted = 0
 
             for purchase in purchases:
+                if existing_purchases:
+                    if any(purchase['Description'] == existing_purchase[3] and 
+                        purchase['Amount'] == float(existing_purchase[4]) and 
+                        purchase['Date'] == existing_purchase[2].strftime('%Y-%m-%d') 
+                        for existing_purchase in existing_purchases):
+                        log.info(f"Purchase {purchase} already exists in database. Skipping insertion.")
+                        continue
+                else:
+                    log.info(f"Purchase {purchase}")
                 try:
                     cur.execute("""
                         INSERT INTO bank_statements (bank, date, description, amount, category) 
                         VALUES (%s, %s, %s, %s, %s)""",
                         (purchase['Bank'], purchase['Date'], purchase['Description'], purchase['Amount'], purchase['Category']))
-                except psycopg2.IntegrityError:
-                    log.info(f"Entry with description '{purchase['Description']}' already exists. Skipping insertion.")
+                    log.info(f"Inserted purchase: {purchase}")
+                    inserted += 1
+                except psycopg2.IntegrityError as e:
+                    conn.commit()
+                    log.info(f"{e}: Purchase {purchase} already exists. Skipping insertion.")
+                    conn.rollback()
+                    continue
+                except Exception as e:
+                    conn.commit()
+                    log.error(f"Error inserting purchase {purchase}: {e}")
                     conn.rollback()
                     continue
             conn.commit()
             cur.close()
-            log.info(f"{len(purchases)} purchases successfully saved to database.")
+            log.info(f"Inserted {inserted} new purchases into the database.")
         except Exception as e:
             log.error(f"Error saving to database: {e}")
         finally:
             if conn is not None:
                 conn.close()
                 
-    def get_records(self, bank_name: Optional[str]):
+    def get_records(self, bank_name: Optional[str]) -> dict:
         conn = None
         records = []
         try:
@@ -61,8 +84,11 @@ class PostgresHandler:
             
             records = cur.fetchall()
             log.info(f"Retrieved {len(records)} records from the database.")
-            
-            return records
+            resp = {
+                'records': records,
+                'count': len(records)
+            }
+            return resp
         except Exception as e:
             log.error(f"Error retrieving records from database: {e}")
             raise HTTPException(status_code=500, detail="Error retrieving records from database.")

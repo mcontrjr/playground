@@ -16,7 +16,7 @@ app = FastAPI()
 handler = PostgresHandler()
 
 @app.get("/records/")
-async def get_records(bank_name: Optional[str] = Query(None)) -> List[dict]:
+async def get_records(bank_name: Optional[str] = Query(None)) -> dict:
     """
     Retrieve records from the database, optionally filtering by bank name.
     
@@ -29,7 +29,8 @@ async def get_records(bank_name: Optional[str] = Query(None)) -> List[dict]:
     bank_name = bank_name.upper()
     records = []
     try:
-        records = handler.get_records(bank_name)
+        request = handler.get_records(bank_name)
+        records = request.get('records', [])
         
         # You can format the results to a list of dictionaries if needed
         results = []
@@ -42,7 +43,11 @@ async def get_records(bank_name: Optional[str] = Query(None)) -> List[dict]:
                 'amount': record[4],  # Assuming fourth column is amount
                 'category': record[5]  # Assuming fifth column is category
             })
-        return results
+        resp = {
+            'records': results,
+            'count': len(results)
+        }
+        return resp
 
     except Exception as e:
         log.error(f"Error retrieving records from database: {e}")
