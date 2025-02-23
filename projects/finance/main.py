@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 import shutil
 import matplotlib.pyplot as plt
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from typing import List, Optional
 import os
@@ -13,6 +14,13 @@ from src.logger import log
 from src.handler import PostgresHandler
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 handler = PostgresHandler()
 
 @app.get("/records/")
