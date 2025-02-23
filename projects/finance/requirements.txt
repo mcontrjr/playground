@@ -1,0 +1,16 @@
+# Databases
+psycopg2
+
+# Testing
+pytest
+
+# Tools
+pypdf
+python-dotenv
+numpy==1.23.5
+matplotlib
+
+# API
+fastapi
+uvicorn
+python-multipart

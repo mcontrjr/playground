@@ -1,0 +1,40 @@
+
+services:
+  db:
+    image: postgres:latest
+    container_name: finance_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./sql/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./logs/pg_log:/var/lib/postgresql/data/pg_log
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finance_api
+    restart: always
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: db
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    depends_on:
+      - db
+    volumes:
+      - .:/app  # Bind mount for live-reloading in development
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${SERVER_PORT}", "--reload"]
+
+volumes:
+  pg_data:
