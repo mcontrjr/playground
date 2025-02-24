@@ -33,10 +33,84 @@
   }
 }
 
+.my-button {
+  background-color: #2b6c88; /* Green background */
+  color: white; /* White text */
+  border: none; /* No borders */
+  border-radius: 5px; /* Rounded corners */
+  padding: 10px 20px; /* Padding for height and width */
+  font-size: 1rem; /* Font size */
+  font-weight: bold; /* Bold text */
+  text-align: center; /* Center text */
+  text-decoration: none; /* Remove underline */
+  display: inline-block; /* Make the button inline-block */
+  transition: background-color 0.3s ease, transform 0.2s; /* Transition effects */
+  cursor: pointer; /* Pointer cursor on hover */
+  margin: 20px;
+}
+
 .card {
   padding: 2em;
 }
 
 .read-the-docs {
   color: #888;
+}
+
+.my-table {
+  width: 100%; /* Increase the width of the table */
+  border-collapse: collapse; /* Ensure borders are collapsed */
+  margin: 20px 0; /* Add some margin around the table */
+  font-size: 1rem; /* Set font size */
+  text-align: left; /* Align text to the left */
+}
+
+.my-table th, .my-table td {
+  border: 1px solid #ddd; /* Add grid lines */
+  padding: 12px 15px; /* Add padding to table cells */
+}
+
+.my-table th {
+  background-color: #2b6c88; /* Set header background color */
+  color: white; /* Set header text color */
+}
+
+.my-table tr:nth-child(even) {
+  background-color: #2b2b2b; /* Set fill color for even rows */
+}
+
+.my-table tr:hover {
+  background-color: #747474; /* Set hover color for rows */
+}
+
+.my-select {
+  width: 100px; /* Ensure the width is 100% */
+  padding: 10px; /* Add padding */
+  font-size: 1rem; /* Set font size */
+  border: 1px solid #ddd; /* Add border */
+  border-radius: 5px; /* Add rounded corners */
+  margin: 10px 0; /* Add margin */
+  box-sizing: border-box; /* Ensure padding and border are included in the element's total width and height */
+}
+
+.my-checkbox {
+  display: block; /* Make the list vertical */
+  margin: 10px 0; /* Add some margin between checkboxes */
+}
+
+.my-checkbox input[type="checkbox"] {
+  accent-color: teal; /* Set the checkbox color to teal */
+}
+
+.my-checkbox input[type="checkbox"]::before {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  text-align: center;
+  line-height: 1em;
+  color: white;
+  background-color: teal;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
 }
