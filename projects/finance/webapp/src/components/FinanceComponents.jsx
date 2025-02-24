@@ -1,6 +1,7 @@
 import React from 'react';
 import { Line, Pie } from 'react-chartjs-2';
 import walletLogo from '../assets/wallet.svg'
+import amexLogo from '../assets/amex.svg'
 import 'chart.js/auto';
 import '../app.css'
 
