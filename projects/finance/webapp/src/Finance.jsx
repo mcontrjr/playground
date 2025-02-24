@@ -5,6 +5,12 @@ import walletLogo from './assets/wallet.svg'
 import 'chart.js/auto';
 import './app.css'
 
+const API_URL = process.env.VITE_API_URL;
+const API_PORT = process.env.SERVER_PORT;
+
+console.log('API_URL:', API_URL);
+console.log('API_PORT:', API_PORT);
+
 const Header = () => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
         <h1>MyFinance</h1>
@@ -202,7 +208,7 @@ const Finance = () => {
     useEffect(() => {
         const fetchBankNames = async () => {
             try {
-                const response = await axios.get('http://10.0.0.163:8000/records');
+                const response = await axios.get(`${API_URL}:${API_PORT}/records`);
                 const fetchedBankNames = [...new Set(response.data.records.map(record => record.bank))];
                 setBankNames(fetchedBankNames);
             } catch (error) {
@@ -215,7 +221,7 @@ const Finance = () => {
 
     const fetchRecords = async () => {
         try {
-            const response = await axios.get(`http://10.0.0.163:8000/records?bank_name=${bankName}`, {
+            const response = await axios.get(`${API_URL}:${API_PORT}/records?bank_name=${bankName}`, {
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                 },
