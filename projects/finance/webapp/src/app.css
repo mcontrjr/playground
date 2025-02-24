@@ -33,10 +33,6 @@
   }
 }
 
-.my-h2 {
-  width: 100%;
-}
-
 .my-button {
   background-color: #2b6c88; /* Green background */
   color: white; /* White text */
@@ -98,8 +94,9 @@
 }
 
 .my-checkbox {
-  /* display: block; Make the list vertical */
+  display: block; /* Make the list vertical */
   margin: 10px 0; /* Add some margin between checkboxes */
+  margin-right: 10px 0;
 }
 
 .my-checkbox input[type="checkbox"] {

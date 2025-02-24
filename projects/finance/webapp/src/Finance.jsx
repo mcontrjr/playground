@@ -31,8 +31,8 @@ const BankSelector = ({ bankName, bankNames, setBankName, fetchRecords }) => (
 );
 
 const AmountLine = ({ chartData }) => (
-    <div>
-        <h2 className='my-h2'>Amount Over Time</h2>
+    <div style={{ width: '850px' }}>
+        <h2>Purchases</h2>
         <Line
             data={chartData}
             options={{
@@ -77,7 +77,7 @@ const MonthSelector = ({ selectedMonths, setSelectedMonths }) => (
 );
 
 const AmountPie = ({ pieChartData, totalAmount }) => (
-    <div>
+    <div style={{ width: '750px' }}>
         <h2>Total Amount: {totalAmount}</h2>
         <Pie data={pieChartData} />
     </div>
@@ -100,7 +100,7 @@ const RecordTable = ({ sortedRecords, requestSort }) => (
                     <tr key={record.id}>
                         <td>{record.date}</td>
                         <td>{record.description}</td>
-                        <td>${record.amount}</td>
+                        <td>{record.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
                         <td>{record.category}</td>
                     </tr>
                 ))}
@@ -132,6 +132,44 @@ const TabNavigation = ({ activeTab, setActiveTab }) => (
     </div>
 );
 
+const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, requestSort, selectedMonths, setSelectedMonths }) => (
+    <>
+        <TabNavigation
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', textAlign: 'center' }}>
+            <div style={{ flex: '1' }}>
+                <MonthSelector
+                    selectedMonths={selectedMonths}
+                    setSelectedMonths={setSelectedMonths}
+                />
+            </div>
+            <div style={{ flex: '3' }}>
+                {activeTab === 'amountOverTime' && (
+                    <div>
+                        <AmountLine chartData={chartData} />
+                    </div>
+                )}
+                {activeTab === 'distribution' && (
+                    <div>
+                        <AmountPie
+                            pieChartData={pieChartData}
+                            totalAmount={totalAmount}
+                        />
+                    </div>
+                )}
+                {activeTab === 'records' && (
+                    <RecordTable
+                        sortedRecords={sortedRecords}
+                        requestSort={requestSort}
+                    />
+                )}
+            </div>
+        </div>
+    </>
+);
+
 
 const Finance = () => {
     const [bankName, setBankName] = useState('');
@@ -142,6 +180,23 @@ const Finance = () => {
     const [totalAmount, setTotalAmount] = useState(0);
     const [selectedMonths, setSelectedMonths] = useState([]);
     const [activeTab, setActiveTab] = useState('amountOverTime');
+    const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'ascending' });
+
+    const sortedRecords = React.useMemo(() => {
+        let sortableRecords = [...records];
+        if (sortConfig !== null) {
+            sortableRecords.sort((a, b) => {
+                if (a[sortConfig.key] < b[sortConfig.key]) {
+                    return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (a[sortConfig.key] > b[sortConfig.key]) {
+                    return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableRecords;
+    }, [records, sortConfig]);
     
 
     useEffect(() => {
@@ -165,10 +220,15 @@ const Finance = () => {
                     'Access-Control-Allow-Origin': '*',
                 },
             });
-            const fetchedRecords = response.data.records.map(record => ({
+            let fetchedRecords = response.data.records.map(record => ({
                 ...record,
                 amount: parseFloat(record.amount),
             }));
+
+            if (selectedMonths.length > 0) {
+                fetchedRecords = fetchedRecords.filter(record => selectedMonths.includes(record.date.split('-')[1]));
+            }
+
             setRecords(fetchedRecords);
             prepareChartData(fetchedRecords);
         } catch (error) {
@@ -232,24 +292,6 @@ const Finance = () => {
         setTotalAmount(formattedTotalAmount);
     };
 
-    const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'ascending' });
-
-    const sortedRecords = React.useMemo(() => {
-        let sortableRecords = [...records];
-        if (sortConfig !== null) {
-            sortableRecords.sort((a, b) => {
-                if (a[sortConfig.key] < b[sortConfig.key]) {
-                    return sortConfig.direction === 'ascending' ? -1 : 1;
-                }
-                if (a[sortConfig.key] > b[sortConfig.key]) {
-                    return sortConfig.direction === 'ascending' ? 1 : -1;
-                }
-                return 0;
-            });
-        }
-        return sortableRecords;
-    }, [records, sortConfig]);
-
     const requestSort = (key) => {
         let direction = 'ascending';
         if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -268,33 +310,17 @@ const Finance = () => {
                 fetchRecords={fetchRecords}
             />
             {records.length > 0 && (
-                <>
-                    <TabNavigation
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                    />
-                    {activeTab === 'amountOverTime' && (
-                        <>
-                            <AmountLine chartData={chartData} />
-                            <MonthSelector
-                                selectedMonths={selectedMonths}
-                                setSelectedMonths={setSelectedMonths}
-                            />
-                        </>
-                    )}
-                    {activeTab === 'distribution' && (
-                        <AmountPie
-                            pieChartData={pieChartData}
-                            totalAmount={totalAmount}
-                        />
-                    )}
-                    {activeTab === 'records' && (
-                        <RecordTable
-                            sortedRecords={sortedRecords}
-                            requestSort={requestSort}
-                        />
-                    )}
-                </>
+                <FinanceTabs
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    chartData={chartData}
+                    pieChartData={pieChartData}
+                    totalAmount={totalAmount}
+                    sortedRecords={sortedRecords}
+                    requestSort={requestSort}
+                    selectedMonths={selectedMonths}
+                    setSelectedMonths={setSelectedMonths}
+                />
             )}
         </div>
     );
