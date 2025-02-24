@@ -84,7 +84,7 @@
 }
 
 .my-select {
-  width: 100px; /* Ensure the width is 100% */
+  width: 200px; /* Ensure the width is 100% */
   padding: 10px; /* Add padding */
   font-size: 1rem; /* Set font size */
   border: 1px solid #ddd; /* Add border */
@@ -94,7 +94,7 @@
 }
 
 .my-checkbox {
-  display: block; /* Make the list vertical */
+  /* display: block; Make the list vertical */
   margin: 10px 0; /* Add some margin between checkboxes */
 }
 
