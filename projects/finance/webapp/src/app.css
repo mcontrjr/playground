@@ -93,7 +93,7 @@
   font-size: 1rem; /* Set font size */
   border: 1px solid #ddd; /* Add border */
   border-radius: 5px; /* Add rounded corners */
-  margin: 10px 0; /* Add margin */
+  margin: 30px auto; /* Add margin */
   box-sizing: border-box; /* Ensure padding and border are included in the element's total width and height */
 }
 
@@ -145,4 +145,13 @@
 .my-tab-navigation button.active {
   background-color: #103042;
   transform: scale(1.05);
+}
+
+.my-card {
+  background-color: #223e4a; /* Light background color */
+  border: 1px solid #ddd; /* Light border */
+  border-radius: 10px; /* Rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  padding: 20px; /* Padding inside the card */
+  margin: 20px; /* Margin around the card */
 }

@@ -26,7 +26,6 @@ const BankSelector = ({ bankName, bankNames, setBankName, fetchRecords }) => (
                 <option key={name} value={name}>{name}</option>
             ))}
         </select>
-        <button onClick={fetchRecords} className='my-button'>Analyze</button>
     </div>
 );
 

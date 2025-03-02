@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'chart.js/auto';
 import './app.css'
-import {Header, BankSelector, FinanceTabs} from './components/FinanceComponents.jsx';
+import { Header, BankSelector, FinanceTabs } from './components/FinanceComponents.jsx';
 
 const API_URL = process.env.VITE_API_URL;
 const API_PORT = process.env.SERVER_PORT;
@@ -16,6 +16,7 @@ const Finance = () => {
     const [totalAmount, setTotalAmount] = useState(0);
     const [selectedMonths, setSelectedMonths] = useState([]);
     const [activeTab, setActiveTab] = useState('amountOverTime');
+    const [activeFunctionTab, setActiveFunctionTab] = useState('upload');
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'ascending' });
 
     const sortedRecords = React.useMemo(() => {
@@ -136,28 +137,104 @@ const Finance = () => {
         setSortConfig({ key, direction });
     };
 
+    const handleKeyPress = (event) => {
+        if (event.key === 'Enter') {
+            fetchRecords();
+        }
+    };
+
+    useEffect(() => {
+        window.addEventListener('keypress', handleKeyPress);
+        return () => {
+            window.removeEventListener('keypress', handleKeyPress);
+        };
+    }, []);
+
     return (
         <div>
             <Header />
-            <BankSelector
-                bankName={bankName}
-                bankNames={bankNames}
-                setBankName={setBankName}
-                fetchRecords={fetchRecords}
-            />
-            {records.length > 0 && (
-                <FinanceTabs
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    chartData={chartData}
-                    pieChartData={pieChartData}
-                    totalAmount={totalAmount}
-                    sortedRecords={sortedRecords}
-                    requestSort={requestSort}
-                    selectedMonths={selectedMonths}
-                    setSelectedMonths={setSelectedMonths}
-                />
-            )}
+            <div className='my-card'>
+                <div className="tabs">
+                    <button
+                        className={`${activeFunctionTab === 'upload' ? 'active' : ''}`}
+                        onClick={() => setActiveFunctionTab('upload')}
+                    >
+                        Upload
+                    </button>
+                    <button
+                        className={`${activeFunctionTab === 'analyze' ? 'active' : ''}`}
+                        onClick={() => setActiveFunctionTab('analyze')}
+                    >
+                        Analyze
+                    </button>
+                </div>
+                {activeFunctionTab === 'analyze' && records.length > 0 && (
+                    <div>
+                        {/* Add your Analyze tab content here */}
+                        <h2>Analyze</h2>
+                        <p>Analyze your financial data here.</p>
+                        <FinanceTabs
+                            activeTab={activeTab}
+                            setActiveTab={setActiveTab}
+                            chartData={chartData}
+                            pieChartData={pieChartData}
+                            totalAmount={totalAmount}
+                            sortedRecords={sortedRecords}
+                            requestSort={requestSort}
+                            selectedMonths={selectedMonths}
+                            setSelectedMonths={setSelectedMonths}
+                        />
+                    </div>
+                )}
+                {activeFunctionTab === 'analyze' && records.length === 0 && (
+                    <div className>
+                        <BankSelector
+                            bankName={bankName}
+                            bankNames={bankNames}
+                            setBankName={setBankName}
+                            fetchRecords={fetchRecords}
+                        />
+                        <button onClick={fetchRecords} className='my-button'>Analyze</button>
+                    </div>
+                )}
+                {activeFunctionTab === 'upload' && (
+                    <div>
+                        {/* Add your Upload tab content here */}
+                        <h2>Upload</h2>
+                        <p>Upload your financial data here.</p>
+                        <button className="my-button" onClick={() => document.getElementById('fileInput').click()}>
+                            Upload
+                        </button>
+                        <input
+                            type="file"
+                            id="fileInput"
+                            style={{ display: 'none' }}
+                            multiple
+                            onChange={async (e) => {
+                                const files = e.target.files;
+                                const formData = new FormData();
+                                for (let i = 0; i < files.length; i++) {
+                                    formData.append('pdf_files', files[i]);
+                                }
+                                formData.append('bank_name', bankName);
+
+                                try {
+                                    const response = await axios.post(`${API_URL}:${API_PORT}/parse/`, formData, {
+                                        headers: {
+                                            'Content-Type': 'multipart/form-data',
+                                            'Access-Control-Allow-Origin': '*',
+                                        },
+                                    });
+                                    console.log(response.data);
+                                    // Handle the response data as needed
+                                } catch (error) {
+                                    console.error('Error uploading files:', error);
+                                }
+                            }}
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
