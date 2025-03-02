@@ -9,7 +9,7 @@ import os
 import io
 from datetime import datetime
 
-from src.parser import Parser, DiscoverConfig, AmexConfig, CitiConfig
+from src.parser import Parser
 from src.logger import log
 from src.handler import PostgresHandler
 
@@ -63,7 +63,9 @@ async def get_records(bank_name: Optional[str] = Query(None)) -> dict:
     
 @app.get("/plot/")
 async def plot_records(bank_name: Optional[str] = Query(None), month: Optional[int] = Query(None)):
-    
+    """
+    Endpoint to plot records for a specific bank and month.
+    """
     if bank_name is None:
         bank_name = ""
         log.info("No bank name passed in query. Returning all records...")
@@ -136,16 +138,10 @@ async def plot_records(bank_name: Optional[str] = Query(None), month: Optional[i
         return {"error": "An error occurred while processing your request"}
 
 @app.post("/parse/")
-async def parse_upload_file(bank_name: str = File(...), pdf_files: List[UploadFile] = File(...)):
-    log.info(f"Received bank name: '{bank_name}'")
-    bank_name = bank_name.upper()
-    
-    bank_configs = {
-        'DISCOVER': DiscoverConfig(),
-        'AMEX': AmexConfig(),
-        'CITI': CitiConfig()
-    }
-    
+async def parse_upload_file(pdf_files: List[UploadFile] = File(...)):
+    """
+    Endpoint to upload and parse PDF files.
+    """
     log.info(f"Received {len(pdf_files)} files: {[file.filename for file in pdf_files]}")
     
     # Save the uploaded file
@@ -160,7 +156,7 @@ async def parse_upload_file(bank_name: str = File(...), pdf_files: List[UploadFi
             shutil.copyfileobj(pdf_file.file, buffer)
         
         # Process each PDF file
-        statement = Parser(pdf_path, bank_configs[bank_name])
+        statement = Parser(pdf_path)
         handler.save_to_database(statement.purchases)
         
     return {"status": "success", "message": "File processed and data saved to database"}

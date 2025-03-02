@@ -12,22 +12,30 @@ class TestAmexParser:
             with open("tests/mock_amex.txt", "r") as file:
                 mock_extract_text.return_value = file.read()
             yield mock_extract_text
+            
+    @pytest.fixture
+    def mock_bank_config(self):
+        with patch.object(Parser, 'config', new_callable=MagicMock) as mock_bank_config:
+            mock_bank_config.return_value = AmexConfig()
+            yield mock_bank_config
 
     def test_determine_category(self):
-        assert Parser._determine_category("Chevron Gas Station") == "GAS"
-        assert Parser._determine_category("Netflix Subscription") == "STREAMING"
-        assert Parser._determine_category("Unknown Merchant") == "OTHER"
+        assert Parser.determine_category("Chevron Gas Station") == "GAS"
+        assert Parser.determine_category("Netflix Subscription") == "STREAMING"
+        assert Parser.determine_category("Unknown Merchant") == "OTHER"
 
     def test_convert_to_sql_date(self):
         assert Parser.convert_to_sql_date("01/06/25") == "2025-01-06"
 
     def test_extract_currency(self):
-        assert Parser._extract_currency("$123.45") == 123.45
-        assert Parser._extract_currency("-$1,234.56") == -1234.56
-        assert Parser._extract_currency("No currency here") == None
+        assert Parser.extract_currency("$123.45") == 123.45
+        assert Parser.extract_currency("-$1,234.56") == -1234.56
+        assert Parser.extract_currency("No currency here") == None
 
-    def test_parse_purchases_from_text(self, mock_extract_text):
-        parser = Parser("tests/dummy_path.pdf", AmexConfig())
+    def test_parse_purchases_from_text(self, mock_extract_text, mock_bank_config):
+        parser = Parser("tests/dummy_path.pdf")
+        parser.config = mock_bank_config.return_value
+        parser.text = mock_extract_text.return_value
         purchases = parser.parse_purchases_from_text()
 
         expected_purchases = [

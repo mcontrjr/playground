@@ -5,7 +5,8 @@ import re
 import os
 from typing import List
 from datetime import datetime
-from pypdf import PdfReader
+from pypdf import PdfReader, PageObject
+from pypdf.errors import PdfReadError
 from dotenv import load_dotenv
 
 from src.handler import PostgresHandler
@@ -37,6 +38,7 @@ class DatabaseHandler:
 
 # Finance Parser
 class Parser:
+    config = None
     keyword_to_category = {
         'GAS': {'GAS', 'CHEVRON', 'SHELL'},
         'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR'},
@@ -55,22 +57,15 @@ class Parser:
         'SKI': {'SNOW.COM/VAIL'},
     }
     
-    def __init__(self, path: str, config: BankConfig):
+    def __init__(self, path: str):
         self.path = path
         self.text = None
         self.purchases = []
-        self.config = config
-        if isinstance(config, BankConfig):
-            self.config = config
-        else:
-            raise ValueError("Need a valid Config to parse!")
-        
         self.text = self.extract_text_from_pdf(path)
         self.purchases = self.parse_purchases_from_text()
         
-    
     @staticmethod
-    def _determine_category(description: str):
+    def determine_category(description: str):
         description = description.upper()
         for category, keywords in Parser.keyword_to_category.items():
             if any(keyword in description for keyword in keywords):
@@ -89,7 +84,7 @@ class Parser:
         return converted_date.strftime("%Y-%m-%d")
         
     @staticmethod
-    def _extract_currency(text: str):
+    def extract_currency(text: str):
         """
         Extracts currency values from a given text and converts them to floats
 
@@ -106,13 +101,35 @@ class Parser:
             return float(clean_value)
         else:
             return None
-        
+    
+    @staticmethod
+    def determine_bank(pages: List[PageObject]) -> BankConfig:
+        """
+        Determines the bank configuration based on the file content.
+
+        :return: BankConfig - The bank configuration object.
+        """
+        config = None
+        main_pages = pages[0].extract_text() + pages[-1].extract_text()
+        log.debug(f"First and Last page: {main_pages}")
+        if 'American Express' in main_pages:
+            config = AmexConfig()
+        if 'Citi' in main_pages:
+            config = CitiConfig()
+        if 'Discover Bank' in main_pages:
+            config = DiscoverConfig()
+        if config is None:
+            raise Exception("Could not determine bank, check the first and last pages for keywords.")
+        return config
+     
     def extract_text_from_pdf(self, pdf_path: str) -> str:
         log.info(f"Opening PDF file: {pdf_path}")
         try:
             text = ""
             with open(pdf_path, 'rb') as file:
                 pdf_reader = PdfReader(file)
+                self.config = self.determine_bank(pdf_reader.pages)
+                log.info(f"Bank config determined: {self.config.bank}")
                 log.info(f"Found {len(pdf_reader.pages)} pages in statement. Starting on page {self.config.start_index + 1}")
                 for page in pdf_reader.pages[self.config.start_index:]:
                     new_text = page.extract_text()
@@ -120,6 +137,9 @@ class Parser:
                     text += new_text + "\n"
             log.info(f"Successfully extracted text from PDF: {pdf_path}")
             return text
+        except PdfReadError as e:
+            log.error(f"PdfReadError: {e}. Check if pdf file is corrupted and in a valid format.")
+            raise e
         except Exception as e:
             log.error(f"Error extracting text from PDF: {e}")
             raise e
@@ -152,11 +172,11 @@ class Parser:
                         amount_line = " ".join([l for l in lines[i:i+10]]) # (lines[i] + " " + lines[i + 1]).strip()
                         log.debug(f"Amount Line: {amount_line}")
 
-                        amount = self._extract_currency(amount_line)
+                        amount = self.extract_currency(amount_line)
                         if amount is None or amount < 0:
                             continue
 
-                        category = self._determine_category(description)
+                        category = self.determine_category(description)
                         log.info(f"Found a purchase on {date_str} under {category} for ${amount} with description: \n\t{description}\n")
                         purchases.append({
                             'Bank': self.config.bank,

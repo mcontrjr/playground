@@ -6,15 +6,17 @@ import 'chart.js/auto';
 import '../app.css'
 
 const Header = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-        <h1>MyFinance</h1>
-        <a href="https://github.com/mcontrjr/playground/tree/main/projects/finance" target="_blank">
-            <img src={walletLogo} className="logo react" alt="Wallet logo" />
-        </a>
-    </div>
+    <>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <h1>MyParser</h1>
+            <a href="https://github.com/mcontrjr/playground/tree/main/projects/finance" target="_blank">
+                <img src={walletLogo} className="logo react" alt="Wallet logo" />
+            </a>
+        </div>
+    </>
 );
 
-const BankSelector = ({ bankName, bankNames, setBankName, fetchRecords }) => (
+const BankSelector = ({ bankName, bankNames, setBankName }) => (
     <div>
         <select
             value={bankName}
@@ -51,7 +53,7 @@ const AmountLine = ({ chartData }) => (
     </div>
 );
 
-const MonthSelector = ({ selectedMonths, setSelectedMonths }) => (
+const MonthSelector = ({ selectedMonths, setSelectedMonths, fetchRecords }) => (
     <div>
         <h3>Select Months</h3>
         {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((month) => (
@@ -67,6 +69,7 @@ const MonthSelector = ({ selectedMonths, setSelectedMonths }) => (
                                 ? prev.filter((month) => month !== value)
                                 : [...prev, value]
                         );
+                        fetchRecords();
                     }}
                 />
                 {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
@@ -131,7 +134,7 @@ const TabNavigation = ({ activeTab, setActiveTab }) => (
     </div>
 );
 
-const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, requestSort, selectedMonths, setSelectedMonths }) => (
+const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, requestSort, selectedMonths, setSelectedMonths, fetchRecords }) => (
     <>
         <TabNavigation
             activeTab={activeTab}
@@ -142,6 +145,7 @@ const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAm
                 <MonthSelector
                     selectedMonths={selectedMonths}
                     setSelectedMonths={setSelectedMonths}
+                    fetchRecords={fetchRecords}
                 />
             </div>
             <div style={{ flex: '3' }}>
@@ -169,4 +173,11 @@ const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAm
     </>
 );
 
-export { Header, BankSelector, FinanceTabs };
+const SupportBanks = () => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <h3>Supported Banks</h3>
+            <img src={amexLogo} className="my-bank-logo" alt="American Express logo" />
+    </div>
+);
+
+export { Header, BankSelector, FinanceTabs, SupportBanks };

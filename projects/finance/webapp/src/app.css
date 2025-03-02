@@ -5,6 +5,13 @@
   text-align: center;
 }
 
+.my-bank-logo {
+  height: 2em;
+  padding: 1em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

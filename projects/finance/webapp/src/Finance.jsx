@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'chart.js/auto';
 import './app.css'
-import { Header, BankSelector, FinanceTabs } from './components/FinanceComponents.jsx';
+import { Header, BankSelector, FinanceTabs, SupportBanks } from './components/FinanceComponents.jsx';
 
 const API_URL = process.env.VITE_API_URL;
 const API_PORT = process.env.SERVER_PORT;
@@ -10,6 +10,8 @@ const API_PORT = process.env.SERVER_PORT;
 const Finance = () => {
     const [bankName, setBankName] = useState('');
     const [bankNames, setBankNames] = useState([]);
+    const [uploadMessage, setUploadMessage] = useState('Upload your financial data here.');
+    const [analyzeMessage, setAnalyzeMessage] = useState('No records to analyze. Upload in the next tab!');
     const [records, setRecords] = useState([]);
     const [chartData, setChartData] = useState({});
     const [pieChartData, setPieChartData] = useState({});
@@ -48,6 +50,7 @@ const Finance = () => {
         };
 
         fetchBankNames();
+        fetchRecords();
     }, []);
 
     const fetchRecords = async () => {
@@ -65,6 +68,8 @@ const Finance = () => {
             if (selectedMonths.length > 0) {
                 fetchedRecords = fetchedRecords.filter(record => selectedMonths.includes(record.date.split('-')[1]));
             }
+            console.log('Fetched records:', fetchedRecords);
+            console.log('Selected months:', selectedMonths);
 
             setRecords(fetchedRecords);
             prepareChartData(fetchedRecords);
@@ -183,6 +188,7 @@ const Finance = () => {
                             requestSort={requestSort}
                             selectedMonths={selectedMonths}
                             setSelectedMonths={setSelectedMonths}
+                            fetchRecords={fetchRecords}
                         />
                     </div>
                 )}
@@ -192,16 +198,15 @@ const Finance = () => {
                             bankName={bankName}
                             bankNames={bankNames}
                             setBankName={setBankName}
-                            fetchRecords={fetchRecords}
                         />
+                        <p>{analyzeMessage}</p>
                         <button onClick={fetchRecords} className='my-button'>Analyze</button>
                     </div>
                 )}
                 {activeFunctionTab === 'upload' && (
                     <div>
-                        {/* Add your Upload tab content here */}
                         <h2>Upload</h2>
-                        <p>Upload your financial data here.</p>
+                        <p>{uploadMessage}</p>
                         <button className="my-button" onClick={() => document.getElementById('fileInput').click()}>
                             Upload
                         </button>
@@ -216,7 +221,6 @@ const Finance = () => {
                                 for (let i = 0; i < files.length; i++) {
                                     formData.append('pdf_files', files[i]);
                                 }
-                                formData.append('bank_name', bankName);
 
                                 try {
                                     const response = await axios.post(`${API_URL}:${API_PORT}/parse/`, formData, {
@@ -226,7 +230,8 @@ const Finance = () => {
                                         },
                                     });
                                     console.log(response.data);
-                                    // Handle the response data as needed
+                                    setUploadMessage('Files uploaded!');
+                                    fetchRecords();
                                 } catch (error) {
                                     console.error('Error uploading files:', error);
                                 }
@@ -235,6 +240,7 @@ const Finance = () => {
                     </div>
                 )}
             </div>
+            <SupportBanks />
         </div>
     );
 };
