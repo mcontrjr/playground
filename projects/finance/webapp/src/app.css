@@ -161,4 +161,5 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
   padding: 20px; /* Padding inside the card */
   margin: 20px; /* Margin around the card */
+  width: 1000px; /* Full width */
 }

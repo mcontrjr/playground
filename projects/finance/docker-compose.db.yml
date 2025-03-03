@@ -12,10 +12,11 @@ services:
       - pg_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./sql/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./logs/pg_log:/var/lib/postgresql/data
+      - ./logs/pg_log:/var/lib/postgresql/data/pg_log
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     ports:
       - "${DB_PORT}:${DB_PORT}"
 
 volumes:
   pg_data:
+    name: finance_pg_data

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'chart.js/auto';
 import './app.css'
-import { Header, BankSelector, FinanceTabs, SupportBanks } from './components/FinanceComponents.jsx';
+import { Header, BankSelector, FinanceTabs, SupportedBanks } from './components/FinanceComponents.jsx';
 
 const API_URL = process.env.VITE_API_URL;
 const API_PORT = process.env.SERVER_PORT;
@@ -16,7 +16,7 @@ const Finance = () => {
     const [chartData, setChartData] = useState({});
     const [pieChartData, setPieChartData] = useState({});
     const [totalAmount, setTotalAmount] = useState(0);
-    const [selectedMonths, setSelectedMonths] = useState([]);
+    const [selectedMonths, setSelectedMonths] = useState(['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']);
     const [activeTab, setActiveTab] = useState('amountOverTime');
     const [activeFunctionTab, setActiveFunctionTab] = useState('upload');
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'ascending' });
@@ -51,7 +51,7 @@ const Finance = () => {
 
         fetchBankNames();
         fetchRecords();
-    }, []);
+    }, [selectedMonths]);
 
     const fetchRecords = async () => {
         try {
@@ -70,6 +70,10 @@ const Finance = () => {
             }
             console.log('Fetched records:', fetchedRecords);
             console.log('Selected months:', selectedMonths);
+
+            if (fetchedRecords.length === 0) {
+                setAnalyzeMessage('No records for this month. Please select another month.');
+            }
 
             setRecords(fetchedRecords);
             prepareChartData(fetchedRecords);
@@ -168,12 +172,15 @@ const Finance = () => {
                     </button>
                     <button
                         className={`${activeFunctionTab === 'analyze' ? 'active' : ''}`}
-                        onClick={() => setActiveFunctionTab('analyze')}
+                        onClick={() => {
+                            setActiveFunctionTab('analyze')
+                            setUploadMessage('Upload your financial data here.')
+                        }}
                     >
                         Analyze
                     </button>
                 </div>
-                {activeFunctionTab === 'analyze' && records.length > 0 && (
+                {activeFunctionTab === 'analyze' && (
                     <div>
                         {/* Add your Analyze tab content here */}
                         <h2>Analyze</h2>
@@ -188,19 +195,7 @@ const Finance = () => {
                             requestSort={requestSort}
                             selectedMonths={selectedMonths}
                             setSelectedMonths={setSelectedMonths}
-                            fetchRecords={fetchRecords}
                         />
-                    </div>
-                )}
-                {activeFunctionTab === 'analyze' && records.length === 0 && (
-                    <div className>
-                        <BankSelector
-                            bankName={bankName}
-                            bankNames={bankNames}
-                            setBankName={setBankName}
-                        />
-                        <p>{analyzeMessage}</p>
-                        <button onClick={fetchRecords} className='my-button'>Analyze</button>
                     </div>
                 )}
                 {activeFunctionTab === 'upload' && (
@@ -240,7 +235,7 @@ const Finance = () => {
                     </div>
                 )}
             </div>
-            <SupportBanks />
+            <SupportedBanks />
         </div>
     );
 };

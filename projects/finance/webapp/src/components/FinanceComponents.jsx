@@ -2,6 +2,7 @@ import React from 'react';
 import { Line, Pie } from 'react-chartjs-2';
 import walletLogo from '../assets/wallet.svg'
 import amexLogo from '../assets/amex.svg'
+import noPurchases from '../assets/no-purchases.svg'
 import 'chart.js/auto';
 import '../app.css'
 
@@ -32,7 +33,7 @@ const BankSelector = ({ bankName, bankNames, setBankName }) => (
 );
 
 const AmountLine = ({ chartData }) => (
-    <div style={{ width: '850px' }}>
+    <div style={{ width: '100%' }}>
         <h2>Purchases</h2>
         <Line
             data={chartData}
@@ -53,33 +54,37 @@ const AmountLine = ({ chartData }) => (
     </div>
 );
 
-const MonthSelector = ({ selectedMonths, setSelectedMonths, fetchRecords }) => (
-    <div>
-        <h3>Select Months</h3>
-        {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((month) => (
-            <label key={month} className='my-checkbox'>
-                <input
-                    type="checkbox"
-                    value={month}
-                    checked={selectedMonths.includes(month)}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        setSelectedMonths((prev) =>
-                            prev.includes(value)
-                                ? prev.filter((month) => month !== value)
-                                : [...prev, value]
-                        );
-                        fetchRecords();
-                    }}
-                />
-                {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
-            </label>
-        ))}
+const MonthSelector = ({ selectedMonths, setSelectedMonths }) => (
+    <div style={{ width: '80%' }}>
+        <div style={{ textAlign: 'left' }}>
+            <h3>Select Months</h3>
+            {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((month) => (
+                <label key={month} className='my-checkbox' style={{ display: 'block' }}>
+                    <input
+                        type="checkbox"
+                        value={month}
+                        checked={selectedMonths.includes(month)}
+                        onChange={({ target: { value, checked } }) => {
+                            console.log(`Month ${value} is now ${checked ? 'checked' : 'unchecked'}`);
+                            setSelectedMonths(prev => {
+                                const newMonths = checked 
+                                    ? [...prev, value] 
+                                    : prev.filter(month => month !== value);
+                                console.log('Updated selected months:', newMonths);
+                                return newMonths;
+                            });
+                            console.log('Selected months:', selectedMonths);
+                        }}
+                    />
+                    {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
+                </label>
+            ))}
+        </div>
     </div>
 );
 
 const AmountPie = ({ pieChartData, totalAmount }) => (
-    <div style={{ width: '750px' }}>
+    <div style={{ width: '100%' }}>
         <h2>Total Amount: {totalAmount}</h2>
         <Pie data={pieChartData} />
     </div>
@@ -134,7 +139,7 @@ const TabNavigation = ({ activeTab, setActiveTab }) => (
     </div>
 );
 
-const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, requestSort, selectedMonths, setSelectedMonths, fetchRecords }) => (
+const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, requestSort, selectedMonths, setSelectedMonths }) => (
     <>
         <TabNavigation
             activeTab={activeTab}
@@ -145,39 +150,47 @@ const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAm
                 <MonthSelector
                     selectedMonths={selectedMonths}
                     setSelectedMonths={setSelectedMonths}
-                    fetchRecords={fetchRecords}
                 />
             </div>
-            <div style={{ flex: '3' }}>
-                {activeTab === 'amountOverTime' && (
+            <div style={{ flex: '3', width: '100%' }}>
+                {sortedRecords.length === 0 ? (
                     <div>
-                        <AmountLine chartData={chartData} />
+                        <h3>No purchases for selected months</h3>
+                        <img src={noPurchases} className="my-no-purchases" alt="No purchases" width={250} />
                     </div>
-                )}
-                {activeTab === 'distribution' && (
-                    <div>
-                        <AmountPie
-                            pieChartData={pieChartData}
-                            totalAmount={totalAmount}
-                        />
-                    </div>
-                )}
-                {activeTab === 'records' && (
-                    <RecordTable
-                        sortedRecords={sortedRecords}
-                        requestSort={requestSort}
-                    />
+                ) : (
+                    <>
+                        {activeTab === 'amountOverTime' && (
+                            <div>
+                                <AmountLine chartData={chartData} />
+                            </div>
+                        )}
+                        {activeTab === 'distribution' && (
+                            <div>
+                                <AmountPie
+                                    pieChartData={pieChartData}
+                                    totalAmount={totalAmount}
+                                />
+                            </div>
+                        )}
+                        {activeTab === 'records' && (
+                            <RecordTable
+                                sortedRecords={sortedRecords}
+                                requestSort={requestSort}
+                            />
+                        )}
+                    </>
                 )}
             </div>
         </div>
     </>
 );
 
-const SupportBanks = () => (
+const SupportedBanks = () => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             <h3>Supported Banks</h3>
             <img src={amexLogo} className="my-bank-logo" alt="American Express logo" />
     </div>
 );
 
-export { Header, BankSelector, FinanceTabs, SupportBanks };
+export { Header, BankSelector, FinanceTabs, SupportedBanks };
