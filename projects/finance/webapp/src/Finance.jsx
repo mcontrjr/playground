@@ -4,8 +4,10 @@ import 'chart.js/auto';
 import './app.css'
 import { Header, BankSelector, FinanceTabs, SupportedBanks } from './components/FinanceComponents.jsx';
 
-const API_URL = process.env.VITE_API_URL;
-const API_PORT = process.env.SERVER_PORT;
+const API_URL = process.env.API_URL;
+const SERVER_PORT = process.env.SERVER_PORT;
+console.log('API_URL:', API_URL);
+console.log('SERVER_PORT:', SERVER_PORT);
 
 const Finance = () => {
     const [bankName, setBankName] = useState('');
@@ -41,7 +43,7 @@ const Finance = () => {
     useEffect(() => {
         const fetchBankNames = async () => {
             try {
-                const response = await axios.get(`${API_URL}:${API_PORT}/records`);
+                const response = await axios.get(`${API_URL}:${SERVER_PORT}/records`);
                 const fetchedBankNames = [...new Set(response.data.records.map(record => record.bank))];
                 setBankNames(fetchedBankNames);
             } catch (error) {
@@ -55,7 +57,7 @@ const Finance = () => {
 
     const fetchRecords = async () => {
         try {
-            const response = await axios.get(`${API_URL}:${API_PORT}/records?bank_name=${bankName}`, {
+            const response = await axios.get(`${API_URL}:${SERVER_PORT}/records?bank_name=${bankName}`, {
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                 },
@@ -218,7 +220,7 @@ const Finance = () => {
                                 }
 
                                 try {
-                                    const response = await axios.post(`${API_URL}:${API_PORT}/parse/`, formData, {
+                                    const response = await axios.post(`${API_URL}:${SERVER_PORT}/parse/`, formData, {
                                         headers: {
                                             'Content-Type': 'multipart/form-data',
                                             'Access-Control-Allow-Origin': '*',

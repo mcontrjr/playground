@@ -9,10 +9,14 @@ dotenv.config({ path: resolve(__dirname, '../.env') });
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,
-    port: process.env.VITE_API_PORT || 3000,
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    watch: {
+      usePolling: true,
+    }
   },
   define: {
-    'process.env': process.env,
-  },
+    'process.env': process.env
+  }
 })

@@ -47,7 +47,7 @@ fi
 
 # Stop all running containers
 echo "Stopping running containers..."
-docker compose down
+docker compose down --remove-orphans
 
 # Remove any existing pg_log directory
 echo "Removing existing pg_log directory..."
@@ -61,6 +61,9 @@ mkdir -p ./logs/pg_log
 echo "Setting correct permissions..."
 sudo chown -R $(whoami):$(whoami) ./logs/pg_log
 sudo chmod -R 750 ./logs/pg_log
+
+# Export environment variables
+export $(grep -v '\#' .env | xargs)
 
 # Start the containers
 echo "Starting containers with $COMPOSE_FILE..."
