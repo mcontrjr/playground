@@ -65,6 +65,7 @@ const MonthSelector = ({ selectedMonths, setSelectedMonths }) => (
                     <input
                         type="checkbox"
                         value={month}
+                        name={month}
                         checked={selectedMonths.includes(month)}
                         onChange={({ target: { value, checked } }) => {
                             console.log(`Month ${value} is now ${checked ? 'checked' : 'unchecked'}`);
