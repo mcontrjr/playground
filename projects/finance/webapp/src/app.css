@@ -100,8 +100,10 @@
   font-size: 1rem; /* Set font size */
   border: 1px solid #ddd; /* Add border */
   border-radius: 5px; /* Add rounded corners */
-  margin: 30px auto; /* Add margin */
+  margin: 10px auto; /* Add margin */
+  margin-top: 0;
   box-sizing: border-box; /* Ensure padding and border are included in the element's total width and height */
+  background-color: #103042;
 }
 
 .my-checkbox {

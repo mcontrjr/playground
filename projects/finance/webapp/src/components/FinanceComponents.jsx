@@ -1,4 +1,5 @@
-import React from 'react';
+/* eslint-disable react/prop-types */
+import { useState } from 'react';
 import { Line, Pie } from 'react-chartjs-2';
 import walletLogo from '../assets/wallet.svg'
 import amexLogo from '../assets/amex.svg'
@@ -19,6 +20,7 @@ const Header = () => (
 
 const BankSelector = ({ bankName, bankNames, setBankName }) => (
     <div>
+        <p>Bank Selector</p>
         <select
             value={bankName}
             onChange={(e) => setBankName(e.target.value)}
@@ -90,31 +92,46 @@ const AmountPie = ({ pieChartData, totalAmount }) => (
     </div>
 );
 
-const RecordTable = ({ sortedRecords, requestSort }) => (
-    <div>
-        <h2>Records</h2>
-        <table className="my-table">
-            <thead>
-                <tr>
-                    <th onClick={() => requestSort('date')}>Date</th>
-                    <th onClick={() => requestSort('description')}>Description</th>
-                    <th onClick={() => requestSort('amount')}>Amount</th>
-                    <th onClick={() => requestSort('category')}>Category</th>
-                </tr>
-            </thead>
-            <tbody>
-                {sortedRecords.map((record) => (
-                    <tr key={record.id}>
-                        <td>{record.date}</td>
-                        <td>{record.description}</td>
-                        <td>{record.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
-                        <td>{record.category}</td>
+const RecordTable = ({ sortedRecords, requestSort }) => {
+    const [searchText, setSearchText] = useState('');
+
+    const filteredRecords = sortedRecords.filter(record =>
+        record.description.toLowerCase().includes(searchText.toLowerCase())
+    );
+
+    return (
+        <div>
+            <h2>Records</h2>
+            <input
+                type="text"
+                className="my-select"
+                placeholder="Search records..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+            />
+            <table className="my-table">
+                <thead>
+                    <tr>
+                        <th onClick={() => requestSort('date')}>Date</th>
+                        <th onClick={() => requestSort('description')}>Description</th>
+                        <th onClick={() => requestSort('amount')}>Amount</th>
+                        <th onClick={() => requestSort('category')}>Category</th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+                </thead>
+                <tbody>
+                    {filteredRecords.map((record) => (
+                        <tr key={record.id}>
+                            <td>{record.date}</td>
+                            <td>{record.description}</td>
+                            <td>{record.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+                            <td>{record.category}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 const TabNavigation = ({ activeTab, setActiveTab }) => (
     <div className="my-tab-navigation">
@@ -139,7 +156,7 @@ const TabNavigation = ({ activeTab, setActiveTab }) => (
     </div>
 );
 
-const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, requestSort, selectedMonths, setSelectedMonths }) => (
+const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, searchText, setSearchText, requestSort, selectedMonths, setSelectedMonths }) => (
     <>
         <TabNavigation
             activeTab={activeTab}
@@ -147,6 +164,13 @@ const FinanceTabs = ({ activeTab, setActiveTab, chartData, pieChartData, totalAm
         />
         <div style={{ display: 'flex', justifyContent: 'center', textAlign: 'center' }}>
             <div style={{ flex: '1' }}>
+                <BankSelector 
+                    bankName={bankName}
+                    bankNames={bankNames}
+                    setBankName={setBankName}
+                    searchText={searchText}
+                    setSearchText={setSearchText}
+                />
                 <MonthSelector
                     selectedMonths={selectedMonths}
                     setSelectedMonths={setSelectedMonths}

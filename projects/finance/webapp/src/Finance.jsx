@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'chart.js/auto';
 import './app.css'
-import { Header, BankSelector, FinanceTabs, SupportedBanks } from './components/FinanceComponents.jsx';
+import { Header, FinanceTabs, SupportedBanks } from './components/FinanceComponents.jsx';
 
-const API_URL = process.env.API_URL;
-const SERVER_PORT = process.env.SERVER_PORT;
+const API_URL = "http://10.0.0.163";
+const SERVER_PORT = "8000";
 console.log('API_URL:', API_URL);
 console.log('SERVER_PORT:', SERVER_PORT);
 
@@ -25,6 +25,7 @@ const Finance = () => {
 
     const sortedRecords = React.useMemo(() => {
         let sortableRecords = [...records];
+
         if (sortConfig !== null) {
             sortableRecords.sort((a, b) => {
                 if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -53,7 +54,7 @@ const Finance = () => {
 
         fetchBankNames();
         fetchRecords();
-    }, [selectedMonths]);
+    });
 
     const fetchRecords = async () => {
         try {
@@ -70,8 +71,6 @@ const Finance = () => {
             if (selectedMonths.length > 0) {
                 fetchedRecords = fetchedRecords.filter(record => selectedMonths.includes(record.date.split('-')[1]));
             }
-            console.log('Fetched records:', fetchedRecords);
-            console.log('Selected months:', selectedMonths);
 
             if (fetchedRecords.length === 0) {
                 setAnalyzeMessage('No records for this month. Please select another month.');
@@ -165,7 +164,7 @@ const Finance = () => {
         <div>
             <Header />
             <div className='my-card'>
-                <div className="tabs">
+                <div className="my-tab-navigation">
                     <button
                         className={`${activeFunctionTab === 'upload' ? 'active' : ''}`}
                         onClick={() => setActiveFunctionTab('upload')}
@@ -186,9 +185,12 @@ const Finance = () => {
                     <div>
                         {/* Add your Analyze tab content here */}
                         <h2>Analyze</h2>
-                        <p>Analyze your financial data here.</p>
+                        <p>{analyzeMessage}</p>
                         <FinanceTabs
                             activeTab={activeTab}
+                            bankName={bankName}
+                            bankNames={bankNames}
+                            setBankName={setBankName}
                             setActiveTab={setActiveTab}
                             chartData={chartData}
                             pieChartData={pieChartData}
