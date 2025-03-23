@@ -54,7 +54,7 @@ const Finance = () => {
 
         fetchBankNames();
         fetchRecords();
-    }, [bankName]);
+    }, [bankName, records]);
 
     const fetchRecords = async () => {
         try {
