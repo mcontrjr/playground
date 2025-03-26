@@ -3,6 +3,29 @@
 # Initialize variables
 COMPOSE_FILE="docker-compose.yml"
 SHOW_HELP=false
+export $(grep -v '\#' .env | xargs)
+
+backup_db() {
+    if docker container ls --filter "name=finance_postgres" --format '{{.Names}}' | grep -q .; then
+        echo "Creating database backup..."
+        docker exec finance_postgres pg_dump -U $DB_USER $DB_NAME > backups/backup.sql
+        timestamp=$(date +"%m-%d-%y_%T")
+        cp backups/backup.sql backups/backup_$timestamp.sql
+        echo "Backup created as backup.sql"
+    else
+        echo "finance_postgres container is not running, skipping backup"
+    fi
+}
+
+teardown() {
+    backup_db
+
+    echo "Stopping running containers..."
+    docker compose -f $COMPOSE_FILE down --remove-orphans
+
+    echo "Removing existing pg_log directory..."
+    sudo rm -rf ./logs/pg_log
+}
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -15,9 +38,9 @@ while [[ $# -gt 0 ]]; do
             COMPOSE_FILE="docker-compose.dev.yml"
             shift
             ;;
-        --db)
-            COMPOSE_FILE="docker-compose.db.yml"
-            shift
+        --down)
+            teardown
+            exit 0
             ;;
         *)
             echo "Unknown option: $1"
@@ -45,13 +68,7 @@ EOF
     exit 0
 fi
 
-# Stop all running containers
-echo "Stopping running containers..."
-docker compose down --remove-orphans
-
-# Remove any existing pg_log directory
-echo "Removing existing pg_log directory..."
-sudo rm -rf ./logs/pg_log
+teardown
 
 # Create necessary directories
 echo "Creating new pg_log directory..."
@@ -62,9 +79,6 @@ echo "Setting correct permissions..."
 sudo chown -R $(whoami):$(whoami) ./logs/pg_log
 sudo chmod -R 750 ./logs/pg_log
 
-# Export environment variables
-export $(grep -v '\#' .env | xargs)
-
 # Start the containers
 echo "Starting containers with $COMPOSE_FILE..."
 docker compose -f $COMPOSE_FILE up -d
@@ -72,3 +86,9 @@ docker compose -f $COMPOSE_FILE up -d
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to be ready..."
 sleep 10
+
+# Restore db from last backup
+echo "Restoring database from backup..."
+docker exec -i finance_postgres psql -U $DB_USER $DB_NAME -c "DROP TABLE IF EXISTS bank_statements CASCADE;" > /dev/null 2>&1
+docker exec -i finance_postgres psql -U $DB_USER $DB_NAME < backups/backup.sql > /dev/null 2>&1
+echo "Restore completed"

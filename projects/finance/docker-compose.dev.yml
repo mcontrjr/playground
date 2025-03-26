@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - finance_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./sql/postgresql.conf:/etc/postgresql/postgresql.conf
       - ./logs/pg_log:/var/lib/postgresql/data
@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: finance_api
+    container_name: finance_server
     restart: always
     environment:
       DB_USER: ${DB_USER}
@@ -61,4 +61,6 @@ networks:
     driver: bridge
 
 volumes:
-  pg_data:
+  fiannce_data:
+    name: finance_data
+    external: false
