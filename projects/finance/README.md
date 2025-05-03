@@ -13,7 +13,7 @@ This is a full-stack financial management application built using PostgreSQL, Fa
 
 Look at your statement records in a time series or a pie chart and toggle the months and categories. You can also search your records for keywords in the the description.
 
-<div style="display: flex; justify-content: space-between; align-items: center;">
+<div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
     <img src="images/line.png" alt="Line Chart" width="250"/>
     <img src="images/pie.png" alt="Pie Chart" width="250"/>
     <img src="images/records.png" alt="Records View" width="250"/>
