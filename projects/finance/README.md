@@ -1,7 +1,23 @@
-# Finance Web Application
+<div align="center">
+    <img src="images/header.png" alt="Finance Web Application Header" width="300"/>
+</div>
 
 ## Overview
 This is a full-stack financial management application built using PostgreSQL, FastAPI, and a modern web frontend. The application runs in Docker containers for easy deployment and development.
+
+<div align="center">
+    <img src="images/main.png" alt="Upload Images" width="300"/>
+</div>
+
+## Analysis
+
+Look at your statement records in a time series or a pie chart and toggle the months and categories. You can also search your records for keywords in the the description.
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <img src="images/line.png" alt="Line Chart" width="250"/>
+    <img src="images/pie.png" alt="Pie Chart" width="250"/>
+    <img src="images/records.png" alt="Records View" width="250"/>
+</div>
 
 ## Prerequisites
 - Docker
@@ -62,3 +78,15 @@ Required environment variables:
 - `SERVER_PORT`
 - `FRONTEND_PORT`
 - `API_URL`
+
+Example
+
+```bash
+DB_NAME=finance
+DB_USER=user
+DB_PASSWORD=1234
+DB_PORT=5432
+SERVER_PORT=8000
+API_URL=http://localhost
+FRONTEND_PORT=5173
+```

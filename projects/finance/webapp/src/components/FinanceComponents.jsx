@@ -40,6 +40,24 @@ const AmountLine = ({ chartData }) => (
         <Line
             data={chartData}
             options={{
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#49585c'
+                        },
+                        ticks: {
+                            color: '#b8d8e0'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: '#49585c'
+                        },
+                        ticks: {
+                            color: '#b8d8e0'
+                        }
+                    }
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -48,6 +66,11 @@ const AmountLine = ({ chartData }) => (
                                 const amount = context.raw;
                                 return `${description}: $${amount}`;
                             }
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: '#509aad'
                         }
                     }
                 }
@@ -89,7 +112,18 @@ const MonthSelector = ({ selectedMonths, setSelectedMonths }) => (
 const AmountPie = ({ pieChartData, totalAmount }) => (
     <div style={{ width: '100%' }}>
         <h2>Total Amount: {totalAmount}</h2>
-        <Pie data={pieChartData} />
+        <Pie 
+            data={pieChartData} 
+            options={{
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white'
+                        }
+                    }
+                }
+            }}
+        />
     </div>
 );
 
