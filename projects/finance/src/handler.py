@@ -71,6 +71,7 @@ class PostgresHandler:
         conn = None
         records = []
         try:
+            print(self.config)
             conn = psycopg2.connect(**self.config)
             cur = conn.cursor()
             

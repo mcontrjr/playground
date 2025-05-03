@@ -39,22 +39,6 @@ const Finance = () => {
         }
         return sortableRecords;
     }, [records, sortConfig]);
-    
-
-    useEffect(() => {
-        const fetchBankNames = async () => {
-            try {
-                const response = await axios.get(`${API_URL}:${SERVER_PORT}/records`);
-                const fetchedBankNames = [...new Set(response.data.records.map(record => record.bank))];
-                setBankNames(fetchedBankNames);
-            } catch (error) {
-                console.error('Error fetching bank names:', error);
-            }
-        };
-
-        fetchBankNames();
-        fetchRecords();
-    }, [bankName, records]);
 
     const fetchRecords = async () => {
         try {
@@ -82,6 +66,21 @@ const Finance = () => {
             console.error('Error fetching records:', error);
         }
     };
+    
+    useEffect(() => {
+        const fetchBankNames = async () => {
+            try {
+                const response = await axios.get(`${API_URL}:${SERVER_PORT}/records`);
+                const fetchedBankNames = [...new Set(response.data.records.map(record => record.bank))];
+                setBankNames(fetchedBankNames);
+            } catch (error) {
+                console.error('Error fetching bank names:', error);
+            }
+        };
+
+        fetchBankNames();
+        fetchRecords();
+    }, [selectedMonths, bankName]);
 
     const prepareChartData = (records) => {
         const filteredRecords = selectedMonths.length > 0
