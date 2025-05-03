@@ -11,7 +11,8 @@ This is a full-stack financial management application built using PostgreSQL, Fa
 
 ## Analysis
 
-Look at your statement records in a time series or a pie chart and toggle the months and categories. You can also search your records for keywords in the the description.
+Look at your statement records in a time series or a pie chart while filtering months and category.
+You can also search your records for keywords in the the description.
 
 <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
     <img src="images/line.png" alt="Line Chart" width="250"/>
@@ -59,15 +60,6 @@ Options:
 - PostgreSQL logging configuration
 - Containerized environment
 
-## Directory Structure
-```
-.
-├── backups/          # Database backups
-├── logs/            # Application logs
-├── sql/             # SQL initialization files
-├── webapp/          # Frontend application
-└── docker-compose.yml
-```
 
 ## Environment Variables
 Required environment variables:
