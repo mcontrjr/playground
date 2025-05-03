@@ -42,7 +42,7 @@ const Finance = () => {
 
     const fetchRecords = async () => {
         try {
-            const response = await axios.get(`${API_URL}:${SERVER_PORT}/records?bank_name=${bankName}`, {
+            const response = await axios.get(`${API_URL}:${SERVER_PORT}/records`, {
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                 },
@@ -80,9 +80,11 @@ const Finance = () => {
 
         fetchBankNames();
         fetchRecords();
+        // fix this ? 
     }, [selectedMonths, bankName]);
 
     const prepareChartData = (records) => {
+        // understand this, how much of this is needed
         const filteredRecords = selectedMonths.length > 0
             ? records.filter(record => selectedMonths.includes(record.date.split('-')[1]))
             : records;
@@ -151,7 +153,7 @@ const Finance = () => {
             fetchRecords();
         }
     };
-
+    // can we merge this in with another useEffect? 
     useEffect(() => {
         window.addEventListener('keypress', handleKeyPress);
         return () => {
@@ -159,6 +161,7 @@ const Finance = () => {
         };
     }, []);
 
+    // use more components!
     return (
         <div>
             <Header />
