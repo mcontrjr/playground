@@ -32,7 +32,7 @@ services:
     depends_on:
       - db
     volumes:
-      - .:/app
+      - ./server:/app
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${SERVER_PORT}", "--reload"]
 
   frontend:

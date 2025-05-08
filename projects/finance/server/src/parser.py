@@ -16,10 +16,11 @@ load_dotenv()
 
 # Bank Configurations
 class BankConfig():
-    def __init__(self, bank: str, start_index: int = 0):
+    def __init__(self, bank: str, start_index: int = 0, date_pattern: str = r'^\d{2}\/\d{2}\/\d{2}'):
         self.bank = bank
         self.start_index = start_index
-        
+        self.date_pattern = date_pattern
+
 class DiscoverConfig(BankConfig):
     def __init__(self):
         super().__init__('DISCOVER', start_index=2)
@@ -30,7 +31,7 @@ class AmexConfig(BankConfig):
 
 class CitiConfig(BankConfig):
     def __init__(self):
-        super().__init__('CITI', start_index=1)
+        super().__init__('CITI', start_index=1, date_pattern=r'^\d{2}\/\d{2}')
         
 class DatabaseHandler:
     def __init__(self, config: dict):
@@ -38,7 +39,6 @@ class DatabaseHandler:
 
 # Finance Parser
 class Parser:
-    config = None
     keyword_to_category = {
         'GAS': {'GAS', 'CHEVRON', 'SHELL'},
         'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR'},
@@ -57,11 +57,11 @@ class Parser:
         'SKI': {'SNOW.COM/VAIL'},
     }
     
-    def __init__(self, path: str):
+    def __init__(self, path: str, config: BankConfig = None, text: str = None):
         self.path = path
-        self.text = None
         self.purchases = []
-        self.text = self.extract_text_from_pdf(path)
+        self.config = config
+        self.text = self.extract_text_from_pdf(path) if not text else text
         self.purchases = self.parse_purchases_from_text()
         
     @staticmethod
@@ -80,9 +80,15 @@ class Parser:
         :param date_str: str - Date in MM/DD format
         :return: str - Date in YYYY-MM-DD format
         """
-        converted_date = datetime.strptime(f"{date_str}", "%m/%d/%y")
+        try:
+            converted_date = datetime.strptime(f"{date_str}", "%m/%d/%y")
+        except ValueError:
+            # If year is missing, default to current year
+            current_year = datetime.now().year
+            converted_date = datetime.strptime(date_str, "%m/%d")
+            converted_date = converted_date.replace(year=current_year)
         return converted_date.strftime("%Y-%m-%d")
-        
+
     @staticmethod
     def extract_currency(text: str):
         """
@@ -154,16 +160,13 @@ class Parser:
         log.info("Parsing extracted text...")
         purchases = []
         try:
-            date_pattern = r'^\d{2}\/\d{2}\/\d{2}'  # Regex pattern to match dates in MM/DD format
             lines = self.text.split('\n')
-
             for i, line in enumerate(lines):
-                if re.search(date_pattern, line):
-                    date = re.search(date_pattern, line)
-                    
+                if date := re.search(self.config.date_pattern, line):
+                    log.debug(f"Found date: {date.group()} at line {i}")
                     if i + 2 < len(lines):
                         description = " ".join(lines[i:i+2])[date.end():date.endpos].strip()
-                        if re.search(date_pattern, description):
+                        if re.search(self.config.date_pattern, description):
                             log.debug(f"Found a date in description: {description}. Skipping...")
                             continue
                         log.debug(f"Description: {description}. Lines: {lines[i:i+2]}. Date endpos: {date.endpos}")

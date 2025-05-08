@@ -1,6 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form
 import shutil
 import matplotlib.pyplot as plt
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
