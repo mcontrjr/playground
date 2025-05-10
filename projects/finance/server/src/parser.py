@@ -43,11 +43,11 @@ class DatabaseHandler:
 class Parser:
     keyword_to_category = {
         'GAS': {'GAS', 'CHEVRON', 'SHELL'},
-        'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR', 'LYFT'},
+        'TRAVEL': {'AMERICAN AI', 'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR', 'LYFT'},
         'PAYPAL': {'PAYPAL'},
         'AMAZON': {'AMAZON'},
         'GROCERIES': {'TARGET', 'TRADER JOE', 'WHOLEF', 'SPROUTS'},
-        'FOOD': {'DISH', 'HOUSE OF BAGELS', 'THE MELT', 'DOORDASH', 'MENDOCINO', 'PRUNEYARD CINEMAS', 'PANDA EXPRESS', 'PIZZA', 'TACOS', 'BURGER'},
+        'FOOD': {'IL FORNAIO', 'KEBAB', 'BBQ', 'CHIPOTLE', 'STARBUCKS', 'EATALY', 'CAFE', 'TEA', 'DUNKIN', 'DISH', 'HOUSE OF BAGELS', 'THE MELT', 'DOORDASH', 'MENDOCINO', 'PRUNEYARD CINEMAS', 'PANDA EXPRESS', 'PIZZA', 'TACOS', 'BURGER', 'RESTAURANT'},
         'AUTO': {'GEICO', 'TOYOTA'},
         'COSTCO': {'COSTCO'},
         'STREAMING': {'NETFLIX', 'PARAMOUNT+', 'DISNEYPLUS', 'PEACOCKTV'},
@@ -57,6 +57,7 @@ class Parser:
         'LAUNDRY': {'KIOSOFT'},
         'APPLE PAY': {'APLPAY'},
         'SKI': {'SNOW.COM/VAIL'},
+        'PARKING': {'PARKING', 'PARKING GARAGE'},
     }
     
     def __init__(self, path: str, config: BankConfig = None, text: str = None):
