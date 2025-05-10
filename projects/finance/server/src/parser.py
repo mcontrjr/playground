@@ -16,10 +16,11 @@ load_dotenv()
 
 # Bank Configurations
 class BankConfig():
-    def __init__(self, bank: str, start_index: int = 0, date_pattern: str = r'^\d{2}\/\d{2}\/\d{2}'):
+    def __init__(self, bank: str, start_index: int = 0, date_pattern: str = r'^\d{2}\/\d{2}\/\d{2}', skip_date_in_desc: bool = True):
         self.bank = bank
         self.start_index = start_index
         self.date_pattern = date_pattern
+        self.skip_date_in_desc = skip_date_in_desc
 
 class DiscoverConfig(BankConfig):
     def __init__(self):
@@ -31,7 +32,8 @@ class AmexConfig(BankConfig):
 
 class CitiConfig(BankConfig):
     def __init__(self):
-        super().__init__('CITI', start_index=1, date_pattern=r'^\d{2}\/\d{2}')
+        super().__init__('CITI', start_index=1, date_pattern=r'^\d{2}\/\d{2}', skip_date_in_desc=False)
+        
         
 class DatabaseHandler:
     def __init__(self, config: dict):
@@ -41,7 +43,7 @@ class DatabaseHandler:
 class Parser:
     keyword_to_category = {
         'GAS': {'GAS', 'CHEVRON', 'SHELL'},
-        'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR'},
+        'TRAVEL': {'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR', 'LYFT'},
         'PAYPAL': {'PAYPAL'},
         'AMAZON': {'AMAZON'},
         'GROCERIES': {'TARGET', 'TRADER JOE', 'WHOLEF', 'SPROUTS'},
@@ -163,20 +165,29 @@ class Parser:
             lines = self.text.split('\n')
             for i, line in enumerate(lines):
                 if date := re.search(self.config.date_pattern, line):
-                    log.debug(f"Found date: {date.group()} at line {i}")
+                    log.debug(f"Found date: {date.group()} in line {i}: {line}")
                     if i + 2 < len(lines):
                         description = " ".join(lines[i:i+2])[date.end():date.endpos].strip()
-                        if re.search(self.config.date_pattern, description):
+                        description = " ".join(description.split())
+                        log.debug(f"self.config.skip_date_in_desc: {self.config.skip_date_in_desc}")
+                        dollar_match = re.search(r'\$[\d,]+\.\d{2}', description)
+                        description = description[:dollar_match.start()].strip() if dollar_match else description
+                        # Skip if description contains a date, common in only some statements
+                        if self.config.skip_date_in_desc and re.search(self.config.date_pattern, description):
                             log.debug(f"Found a date in description: {description}. Skipping...")
                             continue
+                        else:
+                            dup_date = re.search(self.config.date_pattern, description)
+                            description = description[dup_date.end():].strip() if dup_date else description
                         log.debug(f"Description: {description}. Lines: {lines[i:i+2]}. Date endpos: {date.endpos}")
                         date_str = date.group()
                         sql_date = self.convert_to_sql_date(date_str)
-                        amount_line = " ".join([l for l in lines[i:i+10]]) # (lines[i] + " " + lines[i + 1]).strip()
+                        amount_line = " ".join([l for l in lines[i:i+10]])
                         log.debug(f"Amount Line: {amount_line}")
 
                         amount = self.extract_currency(amount_line)
                         if amount is None or amount < 0:
+                            log.debug(f"Amount wasnt found in line: {amount_line}. Skipping...")
                             continue
 
                         category = self.determine_category(description)
