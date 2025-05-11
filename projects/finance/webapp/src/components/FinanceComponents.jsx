@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Line, Pie } from 'react-chartjs-2';
 import walletLogo from '../assets/wallet.svg'
 import amexLogo from '../assets/amex.svg'
+import citiLogo from '../assets/citi.svg'
+import discoverLogo from '../assets/discover.svg'
 import noPurchases from '../assets/no-purchases.svg'
 import 'chart.js/auto';
 import '../app.css'
@@ -249,6 +251,8 @@ const SupportedBanks = () => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             <h3>Supported Banks</h3>
             <img src={amexLogo} className="my-bank-logo" alt="American Express logo" />
+            <img src={discoverLogo} className="my-bank-logo" alt="Discover logo" />
+            <img src={citiLogo} className="my-bank-logo" alt="Citi Bank logo" />
     </div>
 );
 

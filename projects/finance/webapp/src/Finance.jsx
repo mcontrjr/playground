@@ -42,7 +42,7 @@ const Finance = () => {
 
     const fetchRecords = async () => {
         try {
-            const response = await axios.get(`${API_URL}:${SERVER_PORT}/records`, {
+            const response = await axios.get(`${API_URL}:${SERVER_PORT}/records?bank_name=${bankName}`, {
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                 },
