@@ -24,8 +24,8 @@ class BankConfig():
 
 class DiscoverConfig(BankConfig):
     def __init__(self):
-        super().__init__('DISCOVER', start_index=2)
-        
+        super().__init__('DISCOVER', skip_date_in_desc=False)
+
 class AmexConfig(BankConfig):
     def __init__(self):
         super().__init__('AMEX', start_index=2)
@@ -46,8 +46,9 @@ class Parser:
         'TRAVEL': {'AMERICAN AI', 'TRIP', 'HOTEL', 'TOLLS', 'DOUBLETREE', 'AIRLINE', 'RENTAL CAR', 'EXPEDIA', 'HERTZ', 'ALAMO', 'AVIS', 'RENT A CAR', 'LYFT'},
         'PAYPAL': {'PAYPAL'},
         'AMAZON': {'AMAZON'},
-        'GROCERIES': {'TARGET', 'TRADER JOE', 'WHOLEF', 'SPROUTS'},
-        'FOOD': {'IL FORNAIO', 'KEBAB', 'BBQ', 'CHIPOTLE', 'STARBUCKS', 'EATALY', 'CAFE', 'TEA', 'DUNKIN', 'DISH', 'HOUSE OF BAGELS', 'THE MELT', 'DOORDASH', 'MENDOCINO', 'PRUNEYARD CINEMAS', 'PANDA EXPRESS', 'PIZZA', 'TACOS', 'BURGER', 'RESTAURANT'},
+        'GROCERIES': {'TRADER JOE', 'WHOLEF', 'SPROUTS'},
+        'TARGET': {'TARGET'},
+        'FOOD': {'JACK IN THE BOX', 'COFFEE', 'SAFEWAY', 'IL FORNAIO', 'KEBAB', 'BBQ', 'CHIPOTLE', 'STARBUCKS', 'EATALY', 'CAFE', 'TEA', 'DUNKIN', 'DISH', 'HOUSE OF BAGELS', 'THE MELT', 'DOORDASH', 'MENDOCINO', 'PRUNEYARD CINEMAS', 'PANDA EXPRESS', 'PIZZA', 'TACOS', 'BURGER', 'RESTAURANT'},
         'AUTO': {'GEICO', 'TOYOTA'},
         'COSTCO': {'COSTCO'},
         'STREAMING': {'NETFLIX', 'PARAMOUNT+', 'DISNEYPLUS', 'PEACOCKTV'},
@@ -100,17 +101,28 @@ class Parser:
         :param text: str - A string containing currency values to be extracted.
         :return: list of floats - A list of float numbers representing the extracted currency values.
         """
-        # Define the regex pattern for currency (-$12,300.50 or $345.67)
-        pattern = r'-?\$[\d,]+\.\d{2}'
+        text = text.replace(' ', '')
+        patterns = [
+            r'-\$[\d,]+\.\d{2}',  # (-$12,300.50 or -$345.67)
+            r'\$-[\d,]+\.\d{2}',  # ($-12,300.50 or $-345.67)
+            r'\$[\d,]+\.\d{2}',  # ($12,300.50 or $345.67)
+        ]
+        earliest_match = None
+        earliest_pos = len(text)
         
-        # Find all matches in the text
-        match = re.search(pattern, text)
-        if match:
-            clean_value = match.group().replace('$', '').replace(',', '')
+        for pattern in patterns:
+            log.debug(f"Searching for pattern: {pattern} in text: {text}")
+            match = re.search(pattern, text)
+            if match and match.start() < earliest_pos:
+                earliest_match = match
+                earliest_pos = match.start()
+            
+        if earliest_match:
+            clean_value = earliest_match.group().replace('$', '').replace(',', '')
             return float(clean_value)
-        else:
-            return None
-    
+            
+        return None
+
     @staticmethod
     def determine_bank(pages: List[PageObject]) -> BankConfig:
         """
@@ -165,13 +177,13 @@ class Parser:
         try:
             lines = self.text.split('\n')
             for i, line in enumerate(lines):
+                log.debug(f"Line {i}: {line}")
                 if date := re.search(self.config.date_pattern, line):
                     log.debug(f"Found date: {date.group()} in line {i}: {line}")
                     if i + 2 < len(lines):
                         description = " ".join(lines[i:i+2])[date.end():date.endpos].strip()
                         description = " ".join(description.split())
-                        log.debug(f"self.config.skip_date_in_desc: {self.config.skip_date_in_desc}")
-                        dollar_match = re.search(r'\$[\d,]+\.\d{2}', description)
+                        dollar_match = re.search(r'\$', description)
                         description = description[:dollar_match.start()].strip() if dollar_match else description
                         # Skip if description contains a date, common in only some statements
                         if self.config.skip_date_in_desc and re.search(self.config.date_pattern, description):
@@ -183,11 +195,10 @@ class Parser:
                         log.debug(f"Description: {description}. Lines: {lines[i:i+2]}. Date endpos: {date.endpos}")
                         date_str = date.group()
                         sql_date = self.convert_to_sql_date(date_str)
-                        amount_line = " ".join([l for l in lines[i:i+10]])
+                        amount_line = " ".join([l for l in lines[i:i+5]])
                         log.debug(f"Amount Line: {amount_line}")
-
                         amount = self.extract_currency(amount_line)
-                        if amount is None or amount < 0:
+                        if amount is None:
                             log.debug(f"Amount wasnt found in line: {amount_line}. Skipping...")
                             continue
 

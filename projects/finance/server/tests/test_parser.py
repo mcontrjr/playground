@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
-from src.parser import Parser, AmexConfig, CitiConfig
+from src.parser import Parser, AmexConfig, CitiConfig, DiscoverConfig
 from unittest import TestCase
 
 
@@ -93,6 +93,9 @@ class TestCitiParser:
     def test_extract_currency(self):
         assert Parser.extract_currency("$123.45") == 123.45
         assert Parser.extract_currency("-$1,234.56") == -1234.56
+        assert Parser.extract_currency("$ 123.45") == 123.45
+        assert Parser.extract_currency("$ -1,234.56") == -1234.56
+        assert Parser.extract_currency("$ -4.56") == -4.56
         assert Parser.extract_currency("No currency here") == None
 
     def test_parse_purchases_from_text(self):
@@ -141,3 +144,70 @@ class TestCitiParser:
         ]
         TestCase().assertCountEqual(purchases, expected_purchases)
 
+class TestDiscoverParser:
+
+    def test_determine_category(self):
+        assert Parser.determine_category("Chevron Gas Station") == "GAS"
+        assert Parser.determine_category("Netflix Subscription") == "STREAMING"
+        assert Parser.determine_category("Unknown Merchant") == "OTHER"
+
+    def test_convert_to_sql_date(self):
+        assert Parser.convert_to_sql_date("01/06") == "2025-01-06"
+
+    def test_extract_currency(self):
+        assert Parser.extract_currency("$123.45") == 123.45
+        assert Parser.extract_currency("-$1,234.56") == -1234.56
+        assert Parser.extract_currency("No currency here") == None
+
+    def test_parse_purchases_from_text(self):
+        with open("tests/mock_discover.txt", "r") as file:
+            mock_text = file.read()
+        parser = Parser("tests/dummy_path.pdf", config=DiscoverConfig(), text=mock_text)
+        purchases = parser.parse_purchases_from_text()
+        print(purchases)
+
+        expected_purchases = [
+            {
+                'Bank': 'DISCOVER',
+                'Date': "2025-02-24",
+                'Description': "JACK IN THE BOX 0533 OAKLAND CA",
+                'Amount': 13.32,
+                'Category': "FOOD"
+            },
+            {
+                'Bank': 'DISCOVER',
+                'Date': "2025-02-14",
+                'Description': "INTERNET PAYMENT - THANK YOU",
+                'Amount': -62.93,
+                'Category': "INTERNET"
+            },
+            {
+                'Bank': 'DISCOVER',
+                'Date': "2025-02-14",
+                'Description': "SQ *11TH HOUR COFFEE W SANTA CRUZ CA",
+                'Amount': 55.80,
+                'Category': "FOOD"
+            },
+            {
+                'Bank': 'DISCOVER',
+                'Date': "2025-02-13",
+                'Description': "SAFEWAY #1476 SAN JOSE CA",
+                'Amount': 43.45,
+                'Category': "FOOD"
+            },
+            {
+                'Bank': 'DISCOVER',
+                'Date': "2025-01-27",
+                'Description': "TARGET 00014274091 SAN JOSE CA",
+                'Amount': -4.64,
+                'Category': "TARGET"
+            },
+            {
+                'Bank': 'DISCOVER',
+                'Date': "2025-01-26",
+                'Description': "TARGET 00022814091 SAN JOSE CA",
+                'Amount': 75.53,
+                'Category': "TARGET"
+            }
+        ]
+        TestCase().assertCountEqual(purchases, expected_purchases)
