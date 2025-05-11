@@ -5,7 +5,7 @@ from src.parser import Parser, AmexConfig, CitiConfig, DiscoverConfig
 from unittest import TestCase
 
 
-class TestAmexParser:
+class TestParser:
 
     def test_determine_category(self):
         assert Parser.determine_category("Chevron Gas Station") == "GAS"
@@ -13,12 +13,17 @@ class TestAmexParser:
         assert Parser.determine_category("Unknown Merchant") == "OTHER"
 
     def test_convert_to_sql_date(self):
-        assert Parser.convert_to_sql_date("01/06/25") == "2025-01-06"
+        assert Parser.convert_to_sql_date("01/06") == "2025-01-06"
 
     def test_extract_currency(self):
         assert Parser.extract_currency("$123.45") == 123.45
         assert Parser.extract_currency("-$1,234.56") == -1234.56
+        assert Parser.extract_currency("$ 123.45") == 123.45
+        assert Parser.extract_currency("$ -1,234.56") == -1234.56
+        assert Parser.extract_currency("$ -4.56") == -4.56
         assert Parser.extract_currency("No currency here") == None
+
+class TestAmexParser(TestParser):
 
     def test_parse_purchases_from_text(self):
         with open("tests/mock_amex.txt", "r") as file:
@@ -80,23 +85,7 @@ class TestAmexParser:
         ]
         TestCase().assertCountEqual(purchases, expected_purchases)
 
-class TestCitiParser:
-
-    def test_determine_category(self):
-        assert Parser.determine_category("Chevron Gas Station") == "GAS"
-        assert Parser.determine_category("Netflix Subscription") == "STREAMING"
-        assert Parser.determine_category("Unknown Merchant") == "OTHER"
-
-    def test_convert_to_sql_date(self):
-        assert Parser.convert_to_sql_date("01/06") == "2025-01-06"
-
-    def test_extract_currency(self):
-        assert Parser.extract_currency("$123.45") == 123.45
-        assert Parser.extract_currency("-$1,234.56") == -1234.56
-        assert Parser.extract_currency("$ 123.45") == 123.45
-        assert Parser.extract_currency("$ -1,234.56") == -1234.56
-        assert Parser.extract_currency("$ -4.56") == -4.56
-        assert Parser.extract_currency("No currency here") == None
+class TestCitiParser(TestParser):
 
     def test_parse_purchases_from_text(self):
         with open("tests/mock_citi.txt", "r") as file:
@@ -144,20 +133,7 @@ class TestCitiParser:
         ]
         TestCase().assertCountEqual(purchases, expected_purchases)
 
-class TestDiscoverParser:
-
-    def test_determine_category(self):
-        assert Parser.determine_category("Chevron Gas Station") == "GAS"
-        assert Parser.determine_category("Netflix Subscription") == "STREAMING"
-        assert Parser.determine_category("Unknown Merchant") == "OTHER"
-
-    def test_convert_to_sql_date(self):
-        assert Parser.convert_to_sql_date("01/06") == "2025-01-06"
-
-    def test_extract_currency(self):
-        assert Parser.extract_currency("$123.45") == 123.45
-        assert Parser.extract_currency("-$1,234.56") == -1234.56
-        assert Parser.extract_currency("No currency here") == None
+class TestDiscoverParser(TestParser):
 
     def test_parse_purchases_from_text(self):
         with open("tests/mock_discover.txt", "r") as file:
