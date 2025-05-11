@@ -165,6 +165,21 @@ class Parser:
             log.error(f"Error extracting text from PDF: {e}")
             raise e
 
+    def extract_description(self, lines: List[str], date: re.Match) -> str:
+        log.debug(f"Extracting description from lines: {lines} with date: {date.group()}")
+        description = " ".join(lines)[date.end():date.endpos].strip()
+        description = " ".join(description.split())
+        dollar_match = re.search(r'\$', description)
+        description = description[:dollar_match.start()].strip() if dollar_match else description
+        # Skip if description contains a date, common in only some statements
+        if self.config.skip_date_in_desc and re.search(self.config.date_pattern, description):
+            log.debug(f"Found a date in description: {description}. Skipping...")
+            return None
+        else:
+            dup_date = re.search(self.config.date_pattern, description)
+            description = description[dup_date.end():].strip() if dup_date else description
+        return description
+    
     def parse_purchases_from_text(self) -> List[dict]:
         """
         Parses purchases from extracted text.
@@ -177,21 +192,12 @@ class Parser:
         try:
             lines = self.text.split('\n')
             for i, line in enumerate(lines):
-                log.debug(f"Line {i}: {line}")
                 if date := re.search(self.config.date_pattern, line):
                     log.debug(f"Found date: {date.group()} in line {i}: {line}")
                     if i + 2 < len(lines):
-                        description = " ".join(lines[i:i+2])[date.end():date.endpos].strip()
-                        description = " ".join(description.split())
-                        dollar_match = re.search(r'\$', description)
-                        description = description[:dollar_match.start()].strip() if dollar_match else description
-                        # Skip if description contains a date, common in only some statements
-                        if self.config.skip_date_in_desc and re.search(self.config.date_pattern, description):
-                            log.debug(f"Found a date in description: {description}. Skipping...")
+                        if (description := self.extract_description(lines[i:i+2], date)) is None:
+                            log.debug(f"Description was None. Skipping...")
                             continue
-                        else:
-                            dup_date = re.search(self.config.date_pattern, description)
-                            description = description[dup_date.end():].strip() if dup_date else description
                         log.debug(f"Description: {description}. Lines: {lines[i:i+2]}. Date endpos: {date.endpos}")
                         date_str = date.group()
                         sql_date = self.convert_to_sql_date(date_str)
@@ -201,7 +207,6 @@ class Parser:
                         if amount is None:
                             log.debug(f"Amount wasnt found in line: {amount_line}. Skipping...")
                             continue
-
                         category = self.determine_category(description)
                         log.info(f"Found a purchase on {date_str} under {category} for ${amount} with description: \n\t{description}\n")
                         purchases.append({
