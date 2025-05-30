@@ -1,0 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300&display=swap');
+
+
+#root {
+  max-width: 100%;
+  margin: auto;
+  padding: 1rem;
+  text-align: center;
+  font-family: "Roboto Mono", monospace;
+  /* font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal; */
+}
+
+
+a {
+  text-decoration: solid;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.my-body {
+  background: #1f4567;
+  color: hsl(0, 0%, 100%);
+  max-width: 1000px;
+  padding: 1rem;
+  margin: 0 auto;
+}
+
+.my-container {
+  max-width: 100%; /* Matches #root max width */
+  margin: 0 auto; /* Center align container */
+  padding: 2rem; /* Add padding */
+}
+
+.my-row {
+  display: flex; /* Enables flexbox */
+  flex-wrap: wrap; /* Allow items to wrap */
+  justify-content: center; /* Center align items horizontally */
+}
+
+.my-card {
+  color: #ffffff;
+  background-color: #1c3e5c; /* Card background */
+  border-radius: 5px; /* Rounded corners */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow effect */
+  transition: transform 0.3s; /* Transition for hover effect */
+}
+
+.my-col-3 {
+  flex: calc(30% - 1rem); /* Three columns with space in between */
+  max-width: calc(30% - 1rem); /* Apply a maximum width */
+  padding: 0.5rem; /* Padding around columns */
+  margin: 0.1em;
+}
+
+.my-card-body {
+  padding: 0.5em; /* Padding for content within the card */
+}
+
+.my-card-title {
+  font-size: 1.25rem; /* Font size for titles */
+  margin-bottom: 0.5em; /* Margin below titles */
+}
+
+.my-footer {
+  text-align: center; /* Center align text and content */
+  padding: 1em 0; /* Add padding to the footer */
+  background-color: #f8f8f8; /* Optional: Add a light background color */
+}
+
+.my-footer p {
+  font-size: 0.875rem; /* Smaller font size for paragraphs (equivalent to 14px if base is 16px) */
+  margin: 0.2em 0; /* Vertical margin between paragraphs */
+}
+
+.my-footer-logo {
+  height: 1em; /* Adjust height for the footer logo */
+  margin: 0 0.5em; /* Margin for spacing around the logo */
+  vertical-align: middle; /* Aligns the logo with text */
+}
+
+.my-logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.my-logo:hover {
+  filter: drop-shadow(0 0 2em #4ab151aa);
+}
+.my-logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.read-the-docs {
+  color: #6a6a6a;
+}
+.custom-img {
+  width: 100%;      /* Full width */
+  max-width: 250px; /* Maximum width of 500px */
+  height: auto;     /* Automatic height maintaining aspect ratio */
+  margin: 1em;
+}
+
+
+.my-button {
+  background-color: #2b6c88; /* Green background */
+  color: white; /* White text */
+  border: none; /* No borders */
+  border-radius: 5px; /* Rounded corners */
+  padding: 10px 20px; /* Padding for height and width */
+  font-size: 1rem; /* Font size */
+  font-weight: bold; /* Bold text */
+  text-align: center; /* Center text */
+  text-decoration: none; /* Remove underline */
+  display: inline-block; /* Make the button inline-block */
+  transition: background-color 0.3s ease, transform 0.2s; /* Transition effects */
+  cursor: pointer; /* Pointer cursor on hover */
+  margin: 20px;
+}
+
+/* Hover effect */
+.my-button:hover {
+  background-color: rgb(44, 129, 165); /* Darker green on hover */
+  transform: translateY(-2px); /* Lift effect on hover */
+}
+
+/* Active effect */
+.my-button:active {
+  transform: translateY(0); /* Reset lift on click */
+}
+
+input[type='text'] {
+  min-width: 300px; /* Set a minimum width */
+  max-width: 100%; /* Allow it to be responsive */
+  padding: 0.5rem; /* Add padding for text */
+  box-sizing: border-box; /* Include padding in the width */
+  border: 1px solid #ccc; /* Border style */
+  border-radius: 4px; /* Rounded corners */
+  font-size: 1rem; /* Font size */
+}
+
+input[type='text']::placeholder { 
+  color: #888; /* Placeholder text color */
+}
+
+/*  info */
+
+.custom-table-container {
+  margin-top: 1.5rem;
+  border-radius: 10px; /* Rounded corners */
+  overflow: hidden; /* This ensures the table doesn't overflow the rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse; /* Makes border collapse for cleaner look */
+  background-color: #1c3e5c; /* Matches your main page theme */
+  font-family: "Roboto Mono", monospace;
+}
+
+.custom-table th,
+.custom-table td {
+  padding: 1rem; /* Space around content in cells */
+  text-align: left; /* Align text to the left */
+  color: #ffffff; /* White text for contrast */
+  font-family: "Roboto Mono", monospace;
+}
+
+.custom-table-row {
+  transition: background-color 0.3s ease; /* Smooth color change effect */
+  font-family: "Roboto Mono", monospace;
+}
+
+.custom-table-row:hover {
+  background-color: #e7e5e5; /* Light blue on hover for better visibility */
+  color: white; /* Ensure text is still visible */
+}
+
+/* Optional title text color adjustments */
+.custom-title {
+  color: #ffffff; /* Match with main.jsx styles */
+  margin-bottom: 1rem;
+  font-family: "Roboto Mono", monospace;
+}

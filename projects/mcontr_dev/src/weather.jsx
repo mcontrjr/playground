@@ -164,6 +164,7 @@ export default function WeatherPage() {
                     sx={{
                         justifyContent: "center",
                         alignItems: "center",
+                        margin: 2
                     }}
                 >
                     <Typography variant="h3">{`${weatherData.location.name}`}</Typography>
