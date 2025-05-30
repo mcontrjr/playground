@@ -5,6 +5,7 @@ import MainPage from './main.jsx'
 import InfoPage from './info.jsx'
 import GuessPage from './guess.jsx'
 import RandomPage from './random.jsx'
+import WeatherPage from './weather.jsx'
 
 
 createRoot(document.getElementById('root')).render(
@@ -15,7 +16,8 @@ createRoot(document.getElementById('root')).render(
         <Route path='/info' element={<InfoPage />}/>
         <Route path='/guess' element={<GuessPage />}/>
         <Route path='/random' element={<RandomPage />}/>
+        <Route path='/weather' element={<WeatherPage />}/>
       </Routes>
     </Router>
-  </StrictMode>,
+  </StrictMode>
 )

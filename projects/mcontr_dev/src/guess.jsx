@@ -38,48 +38,70 @@ function Head() {
   )
 }
 
-const apiUrl = import.meta.env.VITE_MYPY_API_URL;
-
-function getRandomImg() {
-    fetch(`${apiUrl}/get-loremflickr?category=random`)
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        console.log(response.json().response)
-        return response.json();
-    })
-    .then(data => setRandomImg(data.response))
-    .catch(error => {
-        console.error('error: ', error)
-    });
+function getRandomNum() {
+    return Math.floor(Math.random() * 100)
 }
 
-export default function RandomPage() {
-  const startMessage = 'Find something cool with 3 clicks.'
-  const [randomImg, setRandomImg]  = useState(getRandomImg());
+export default function GuessPage() {
+  const startMessage = 'Welcome to the Guessing Game'
+  const [attempts, setAttempts] = useState(Number(0));
+  const [randomNum, setRandomNum]  = useState(getRandomNum());
   const [guess, setGuess] = useState('');
   const [message, setMessage] = useState(startMessage);
+  console.log(randomNum)
+
+  const handleGuess = (e) => {
+    setGuess(e.target.value)
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+        setAttempts(attempts + 1)
+        console.log('my guess: ', guess)
+        compareGuess(guess)
+        setGuess('')
+    }
+  }
+
+  const compareGuess = (guess) => {
+    if (Number(guess) === randomNum) {
+        setMessage(`Can\'t believe it took you ${attempts} attempts`)
+    } else if (guess < randomNum) {
+        setMessage(`Your guess is too low. Try again! Your guess was ${guess}.`);
+    } else {
+        setMessage(`Your guess is too high. Try again! Your guess was ${guess}.`);
+    }
+  }
+
+  const resetGame  = () => {
+    setGuess('')
+    setMessage(startMessage)
+    setRandomNum(getRandomNum())
+    setAttempts(0)
+  }
 
   return (
     <>
       <ThemeProvider theme={theme}>
         <Head />
         <TextField
-            id="random"
-            label="Category"
+            id="guess"
+            label="Your Guess"
             value={guess}
-            type="input"
+            type="number"
             variant="standard"
             color='white'
+            onChange={handleGuess}
+            onKeyDown={handleKeyPress}
           />
         <p>{message}</p>
         <Button 
             variant="contained"
+            onClick={resetGame}
             sx={{color: '#cceeff'}}
             color='white'
           >
-            Find
+            Reset
         </Button>
         <Footer sx={{ margin: "50px"}}/>
       </ThemeProvider>

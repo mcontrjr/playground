@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import coolImg from './assets/man_with_dog.jpg';
 import Footer from '../components/footer';
-import { createTheme, ThemeProvider } from '@mui/material'; 
+import { Box, createTheme, Paper, ThemeProvider } from '@mui/material'; 
 
 
 // Create a custom theme for the app
@@ -19,23 +19,33 @@ const theme = createTheme({
       }
   },
   palette: {
-      primary: {
-          main: '#1c3e5c', // Main color for primary elements
-      },
-      secondary: {
-          main: '#3789ad', // Main color for secondary elements
-      },
+    mode: 'dark',
+    primary: {
+      main: '#fdf5e9',
+    },
+    secondary: {
+      main: '#924d21',
+      contrastText: 'rgba(74,15,15,0.87)',
+    },
+    background: {
+      paper: '#001a25',
+      default: '#011823',
+    },
   },
+  spacing: 10,
 });
+
 
 function Head() {
   return (
-    <header>
-      <h1>MyPy</h1>
-      <nav>
-        <a href="/info" className='my-button'>Server Info</a>
-      </nav>
-    </header>
+    <ThemeProvider theme={theme}>
+      <header>
+        <h1>MyPy</h1>
+        <nav>
+          <a href="/info" className='my-button'>Server Info</a>
+        </nav>
+      </header>
+    </ThemeProvider>
   )
 }
 
@@ -62,14 +72,24 @@ function About() {
 
 function Feature({title, body, route}) {
   return (
-    <div className='my-col-3 my-card'>
-      <a href={route} className="my-card">
-          <div className="my-card-body">
-              <h5 className="my-card-title">{title}</h5>
-              <p>{body}</p>
-          </div>
-      </a>
-    </div>
+    <ThemeProvider theme={theme}>
+      <Box >
+          <a href={route}>
+              <div >
+                  <h5>{title}</h5>
+                  <p>{body}</p>
+              </div>
+          </a>
+      </Box>
+    </ThemeProvider>
+    // <div className='my-col-3 my-card'>
+    //   <a href={route} className="my-card">
+    //       <div className="my-card-body">
+    //           <h5 className="my-card-title">{title}</h5>
+    //           <p>{body}</p>
+    //       </div>
+    //   </a>
+    // </div>
   )
 }
 
@@ -88,16 +108,31 @@ function MyFeatures() {
   )
 }
 
+function MyTools() {
+  return (
+    <section id="tools">
+      <div className='my-container'>
+        <h1>Tools</h1>
+        <div className='my-row'>
+          <Feature route={"/finance"} title={"Parser"} body={"Figure out where your money is going!"}/>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function MainPage() {
-  const [count, setCount] = useState(0)
 
   return (
     <>
       <ThemeProvider theme={theme}>
+        <Paper />
           <Head />
           <About />
           <MyFeatures />
+          <MyTools />
           <Footer />
+        <Paper />
       </ThemeProvider>
     </>
   )
