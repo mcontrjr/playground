@@ -62,7 +62,7 @@ function ModernHeader({ theme, toggleTheme }) {
 // Simplified image fetching with Pexels API
 async function getImages(keyword) {
   try {
-    const apiKey = 'RriV0cksGXfySmzkqY6eNLIolwSiU4vHNIwwlJaRkEEWAJVeSpN6XSDg'; // Get from https://www.pexels.com/api/
+    const apiKey = import.meta.env.VITE_PEXELS_API_KEY;
     
     if (!keyword || keyword.trim() === '') {
       const response = await fetch('https://api.pexels.com/v1/curated?per_page=9', {

@@ -61,7 +61,7 @@ function ModernHeader({ theme, toggleTheme }) {
 // Weather API function
 async function getWeatherData(location) {
   try {
-    const apiKey = 'a433f750d26242e394f61709241611';
+    const apiKey = import.meta.env.VITE_WEATHER_API_KEY;
     const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(location)}&aqi=no`);
     
     if (!response.ok) {
