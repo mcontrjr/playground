@@ -2,31 +2,26 @@ import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead
 import { useState, useEffect } from "react";
 import error_img from './assets/error.svg'
 
-const theme = createTheme({
-    typography: {
-        fontFamily: '"Roboto Mono", monospace',
-        h2: {
-            color: "#ffffff" // Custom color for h2
-        },
-        h3: {
-            color: "#ffffff" // Custom color for h3
-        },
-        body1: {
-            color: "#ffffff" // Custom default text color
-        }
-    },
-    palette: {
-        primary: {
-            main: '#1c3e5c', // Main color for primary elements
-        },
-        secondary: {
-            main: '#3789ad', // Main color for secondary elements
-        },
-    },
-});
+function useTheme() {
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
+
+  return { theme, toggleTheme };
+}
 
 
 export default function InfoPage() {
+    const { theme, toggleTheme } = useTheme();
     const apiUrl = 'http://localhost:5170';
     const [specs, setSpecs] = useState(null);
     const [error, setError] = useState(null);
