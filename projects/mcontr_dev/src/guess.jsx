@@ -97,7 +97,7 @@ function GameKeypad({ guess, onKeypadPress, onClear, onBackspace, gameWon }) {
         onClick={onClear}
         disabled={gameWon || !guess}
       >
-        Clear
+        Cl
       </button>
       <button
         className="keypad-button"
@@ -135,12 +135,20 @@ function GameInterface({
   const isValidGuess = guess && Number(guess) >= 1 && Number(guess) <= 100;
   
   return (
-    <div className={`game-main ${!hasActiveGame ? 'game-main-centered' : ''}`}>
-      <div className="my-card animate-fade-in-up">
+    <div className="game-interface">
+      {hasActiveGame && (
+        <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
+          Guessing Game
+        </h3>
+      )}
+      
+      <div className="game-right-panel animate-fade-in-up">
         <div className="my-card-body">
-          <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
-            Guessing Game
-          </h3>
+          {!hasActiveGame && (
+            <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
+              Guessing Game
+            </h3>
+          )}
           
           <p className="mb-3" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
             {message}
@@ -273,7 +281,7 @@ function GameChart({ sessionAttempts, currentRound, theme }) {
       <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
         Current Game Progress
       </h3>
-      <div className="my-card">
+      <div className="game-left-panel">
         <div className="my-card-body">
           <Line key={chartKey} data={chartData} options={chartOptions} />
         </div>
@@ -328,7 +336,7 @@ function GameHistory({ gameHistory }) {
 // Game Sidebar Component
 function GameSidebar({ sessionAttempts, currentRound, theme, gameHistory }) {
   return (
-    <div className="game-sidebar">
+    <div className="game-left-panel">
       {sessionAttempts.length > 0 && (
         <GameChart 
           sessionAttempts={sessionAttempts} 
@@ -452,31 +460,52 @@ export default function GuessPage() {
               <h2 className="my-section-title animate-fade-in-up">Guessing Game</h2>
             )}
             
-            <div className={`game-layout ${!hasActiveGame ? 'game-layout-centered' : ''}`}>
-              {hasActiveGame && (
-                <GameSidebar 
-                  sessionAttempts={sessionAttempts}
-                  currentRound={currentRound}
-                  theme={theme}
+            {hasActiveGame ? (
+              <div className="game-layout-active">
+                <div className="game-left-panel">
+                  <GameSidebar 
+                    sessionAttempts={sessionAttempts}
+                    currentRound={currentRound}
+                    theme={theme}
+                    gameHistory={gameHistory}
+                  />
+                </div>
+                
+                <div className="game-right-panel">
+                  <GameInterface
+                    message={message}
+                    guess={guess}
+                    onKeypadPress={handleKeypadPress}
+                    onClear={handleClear}
+                    onBackspace={handleBackspace}
+                    onSubmitGuess={submitGuess}
+                    onResetGame={resetGame}
+                    onClearHistory={clearHistory}
+                    gameWon={gameWon}
+                    attempts={attempts}
+                    gameHistory={gameHistory}
+                    hasActiveGame={hasActiveGame}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="game-layout-centered">
+                <GameInterface
+                  message={message}
+                  guess={guess}
+                  onKeypadPress={handleKeypadPress}
+                  onClear={handleClear}
+                  onBackspace={handleBackspace}
+                  onSubmitGuess={submitGuess}
+                  onResetGame={resetGame}
+                  onClearHistory={clearHistory}
+                  gameWon={gameWon}
+                  attempts={attempts}
                   gameHistory={gameHistory}
+                  hasActiveGame={hasActiveGame}
                 />
-              )}
-
-              <GameInterface
-                message={message}
-                guess={guess}
-                onKeypadPress={handleKeypadPress}
-                onClear={handleClear}
-                onBackspace={handleBackspace}
-                onSubmitGuess={submitGuess}
-                onResetGame={resetGame}
-                onClearHistory={clearHistory}
-                gameWon={gameWon}
-                attempts={attempts}
-                gameHistory={gameHistory}
-                hasActiveGame={hasActiveGame}
-              />
-            </div>
+              </div>
+            )}
           </div>
         </section>
       </main>

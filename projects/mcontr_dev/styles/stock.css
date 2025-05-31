@@ -793,3 +793,45 @@ input[type='text']::placeholder {
 .mt-2 { margin-top: 1rem; }
 .mt-3 { margin-top: 1.5rem; }
 .mt-4 { margin-top: 2rem; }
+
+/* Game Layout */
+.game-layout-active {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  min-height: 500px;
+}
+
+.game-left-panel {
+  flex: 0 0 60%;
+  display: flex;
+  flex-direction: column;
+}
+
+.game-right-panel {
+  flex: 0 0 40%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.game-layout-centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.game-interface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Game Controls */
+.game-controls {
+  text-align: center;
+  margin-top: 1rem;
+  width: 100%;
+}
