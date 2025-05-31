@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - finance_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./sql/postgresql.conf:/etc/postgresql/postgresql.conf
       - ./logs/pg_log:/var/lib/postgresql/data
@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: finance_api
+    container_name: finance_server
     restart: always
     environment:
       DB_USER: ${DB_USER}
@@ -31,6 +31,36 @@ services:
       - "${SERVER_PORT}:${SERVER_PORT}"
     depends_on:
       - db
+    volumes:
+      - ./server:/app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${SERVER_PORT}", "--reload"]
+
+  frontend:
+    build:
+      context: ./mcontr_dev
+      dockerfile: Dockerfile
+    container_name: finance_frontend
+    volumes:
+      - ./mcontr_dev:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - API_URL=${API_URL}
+      - SERVER_PORT=${SERVER_PORT}
+      - HOST=0.0.0.0
+      - PORT=${FRONTEND_PORT}
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    depends_on:
+      - app
+    networks:
+      - finance_network
+
+networks:
+  finance_network:
+    driver: bridge
 
 volumes:
-  pg_data:
+  fiannce_data:
+    name: finance_data
+    external: false

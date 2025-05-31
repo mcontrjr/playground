@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"> 
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <!-- <link rel="stylesheet" href="./styles/styles.css" /> -->
+    <title>mcontr</title>
+    <script>
+      // Apply theme immediately to prevent flash
+      (function() {
+        const theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        
+        // Apply CSS custom properties immediately
+        const style = document.createElement('style');
+        style.textContent = `
+          :root {
+            --bg-primary-light: #f0f5f9;
+            --bg-secondary-light: #ffffff;
+            --text-primary-light: #182430;
+            --text-secondary-light: #475569;
+            --text-muted-light: #06090c;
+            --border-light: #e2e8f0;
+            --accent-light: #edeff0;
+            --bg-primary-dark: #0a0e13;
+            --bg-secondary-dark: #111720;
+            --text-primary-dark: #f0f5f9;
+            --text-secondary-dark: #cbd5e1;
+            --text-muted-dark: #94a3b8;
+            --border-dark: #475569;
+            --accent-dark: #111720;
+          }
+          [data-theme="light"] {
+            --bg-primary: var(--bg-primary-light);
+            --bg-secondary: var(--bg-secondary-light);
+            --text-primary: var(--text-primary-light);
+            --text-secondary: var(--text-secondary-light);
+            --text-muted: var(--text-muted-light);
+            --border: var(--border-light);
+            --accent: var(--accent-light);
+          }
+          [data-theme="dark"] {
+            --bg-primary: var(--bg-primary-dark);
+            --bg-secondary: var(--bg-secondary-dark);
+            --text-primary: var(--text-primary-dark);
+            --text-secondary: var(--text-secondary-dark);
+            --text-muted: var(--text-muted-dark);
+            --border: var(--border-dark);
+            --accent: var(--accent-dark);
+          }
+          body { background-color: var(--bg-primary); color: var(--text-primary); }
+        `;
+        document.head.appendChild(style);
+      })();
+    </script>
+  </head>
+  <body class="my-body">
+    <div id="root" class="my-roboto-mono">
+      <script type="module" src="/src/index.jsx"></script>
+    </div>
+  </body>
+</html>
