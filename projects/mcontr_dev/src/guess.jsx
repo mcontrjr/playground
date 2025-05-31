@@ -16,7 +16,6 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -27,7 +26,7 @@ ChartJS.register(
   Legend
 );
 
-// Theme toggle hook
+// Theme hook
 function useTheme() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
@@ -59,17 +58,17 @@ function ThemeToggle({ theme, toggleTheme }) {
   );
 }
 
-// Modern Header Component
+// Header Component
 function ModernHeader({ theme, toggleTheme }) {
   return (
     <header className="my-header">
       <div className="my-header-content">
         <div className="my-logo">
-          <img src={logo} alt="mypy-logo" />
-          <div className="my-logo-text">MyPy</div>
+          <img src={logo} alt="mcontr-logo" />
+          <div className="my-logo-text">mcontr</div>
         </div>
         <nav className="my-nav" style={{ gap: '0.5rem' }}>
-          <a href="/" className="my-button my-button-secondary">
+          <a href="/" className="my-button">
             Home
           </a>
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
@@ -79,8 +78,274 @@ function ModernHeader({ theme, toggleTheme }) {
   );
 }
 
+// Keypad Component
+function GameKeypad({ guess, onKeypadPress, onClear, onBackspace, gameWon }) {
+  return (
+    <div className="keypad">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+        <button
+          key={num}
+          className="keypad-button"
+          onClick={() => onKeypadPress(num.toString())}
+          disabled={gameWon}
+        >
+          {num}
+        </button>
+      ))}
+      <button
+        className="keypad-button keypad-button-small"
+        onClick={onClear}
+        disabled={gameWon || !guess}
+      >
+        Clear
+      </button>
+      <button
+        className="keypad-button"
+        onClick={() => onKeypadPress('0')}
+        disabled={gameWon}
+      >
+        0
+      </button>
+      <button
+        className="keypad-button"
+        onClick={onBackspace}
+        disabled={gameWon || !guess}
+      >
+        ⌫
+      </button>
+    </div>
+  );
+}
+
+// Game Interface Component
+function GameInterface({ 
+  message, 
+  guess, 
+  onKeypadPress, 
+  onClear, 
+  onBackspace, 
+  onSubmitGuess, 
+  onResetGame, 
+  onClearHistory, 
+  gameWon, 
+  attempts, 
+  gameHistory, 
+  hasActiveGame 
+}) {
+  const isValidGuess = guess && Number(guess) >= 1 && Number(guess) <= 100;
+  
+  return (
+    <div className={`game-main ${!hasActiveGame ? 'game-main-centered' : ''}`}>
+      <div className="my-card animate-fade-in-up">
+        <div className="my-card-body">
+          <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
+            Guessing Game
+          </h3>
+          
+          <p className="mb-3" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+            {message}
+          </p>
+          
+          <div className="guess-display">
+            {guess || '?'}
+          </div>
+
+          <GameKeypad 
+            guess={guess}
+            onKeypadPress={onKeypadPress}
+            onClear={onClear}
+            onBackspace={onBackspace}
+            gameWon={gameWon}
+          />
+        </div>
+      </div>
+
+      <div className="game-controls">
+        <button 
+          className="my-button"
+          onClick={onSubmitGuess}
+          disabled={gameWon || !isValidGuess}
+          style={{ fontSize: '1.1rem', padding: '0.75rem 2rem', marginBottom: '1rem' }}
+        >
+          Submit Guess {guess && `(${guess})`}
+        </button>
+        {guess && !isValidGuess && (
+          <p style={{ color: '#ef4444', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
+            Warning: Number must be between 1-100
+          </p>
+        )}
+
+        <div className="button-group">
+          <button 
+            className="my-button"
+            onClick={onResetGame}
+          >
+            {gameWon ? 'New Game' : 'Reset Game'}
+          </button>
+          {gameHistory.length > 0 && (
+            <button 
+              className="my-button"
+              onClick={onClearHistory}
+            >
+              Clear History
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Chart Component
+function GameChart({ sessionAttempts, currentRound, theme }) {
+  const [chartKey, setChartKey] = useState(0);
+  
+  const getThemeColors = () => {
+    const computedStyle = getComputedStyle(document.documentElement);
+    return {
+      primary: computedStyle.getPropertyValue('--text-primary').trim(),
+      secondary: computedStyle.getPropertyValue('--text-primary').trim(),
+      border: computedStyle.getPropertyValue('--border').trim(),
+    };
+  };
+
+  useEffect(() => {
+    setChartKey(prev => prev + 1);
+  }, [theme]);
+
+  const colors = getThemeColors();
+
+  const chartData = {
+    labels: sessionAttempts.map((_, index) => `Attempt ${index + 1}`),
+    datasets: [
+      {
+        label: 'Your Guess',
+        data: sessionAttempts.map(attempt => attempt.guess),
+        borderColor: colors.primary,
+        backgroundColor: colors.primary,
+        tension: 0.1,
+        fill: false,
+        pointBackgroundColor: colors.primary,
+        pointBorderColor: colors.primary,
+      }
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          color: colors.primary
+        }
+      },
+      title: {
+        display: true,
+        text: `Game ${currentRound} - Guess Progress`,
+        color: colors.primary
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+        grid: {
+          color: colors.border,
+        },
+        ticks: {
+          color: colors.secondary
+        }
+      },
+      x: {
+        grid: {
+          color: colors.border,
+        },
+        ticks: {
+          color: colors.secondary
+        }
+      }
+    },
+  };
+
+  return (
+    <div className="animate-fade-in-up" style={{ marginBottom: '2rem' }}>
+      <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
+        Current Game Progress
+      </h3>
+      <div className="my-card">
+        <div className="my-card-body">
+          <Line key={chartKey} data={chartData} options={chartOptions} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Game History Component
+function GameHistory({ gameHistory }) {
+  return (
+    <div className="animate-fade-in-up">
+      <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
+        Game History
+      </h3>
+      <div className="custom-table-container">
+        <table className="custom-table">
+          <thead>
+            <tr>
+              <th>Game</th>
+              <th>Target</th>
+              <th>Attempts</th>
+              <th>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {gameHistory.map((game, index) => (
+              <tr key={index} className="custom-table-row">
+                <td>{game.round}</td>
+                <td>{game.target}</td>
+                <td>{game.attempts}</td>
+                <td>
+                  <span style={{ 
+                    color: game.attempts === 1 ? '#22c55e' : 
+                           game.attempts <= 3 ? '#3b82f6' : 
+                           game.attempts <= 7 ? '#f59e0b' : '#ef4444'
+                  }}>
+                    {game.attempts === 1 ? 'Perfect!' :
+                     game.attempts <= 3 ? 'Excellent' :
+                     game.attempts <= 7 ? 'Good' : 'Keep practicing'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// Game Sidebar Component
+function GameSidebar({ sessionAttempts, currentRound, theme, gameHistory }) {
+  return (
+    <div className="game-sidebar">
+      {sessionAttempts.length > 0 && (
+        <GameChart 
+          sessionAttempts={sessionAttempts} 
+          currentRound={currentRound} 
+          theme={theme} 
+        />
+      )}
+      
+      {gameHistory.length > 0 && (
+        <GameHistory gameHistory={gameHistory} />
+      )}
+    </div>
+  );
+}
+
 function getRandomNum() {
-    return Math.floor(Math.random() * 100) + 1;
+  return Math.floor(Math.random() * 100) + 1;
 }
 
 export default function GuessPage() {
@@ -97,7 +362,6 @@ export default function GuessPage() {
 
   console.log('Target:', randomNum);
 
-  // Add keyboard event listener
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.key === 'Enter' && !gameWon && guess && Number(guess) >= 1 && Number(guess) <= 100) {
@@ -110,7 +374,7 @@ export default function GuessPage() {
   }, [guess, gameWon]);
 
   const handleKeypadPress = (digit) => {
-    if (guess.length < 3) { // Limit to 3 digits max (for numbers up to 100)
+    if (guess.length < 3) {
       setGuess(prev => prev + digit);
     }
   };
@@ -128,7 +392,6 @@ export default function GuessPage() {
     
     const guessNum = Number(guess);
     
-    // Check bounds without counting as attempt
     if (guessNum < 1 || guessNum > 100) {
       setMessage(`Please enter a number between 1 and 100! Your guess: ${guessNum}`);
       setGuess('');
@@ -177,70 +440,7 @@ export default function GuessPage() {
     setCurrentRound(1);
   }
 
-  // Chart data for current game attempts
-  const chartData = {
-    labels: sessionAttempts.map((_, index) => `Attempt ${index + 1}`),
-    datasets: [
-      {
-        label: 'Your Guess',
-        data: sessionAttempts.map(attempt => attempt.guess),
-        borderColor: 'var(--accent)',
-        backgroundColor: 'var(--accent)',
-        tension: 0.1,
-        fill: false,
-      }
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          color: 'var(--text-primary)',
-          font: {
-            family: '"Roboto Mono", monospace'
-          }
-        }
-      },
-      title: {
-        display: true,
-        text: `Game ${currentRound} - Guess Progress`,
-        color: 'var(--text-primary)',
-        font: {
-          family: '"Roboto Mono", monospace',
-          size: 16
-        }
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        grid: {
-          color: 'var(--border)',
-        },
-        ticks: {
-          color: 'var(--text-secondary)',
-          font: {
-            family: '"Roboto Mono", monospace'
-          }
-        }
-      },
-      x: {
-        grid: {
-          color: 'var(--border)',
-        },
-        ticks: {
-          color: 'var(--text-secondary)',
-          font: {
-            family: '"Roboto Mono", monospace'
-          }
-        }
-      }
-    },
-  };
+  const hasActiveGame = sessionAttempts.length > 0;
 
   return (
     <>
@@ -248,205 +448,35 @@ export default function GuessPage() {
       <main>
         <section className="my-section">
           <div className="my-container">
-            <h2 className="my-section-title animate-fade-in-up">Guessing Game</h2>
+            {!hasActiveGame && (
+              <h2 className="my-section-title animate-fade-in-up">Guessing Game</h2>
+            )}
             
-            {/* Game Interface */}
-            <div className="my-card animate-fade-in-up" style={{ maxWidth: '500px', margin: '0 auto' }}>
-              <div className="my-card-body">
-                <p className="mb-3" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-                  {message}
-                </p>
-                
-                {/* Display Current Guess */}
-                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                  <div style={{
-                    background: 'var(--bg-secondary)',
-                    border: '2px solid var(--border)',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    fontSize: '2rem',
-                    fontWeight: 'bold',
-                    color: 'var(--text-primary)',
-                    minHeight: '60px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    maxWidth: '200px',
-                    margin: '0 auto'
-                  }}>
-                    {guess || '?'}
-                  </div>
-                </div>
+            <div className={`game-layout ${!hasActiveGame ? 'game-layout-centered' : ''}`}>
+              {hasActiveGame && (
+                <GameSidebar 
+                  sessionAttempts={sessionAttempts}
+                  currentRound={currentRound}
+                  theme={theme}
+                  gameHistory={gameHistory}
+                />
+              )}
 
-                {/* Custom Keypad */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '0.75rem',
-                  maxWidth: '240px',
-                  margin: '0 auto 1.5rem auto'
-                }}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                    <button
-                      key={num}
-                      className="my-button my-button-secondary"
-                      onClick={() => handleKeypadPress(num.toString())}
-                      disabled={gameWon}
-                      style={{ 
-                        fontSize: '1.2rem', 
-                        padding: '1rem',
-                        minHeight: '50px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      {num}
-                    </button>
-                  ))}
-                  <button
-                    className="my-button my-button-secondary"
-                    onClick={handleClear}
-                    disabled={gameWon || !guess}
-                    style={{ 
-                      fontSize: '0.9rem', 
-                      padding: '1rem',
-                      minHeight: '50px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <button
-                    className="my-button my-button-secondary"
-                    onClick={() => handleKeypadPress('0')}
-                    disabled={gameWon}
-                    style={{ 
-                      fontSize: '1.2rem', 
-                      padding: '1rem',
-                      minHeight: '50px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    0
-                  </button>
-                  <button
-                    className="my-button my-button-secondary"
-                    onClick={handleBackspace}
-                    disabled={gameWon || !guess}
-                    style={{ 
-                      fontSize: '1rem', 
-                      padding: '1rem',
-                      minHeight: '50px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    ⌫
-                  </button>
-                </div>
-
-                {/* Submit Button */}
-                <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                  <button 
-                    className="my-button my-button-secondary"
-                    onClick={submitGuess}
-                    disabled={gameWon || !guess}
-                    style={{ fontSize: '1.1rem', padding: '0.75rem 2rem' }}
-                  >
-                    Submit Guess {guess && `(${guess})`}
-                  </button>
-                  {guess && (Number(guess) < 1 || Number(guess) > 100) && (
-                    <p style={{ color: '#ef4444', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                      Warning: Number must be between 1-100
-                    </p>
-                  )}
-                </div>
-
-                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button 
-                    className="my-button my-button-secondary"
-                    onClick={resetGame}
-                  >
-                    {gameWon ? 'New Game' : 'Reset Game'}
-                  </button>
-                  {gameHistory.length > 0 && (
-                    <button 
-                      className="my-button my-button-secondary"
-                      onClick={clearHistory}
-                    >
-                      Clear History
-                    </button>
-                  )}
-                </div>
-
-                <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    Attempts this round: <strong>{attempts}</strong>
-                  </p>
-                </div>
-              </div>
+              <GameInterface
+                message={message}
+                guess={guess}
+                onKeypadPress={handleKeypadPress}
+                onClear={handleClear}
+                onBackspace={handleBackspace}
+                onSubmitGuess={submitGuess}
+                onResetGame={resetGame}
+                onClearHistory={clearHistory}
+                gameWon={gameWon}
+                attempts={attempts}
+                gameHistory={gameHistory}
+                hasActiveGame={hasActiveGame}
+              />
             </div>
-
-            {/* Chart Section */}
-            {sessionAttempts.length > 0 && (
-              <div className="animate-fade-in-up" style={{ marginTop: '3rem' }}>
-                <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
-                  Current Game Progress
-                </h3>
-                <div className="my-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                  <div className="my-card-body">
-                    <Line data={chartData} options={chartOptions} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Game History */}
-            {gameHistory.length > 0 && (
-              <div className="animate-fade-in-up" style={{ marginTop: '3rem' }}>
-                <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
-                  Game History
-                </h3>
-                <div className="custom-table-container" style={{ maxWidth: '600px', margin: '0 auto' }}>
-                  <table className="custom-table">
-                    <thead>
-                      <tr>
-                        <th>Game</th>
-                        <th>Target</th>
-                        <th>Attempts</th>
-                        <th>Performance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {gameHistory.map((game, index) => (
-                        <tr key={index} className="custom-table-row">
-                          <td>{game.round}</td>
-                          <td>{game.target}</td>
-                          <td>{game.attempts}</td>
-                          <td>
-                            <span style={{ 
-                              color: game.attempts === 1 ? '#22c55e' : 
-                                     game.attempts <= 3 ? '#3b82f6' : 
-                                     game.attempts <= 7 ? '#f59e0b' : '#ef4444'
-                            }}>
-                              {game.attempts === 1 ? 'Perfect!' :
-                               game.attempts <= 3 ? 'Excellent' :
-                               game.attempts <= 7 ? 'Good' : 'Keep practicing'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         </section>
       </main>
@@ -454,4 +484,3 @@ export default function GuessPage() {
     </>
   )
 }
-

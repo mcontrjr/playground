@@ -44,11 +44,11 @@ function ModernHeader({ theme, toggleTheme }) {
     <header className="my-header">
       <div className="my-header-content">
         <div className="my-logo">
-          <img src={logo} alt="mypy-logo" />
-          <div className="my-logo-text">MyPy</div>
+          <img src={logo} alt="mcontr-logo" />
+          <div className="my-logo-text">mcontr</div>
         </div>
         <nav className="my-nav" style={{ gap: '0.5rem' }}>
-          <a href="/" className="my-button my-button-secondary">
+          <a href="/" className="my-button">
             Home
           </a>
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
@@ -102,7 +102,7 @@ function SearchInterface({ location, setLocation, onSearch, loading, message }) 
             className="photo-search-input"
           />
           <button 
-            className="my-button my-button-secondary"
+            className="my-button"
             onClick={onSearch}
             disabled={loading || !location.trim()}
           >

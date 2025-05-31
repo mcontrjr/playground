@@ -8,23 +8,23 @@
   --bg-card-light: #ffffff;
   --text-primary-light: #182430;
   --text-secondary-light: #475569;
-  --text-muted-light: #64748b;
+  --text-muted-light: #06090c;
   --border-light: #e2e8f0;
   --shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --accent-light: #122647;
-  --accent-hover-light: #070d1b;
+  --accent-light: #edeff0;
+  --accent-hover-light: #d2dee8;
 
   /* Dark theme colors */
-  --bg-primary-dark: #182430;
-  --bg-secondary-dark: #1e293b;
-  --bg-card-dark: #334155;
+  --bg-primary-dark: #0a0e13;
+  --bg-secondary-dark: #111720;
+  --bg-card-dark: #111720;
   --text-primary-dark: #f0f5f9;
   --text-secondary-dark: #cbd5e1;
   --text-muted-dark: #94a3b8;
   --border-dark: #475569;
   --shadow-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --accent-dark: #f0f5f9;
-  --accent-hover-dark: #f0f5f9;
+  --accent-dark: #111720;
+  --accent-hover-dark: #161d27;
 }
 
 /* Light theme (default) */
@@ -144,9 +144,31 @@ a:hover {
   margin: 0 auto;
   padding: 0 1rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   gap: 2rem;
+}
+
+.my-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.my-logo img {
+  transition: transform 0.3s ease;
+}
+
+.my-logo img:hover {
+  transform: rotate(-45deg);
+}
+
+.my-nav {
+  margin-left: auto;
 }
 
 
@@ -170,24 +192,20 @@ a:hover {
 
 /* Theme Toggle Button */
 .theme-toggle {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: var(--accent);
   border-radius: 8px;
   padding: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: var(--text-primary);
   font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
+  border: none;
 }
 
 .theme-toggle:hover {
-  background: var(--accent);
-  color: white;
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 
@@ -234,7 +252,7 @@ a:hover {
 
 .my-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 25px -8px rgba(210, 198, 198, 0.2);
 }
 
 .my-card::before {
@@ -259,9 +277,7 @@ a:hover {
   user-select: none;
 }
 
-.my-card-interactive:active {
-  transform: translateY(-2px);
-}
+
 
 /* Card Header */
 .my-card-header {
@@ -308,7 +324,7 @@ a:hover {
 .my-hero {
   text-align: center;
   padding: 4rem 0;
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
 }
 
 .my-hero-title {
@@ -333,8 +349,8 @@ a:hover {
 /* Button Styles */
 .my-button {
   background: var(--accent);
-  color: white;
-  border: none;
+  color: var(--text-primary);
+  border: var(--accent-hover);
   border-radius: 8px;
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
@@ -349,27 +365,118 @@ a:hover {
   gap: 0.5rem;
 }
 
+/* Game specific components */
+.game-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.game-layout-centered {
+  align-items: center;
+  justify-content: center;
+}
+
+.game-sidebar {
+  flex: 2;
+  min-width: 500px;
+}
+
+.game-main {
+  flex: 0 0 350px;
+  min-width: 300px;
+}
+
+.game-main-centered {
+  flex: none;
+}
+
+.guess-display {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 200px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  max-width: 180px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.keypad-button {
+  background: var(--accent);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keypad-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.keypad-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.keypad-button-small {
+  font-size: 0.9rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.game-stats {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.game-stats p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 .my-button:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  color: white;
+  color: var(--text-primary);
   text-decoration: none;
 }
 
 .my-button:active {
   transform: translateY(0);
-}
-
-.my-button-secondary {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-
-.my-button-secondary:hover {
-  background: var(--accent);
-  color: white;
 }
 
 /* Image Styles */
@@ -457,7 +564,7 @@ input[type='text']::placeholder {
 /* Footer */
 .my-footer {
   text-align: center;
-  padding: 2rem 0;
+  padding: 1rem 0;
   border-top: 1px solid var(--border);
   background-color: var(--bg-secondary);
   margin-top: 4rem;
@@ -468,6 +575,18 @@ input[type='text']::placeholder {
   color: var(--text-muted);
   margin: 0.2rem 0;
   text-align: center;
+}
+
+.my-footer a {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.my-footer a:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
 }
 
 /* Responsive Design */
@@ -631,7 +750,7 @@ input[type='text']::placeholder {
 }
 
 .photo-credits a {
-  color: var(--accent);
+  color: var(--text-muted);
   text-decoration: none;
 }
 
