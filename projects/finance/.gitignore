@@ -7,3 +7,4 @@ pgdata
 uploads
 __pycache__
 .env
+backups
