@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import '../styles/stock.css';
 import Footer from '../components/footer';
 import logo from './assets/logo.svg';
+import light_logo from './assets/guess-light-logo.svg';
+import dark_logo from './assets/guess-dark-logo.svg';
 import light from './assets/light.svg';
 import dark from './assets/dark.svg';
 import {
@@ -64,7 +66,7 @@ function ModernHeader({ theme, toggleTheme }) {
     <header className="my-header">
       <div className="my-header-content">
         <div className="my-logo">
-          <img src={logo} alt="mcontr-logo" />
+          {theme === 'light' ? <img src={light_logo} alt="Dark mode" /> : <img src={dark_logo} alt="Light mode" />}
           <div className="my-logo-text">mcontr</div>
         </div>
         <nav className="my-nav" style={{ gap: '0.5rem' }}>

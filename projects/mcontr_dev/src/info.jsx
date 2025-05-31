@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import error_img from './assets/error.svg';
-import logo from './assets/logo.svg';
+import logo from './assets/info-logo.svg';
 import light from './assets/light.svg';
 import dark from './assets/dark.svg';
 import '../styles/stock.css';

@@ -161,6 +161,9 @@ a:hover {
 
 .my-logo img {
   transition: transform 0.3s ease;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 .my-logo img:hover {
