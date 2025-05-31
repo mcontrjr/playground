@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import 'chart.js/auto';
 import '../styles/stock.css';
 import { FinanceTabs, SupportedBanks, UploadTab } from './components/FinanceComponents.jsx';
-import walletLogo from './assets/wallet.svg';
+import logo from './assets/finance-logo.svg';
 import light from './assets/light.svg';
 import dark from './assets/dark.svg';
 
@@ -46,8 +46,8 @@ function ModernHeader({ theme, toggleTheme }) {
         <header className="my-header">
             <div className="my-header-content">
                 <div className="my-logo">
-                    <img src={walletLogo} alt="finance-logo" />
-                    <div className="my-logo-text">Finance</div>
+                    <img src={logo} alt="finance-logo" />
+                    <div className="my-logo-text">mcontr</div>
                 </div>
                 <nav className="my-nav" style={{ gap: '0.5rem' }}>
                     <a href="/" className="my-button">
