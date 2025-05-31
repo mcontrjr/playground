@@ -7,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import os
 import io
+import psutil
+import platform
+import threading
 from datetime import datetime
 
 from src.parser import Parser
@@ -205,3 +208,66 @@ async def parse_upload_file(pdf_files: List[UploadFile] = File(...)):
         handler.save_to_database(statement.purchases)
         
     return {"status": "success", "message": "File processed and data saved to database"}
+
+@app.get("/system-info/")
+async def get_system_info():
+    """
+    Endpoint to retrieve system information including CPU, memory, threads, and platform details.
+    """
+    try:
+        # CPU information
+        cpu_info = {
+            "cpu_count": psutil.cpu_count(),
+            "cpu_count_logical": psutil.cpu_count(logical=True),
+            "cpu_percent": psutil.cpu_percent(interval=1),
+            "cpu_freq": psutil.cpu_freq()._asdict() if psutil.cpu_freq() else None
+        }
+        
+        # Memory information
+        memory = psutil.virtual_memory()
+        memory_info = {
+            "total": memory.total,
+            "available": memory.available,
+            "percent": memory.percent,
+            "used": memory.used,
+            "free": memory.free
+        }
+        
+        # Thread information
+        thread_info = {
+            "active_threads": threading.active_count(),
+            "current_thread": threading.current_thread().name
+        }
+        
+        # Platform information
+        platform_info = {
+            "system": platform.system(),
+            "node": platform.node(),
+            "release": platform.release(),
+            "version": platform.version(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "python_version": platform.python_version()
+        }
+        
+        # Disk usage
+        disk = psutil.disk_usage('/')
+        disk_info = {
+            "total": disk.total,
+            "used": disk.used,
+            "free": disk.free,
+            "percent": (disk.used / disk.total) * 100
+        }
+        
+        return {
+            "cpu": cpu_info,
+            "memory": memory_info,
+            "threads": thread_info,
+            "platform": platform_info,
+            "disk": disk_info,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        log.error(f"Error retrieving system information: {e}")
+        raise HTTPException(status_code=500, detail="Error retrieving system information")

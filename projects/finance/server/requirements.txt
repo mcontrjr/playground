@@ -9,6 +9,7 @@ pypdf
 python-dotenv
 numpy==1.23.5
 matplotlib
+psutil
 
 # API
 fastapi
