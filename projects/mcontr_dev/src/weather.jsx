@@ -114,47 +114,85 @@ function SearchInterface({ location, setLocation, onSearch, loading, message }) 
   );
 }
 
-function WeatherCards({ weatherData }) {
-  const cards = [
-    {
-      title: 'Temperature',
-      value: `${weatherData.current.temp_c}°C`,
-      subtitle: `${weatherData.current.temp_f}°F`
-    },
-    {
-      title: 'Feels Like',
-      value: `${weatherData.current.feelslike_c}°C`,
-      subtitle: `${weatherData.current.feelslike_f}°F`
-    },
-    {
-      title: 'Humidity',
-      value: `${weatherData.current.humidity}%`,
-      subtitle: 'Relative humidity'
-    },
-    {
-      title: 'Wind Speed',
-      value: `${weatherData.current.wind_kph} km/h`,
-      subtitle: `${weatherData.current.wind_mph} mph ${weatherData.current.wind_dir}`
-    }
-  ];
-
+function WeatherProfileCard({ weatherData }) {
   return (
-    <div className="my-grid my-grid-2 animate-fade-in-up" style={{ marginBottom: '3rem' }}>
-      {cards.map((card, index) => (
-        <div key={index} className="my-card">
-          <div className="my-card-header">
-            <h3 className="my-card-title">{card.title}</h3>
-          </div>
-          <div className="my-card-body">
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '0.5rem' }}>
-              {card.value}
+    <div className="animate-fade-in-up" style={{ marginBottom: '3rem' }}>
+      <div className="my-card weather-profile-card">
+        <div className="my-card-body">
+          {/* Profile Header */}
+          <div className="weather-profile-header">
+            <div className="weather-location-info">
+              <h2 className="weather-location-name">
+                {weatherData.location.name}
+              </h2>
+              <p className="weather-location-region">
+                {weatherData.location.region}, {weatherData.location.country}
+              </p>
+              <p className="weather-location-time">
+                Local time: {new Date(weatherData.location.localtime).toLocaleString()}
+              </p>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
-              {card.subtitle}
-            </p>
+            
+            <div className="weather-icon-temp-container">
+              <div className="weather-icon-container">
+                <img 
+                  src={weatherData.current.condition.icon} 
+                  alt={weatherData.current.condition.text}
+                  className="weather-icon"
+                />
+                <p className="weather-condition-text">
+                  {weatherData.current.condition.text}
+                </p>
+              </div>
+              
+              <div className="weather-temperature-container">
+                <div className="weather-temperature-main">
+                  {weatherData.current.temp_c}
+                  <span className="weather-temperature-unit">
+                    °C
+                  </span>
+                </div>
+                <p className="weather-temperature-secondary">
+                  {weatherData.current.temp_f}°F
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Weather Stats Grid */}
+          <div className="weather-stats-grid">
+            <div className="weather-stat-item">
+              <h4 className="weather-stat-title">Feels Like</h4>
+              <div className="weather-stat-value">
+                {weatherData.current.feelslike_c}°C
+              </div>
+              <p className="weather-stat-subtitle">
+                {weatherData.current.feelslike_f}°F
+              </p>
+            </div>
+            
+            <div className="weather-stat-item">
+              <h4 className="weather-stat-title">Humidity</h4>
+              <div className="weather-stat-value">
+                {weatherData.current.humidity}%
+              </div>
+              <p className="weather-stat-subtitle">
+                Relative humidity
+              </p>
+            </div>
+            
+            <div className="weather-stat-item">
+              <h4 className="weather-stat-title">Wind Speed</h4>
+              <div className="weather-stat-value">
+                {weatherData.current.wind_kph} km/h
+              </div>
+              <p className="weather-stat-subtitle">
+                {weatherData.current.wind_mph} mph {weatherData.current.wind_dir}
+              </p>
+            </div>
           </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
@@ -179,15 +217,15 @@ function WeatherTable({ weatherData }) {
         <table className="custom-table">
           <thead>
             <tr>
-              <th>Metric</th>
-              <th>Value</th>
+              <th style={{ color: 'var(--text-primary)' }}>Metric</th>
+              <th style={{ color: 'var(--text-primary)' }}>Value</th>
             </tr>
           </thead>
           <tbody>
             {currentData.map((row, index) => (
               <tr key={index} className="custom-table-row">
-                <td>{row[0]}</td>
-                <td>{row[1]}</td>
+                <td style={{ color: 'var(--text-primary)' }}>{row[0]}</td>
+                <td style={{ color: 'var(--text-primary)' }}>{row[1]}</td>
               </tr>
             ))}
           </tbody>
@@ -197,32 +235,6 @@ function WeatherTable({ weatherData }) {
   );
 }
 
-function LocationHeader({ weatherData }) {
-  return (
-    <div className="animate-fade-in-up text-center" style={{ marginBottom: '3rem' }}>
-      <div className="my-card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <div className="my-card-body">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <div>
-              <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>{weatherData.location.name}</h2>
-              <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)' }}>
-                {weatherData.location.region}, {weatherData.location.country}
-              </p>
-              <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Local time: {new Date(weatherData.location.localtime).toLocaleString()}
-              </p>
-            </div>
-            <img 
-              src={weatherData.current.condition.icon} 
-              alt={weatherData.current.condition.text}
-              style={{ width: '64px', height: '64px' }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function LoadingState() {
   return (
@@ -281,7 +293,7 @@ export default function WeatherPage() {
     
     if (result.success) {
       setWeatherData(result.data);
-      setMessage('Weather data updated successfully');
+      setMessage('Success!');
     } else {
       setError(`Could not find weather data for "${location.trim()}". Please check the location and try again.`);
       setWeatherData(null);
@@ -314,8 +326,7 @@ export default function WeatherPage() {
 
             {weatherData && !loading && !error && (
               <>
-                <LocationHeader weatherData={weatherData} />
-                <WeatherCards weatherData={weatherData} />
+                <WeatherProfileCard weatherData={weatherData} />
                 <WeatherTable weatherData={weatherData} />
               </>
             )}

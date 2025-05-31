@@ -59,13 +59,13 @@ function ModernHeader({ theme, toggleTheme }) {
 }
 
 
-// Simplified image fetching with Pexels API
-async function getImages(keyword) {
+// Pexels API image fetching
+async function getPexelsImages(keyword, page = 1) {
   try {
     const apiKey = import.meta.env.VITE_PEXELS_API_KEY;
     
     if (!keyword || keyword.trim() === '') {
-      const response = await fetch('https://api.pexels.com/v1/curated?per_page=9', {
+      const response = await fetch(`https://api.pexels.com/v1/curated?per_page=9&page=${page}`, {
         headers: { 'Authorization': apiKey }
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -74,7 +74,7 @@ async function getImages(keyword) {
       return { success: true, images: data.photos.map(photo => ({ id: photo.id, url: photo.src.medium })) };
     }
     
-    const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword)}&per_page=9`, {
+    const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword)}&per_page=9&page=${page}`, {
       headers: { 'Authorization': apiKey }
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -84,36 +84,74 @@ async function getImages(keyword) {
     
     return { success: true, images: data.photos.map(photo => ({ id: photo.id, url: photo.src.medium })) };
   } catch (error) {
-    return getFallbackImages(keyword);
+    return { success: false, error: error.message };
   }
 }
 
-// Simplified fallback
-async function getFallbackImages(keyword) {
+// Lorem Picsum image fetching
+async function getLoremPicsumImages(keyword, page = 1) {
   const images = [];
+  const baseOffset = (page - 1) * 9;
   for (let i = 0; i < 9; i++) {
-    const seed = keyword ? `${keyword}-${i}` : `random-${Date.now()}-${i}`;
-    images.push({ id: `fallback-${i}`, url: `https://picsum.photos/seed/${seed}/400/400` });
+    const imageIndex = baseOffset + i;
+    const seed = keyword ? `${keyword}-${imageIndex}` : `random-${Date.now()}-${imageIndex}`;
+    images.push({ id: `picsum-${imageIndex}`, url: `https://picsum.photos/seed/${seed}/400/400` });
+  }
+  return { success: true, images };
+}
+
+// Flickr API image fetching
+async function getFlickrImages(keyword, page = 1) {
+  try {
+    const apiKey = import.meta.env.VITE_FLICKR_API_KEY;
+    
+    if (!apiKey) {
+      // Fallback to Lorem Flickr if no API key
+      return getLoremFlickrImages(keyword, page);
+    }
+    
+    let searchText = keyword && keyword.trim() !== '' ? keyword.trim() : 'nature';
+    
+    const response = await fetch(
+      `https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=${apiKey}&text=${encodeURIComponent(searchText)}&page=${page}&per_page=9&format=json&nojsoncallback=1&safe_search=1&content_type=1`
+    );
+    
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+    const data = await response.json();
+    if (data.photos.photo.length === 0) return { success: false, error: 'No photos found' };
+    
+    const images = data.photos.photo.map(photo => ({
+      id: `flickr-${photo.id}`,
+      url: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_z.jpg`
+    }));
+    
+    return { success: true, images };
+  } catch (error) {
+    return getLoremFlickrImages(keyword, page);
+  }
+}
+
+// Lorem Flickr fallback (creative placeholder images)
+async function getLoremFlickrImages(keyword, page = 1) {
+  const images = [];
+  const baseOffset = (page - 1) * 9;
+  const categories = ['nature', 'city', 'abstract', 'people', 'technology', 'food', 'animals', 'architecture', 'art'];
+  
+  for (let i = 0; i < 9; i++) {
+    const imageIndex = baseOffset + i;
+    const category = keyword ? keyword : categories[imageIndex % categories.length];
+    const seed = `flickr-${category}-${imageIndex}`;
+    images.push({ 
+      id: `lorem-flickr-${imageIndex}`, 
+      url: `https://picsum.photos/seed/${seed}/400/400?random=${imageIndex}` 
+    });
   }
   return { success: true, images };
 }
 
 
 // Components
-function ApiNotice() {
-  return (
-    <div className="my-card api-notice animate-fade-in-up">
-      <div className="my-card-body">
-        <p className="api-notice-text">
-          <strong>Demo Mode:</strong> Currently using fallback API. For best keyword accuracy, 
-          <a href="https://www.pexels.com/api/" target="_blank" rel="noopener noreferrer" className="api-notice-link">
-            get a free Pexels API key
-          </a> and update the code.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function SearchInterface({ keyword, setKeyword, onSearch, onClear, loading, message, hasSearched, hasImages }) {
   return (
@@ -146,7 +184,7 @@ function SearchInterface({ keyword, setKeyword, onSearch, onClear, loading, mess
             <button 
               className="my-button"
               onClick={onClear}
-              disabled={loading}
+              disabled={loading.pexels || loading.picsum || loading.flickr}
             >
               Clear Results
             </button>
@@ -169,8 +207,22 @@ function LoadingGrid() {
   );
 }
 
-function ImageGrid({ images }) {
-  return (
+function TabulatedGallery({ pexelsImages, picsumImages, flickrImages, loading, activeTab, setActiveTab, keyword }) {
+  const LoadingState = () => (
+    <div className="gallery-loading-state">
+      <div className="photo-skeleton-spinner"></div>
+      <p className="gallery-loading-text">Loading photos...</p>
+    </div>
+  );
+
+  const ErrorState = ({ engine }) => (
+    <div className="gallery-error-state">
+      <img src={notFound} alt="No results" className="gallery-error-image" />
+      <p className="gallery-error-text">No photos found from {engine}. Try a different keyword!</p>
+    </div>
+  );
+
+  const ImageGrid = ({ images, engine }) => (
     <>
       <div className="photo-grid">
         {images.map((image) => (
@@ -192,32 +244,107 @@ function ImageGrid({ images }) {
           </div>
         ))}
       </div>
+    </>
+  );
+
+  return (
+    <div className="gallery-tabs-container animate-fade-in-up">
+      <div className="gallery-tabs-header">
+        <button 
+          className={`gallery-tab ${activeTab === 'pexels' ? 'active' : ''}`}
+          onClick={() => setActiveTab('pexels')}
+        >
+          Pexels
+        </button>
+        <button 
+          className={`gallery-tab ${activeTab === 'picsum' ? 'active' : ''}`}
+          onClick={() => setActiveTab('picsum')}
+        >
+          Lorem Picsum
+        </button>
+        <button 
+          className={`gallery-tab ${activeTab === 'flickr' ? 'active' : ''}`}
+          onClick={() => setActiveTab('flickr')}
+        >
+          Flickr
+        </button>
+      </div>
+      
+      <div className="gallery-tab-content">
+        <div className={`gallery-tab-pane ${activeTab === 'pexels' ? 'active' : ''}`}>
+          <div className="gallery-engine-info">
+            <h4 className="gallery-engine-title">Pexels Gallery</h4>
+            <p className="gallery-engine-description">
+              High-quality stock photos from professional photographers
+            </p>
+          </div>
+          
+          {loading.pexels ? (
+            <LoadingState />
+          ) : pexelsImages.length > 0 ? (
+            <ImageGrid images={pexelsImages} engine="Pexels" />
+          ) : (
+            <ErrorState engine="Pexels" />
+          )}
+        </div>
+        
+        <div className={`gallery-tab-pane ${activeTab === 'picsum' ? 'active' : ''}`}>
+          <div className="gallery-engine-info">
+            <h4 className="gallery-engine-title">Lorem Picsum Gallery</h4>
+            <p className="gallery-engine-description">
+              Beautiful placeholder images with consistent quality and variety
+            </p>
+          </div>
+          
+          {loading.picsum ? (
+            <LoadingState />
+          ) : picsumImages.length > 0 ? (
+            <ImageGrid images={picsumImages} engine="Lorem Picsum" />
+          ) : (
+            <ErrorState engine="Lorem Picsum" />
+          )}
+        </div>
+        
+        <div className={`gallery-tab-pane ${activeTab === 'flickr' ? 'active' : ''}`}>
+          <div className="gallery-engine-info">
+            <h4 className="gallery-engine-title">Flickr Gallery</h4>
+            <p className="gallery-engine-description">
+              Community-driven photos from photographers around the world
+            </p>
+          </div>
+          
+          {loading.flickr ? (
+            <LoadingState />
+          ) : flickrImages.length > 0 ? (
+            <ImageGrid images={flickrImages} engine="Flickr" />
+          ) : (
+            <ErrorState engine="Flickr" />
+          )}
+        </div>
+      </div>
       
       <div className="photo-credits">
         <p><strong>Photo Credits:</strong></p>
-        <p>Photos provided by <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a> and <a href="https://picsum.photos" target="_blank" rel="noopener noreferrer">Lorem Picsum</a></p>
+        <p>Photos provided by <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>, <a href="https://picsum.photos" target="_blank" rel="noopener noreferrer">Lorem Picsum</a>, and <a href="https://www.flickr.com" target="_blank" rel="noopener noreferrer">Flickr</a></p>
         <p>Click any photo to view full size</p>
       </div>
-    </>
-  );
-}
-
-function NoResults() {
-  return (
-    <div className="animate-fade-in-up text-center">
-      <img src={notFound} alt="No results" style={{ width: '200px', height: '200px', maxWidth: '100%' }} />
-      <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>No photos found. Try a different keyword!</p>
     </div>
   );
 }
 
+
 export default function RandomPage() {
   const { theme, toggleTheme } = useTheme();
   const [keyword, setKeyword] = useState('');
-  const [images, setImages] = useState([]);
+  const [pexelsImages, setPexelsImages] = useState([]);
+  const [picsumImages, setPicsumImages] = useState([]);
+  const [flickrImages, setFlickrImages] = useState([]);
   const [message, setMessage] = useState('Enter a keyword to discover amazing photos!');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({ pexels: false, picsum: false, flickr: false });
   const [hasSearched, setHasSearched] = useState(false);
+  const [lastSearchedKeyword, setLastSearchedKeyword] = useState('');
+  const [currentPage, setCurrentPage] = useState({ pexels: 1, picsum: 1, flickr: 1 });
+  const [activeTab, setActiveTab] = useState('pexels');
 
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -228,27 +355,66 @@ export default function RandomPage() {
   }, [keyword, loading]);
 
   const handleSearch = async () => {
-    setLoading(true);
+    setLoading({ pexels: true, picsum: true, flickr: true });
     setHasSearched(true);
-    setMessage(keyword.trim() === '' ? 'Generating random photos...' : `Searching for "${keyword.trim()}"...`);
-
-    const result = await getImages(keyword.trim());
     
-    if (result.success) {
-      setImages(result.images);
-      setMessage(keyword.trim() === '' ? 'Here are some random photos for you!' : `Found photos for "${keyword.trim()}"`); 
+    const searchKeyword = keyword.trim();
+    let pexelsPage = 1;
+    let picsumPage = 1;
+    let flickrPage = 1;
+    
+    // If searching the same keyword as before, increment pages for different results
+    if (searchKeyword === lastSearchedKeyword) {
+      pexelsPage = currentPage.pexels + 1;
+      picsumPage = currentPage.picsum + 1;
+      flickrPage = currentPage.flickr + 1;
+      setCurrentPage({ pexels: pexelsPage, picsum: picsumPage, flickr: flickrPage });
+      setMessage(searchKeyword === '' ? `Loading more random photos...` : `Loading more photos for "${searchKeyword}"...`);
     } else {
-      setImages([]);
-      setMessage('Sorry, something went wrong. Please try again.');
+      // New keyword, reset pages to 1
+      setCurrentPage({ pexels: 1, picsum: 1, flickr: 1 });
+      setLastSearchedKeyword(searchKeyword);
+      setMessage(searchKeyword === '' ? 'Generating random photos...' : `Searching for "${searchKeyword}"...`);
     }
-    setLoading(false);
+
+    // Search all three engines simultaneously
+    const [pexelsResult, picsumResult, flickrResult] = await Promise.all([
+      getPexelsImages(searchKeyword, pexelsPage),
+      getLoremPicsumImages(searchKeyword, picsumPage),
+      getFlickrImages(searchKeyword, flickrPage)
+    ]);
+    
+    if (pexelsResult.success) {
+      setPexelsImages(pexelsResult.images);
+    } else {
+      setPexelsImages([]);
+    }
+    
+    if (picsumResult.success) {
+      setPicsumImages(picsumResult.images);
+    } else {
+      setPicsumImages([]);
+    }
+    
+    if (flickrResult.success) {
+      setFlickrImages(flickrResult.images);
+    } else {
+      setFlickrImages([]);
+    }
+    
+    setMessage(searchKeyword === '' ? 'Here are some photos for you!' : `Found photos for "${searchKeyword}"`);
+    setLoading({ pexels: false, picsum: false, flickr: false });
   };
 
   const handleClear = () => {
-    setImages([]);
+    setPexelsImages([]);
+    setPicsumImages([]);
+    setFlickrImages([]);
     setKeyword('');
     setMessage('Enter a keyword to discover amazing photos!');
     setHasSearched(false);
+    setLastSearchedKeyword('');
+    setCurrentPage({ pexels: 1, picsum: 1, flickr: 1 });
   };
 
   return (
@@ -257,34 +423,30 @@ export default function RandomPage() {
       <main>
         <section className="my-section">
           <div className="my-container">
-            <h2 className="my-section-title animate-fade-in-up">Random Image Generator</h2>
+            <h2 className="my-section-title animate-fade-in-up">Image Search</h2>
 
             <SearchInterface 
               keyword={keyword}
               setKeyword={setKeyword}
               onSearch={handleSearch}
               onClear={handleClear}
-              loading={loading}
+              loading={loading.pexels || loading.picsum || loading.flickr}
               message={message}
               hasSearched={hasSearched}
-              hasImages={images.length > 0}
+              hasImages={pexelsImages.length > 0 || picsumImages.length > 0 || flickrImages.length > 0}
             />
 
-            {loading && (
-              <div className="animate-fade-in-up">
-                <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>Loading Photos...</h3>
-                <LoadingGrid />
-              </div>
+            {(hasSearched || pexelsImages.length > 0 || picsumImages.length > 0 || flickrImages.length > 0) && (
+              <TabulatedGallery
+                pexelsImages={pexelsImages}
+                picsumImages={picsumImages}
+                flickrImages={flickrImages}
+                loading={loading}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                keyword={keyword}
+              />
             )}
-
-            {!loading && images.length > 0 && (
-              <div className="animate-fade-in-up">
-                <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>Gallery</h3>
-                <ImageGrid images={images} />
-              </div>
-            )}
-
-            {!loading && hasSearched && images.length === 0 && <NoResults />}
           </div>
         </section>
       </main>
