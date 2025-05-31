@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import '../styles/stock.css';
-import Footer from '../components/footer';
+import Footer from './components/footer';
 import logo from './assets/logo.svg';
 import light_logo from './assets/guess-light-logo.svg';
 import dark_logo from './assets/guess-dark-logo.svg';

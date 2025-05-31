@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import '../styles/stock.css';
 import error_img from './assets/rainy.svg';
-import Footer from '../components/footer';
+import Footer from './components/footer';
 import logo from './assets/weather-logo.svg';
 import light from './assets/light.svg';
 import dark from './assets/dark.svg';

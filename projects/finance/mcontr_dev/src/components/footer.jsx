@@ -1,4 +1,4 @@
-import '../styles/stock.css'
+import '../../styles/stock.css'
 
 export default function Footer() {
     return (

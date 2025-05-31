@@ -5,7 +5,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { MuiFileInput } from 'mui-file-input'
 import { useState, useEffect } from "react";
 import error_img from './assets/rainy.svg';
-import Footer from '../components/footer'
+import Footer from './components/footer'
 
 const theme = createTheme({
     typography: {

@@ -3,7 +3,7 @@ import coolImg from './assets/man_with_dog.jpg';
 import logo from './assets/logo.svg';
 import light from './assets/light.svg';
 import dark from './assets/dark.svg';
-import Footer from '../components/footer';
+import Footer from './components/footer';
 
 // Theme toggle hook
 function useTheme() {
