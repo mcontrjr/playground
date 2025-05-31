@@ -44,7 +44,7 @@ h1 {
 
 .my-bank-logo {
   height: 2em;
-  padding: 1em;
+  padding: 0.5em;
   will-change: filter;
   transition: filter 300ms;
 }

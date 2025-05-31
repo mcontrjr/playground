@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'chart.js/auto';
 import './app.css'
-import { Header, FinanceTabs, SupportedBanks } from './components/FinanceComponents.jsx';
+import { Header, FinanceTabs, SupportedBanks, UploadTab } from './components/FinanceComponents.jsx';
 
 const API_URL = "http://10.0.0.163";
 const SERVER_PORT = "8000";
 console.log('API_URL:', API_URL);
 console.log('SERVER_PORT:', SERVER_PORT);
+
+// Notes: fix chart for neg values, fix pie chart to only indlude current amount and spoedning (no negs), fix date co9l in records
 
 const Finance = () => {
     const [bankName, setBankName] = useState('');
@@ -15,8 +17,8 @@ const Finance = () => {
     const [uploadMessage, setUploadMessage] = useState('Upload your financial data here.');
     const [analyzeMessage, setAnalyzeMessage] = useState('No records to analyze. Upload in the next tab!');
     const [records, setRecords] = useState([]);
-    const [chartData, setChartData] = useState({});
-    const [pieChartData, setPieChartData] = useState({});
+    const [lineData, setLineData] = useState({});
+    const [pieData, setPieData] = useState({});
     const [totalAmount, setTotalAmount] = useState(0);
     const [selectedMonths, setSelectedMonths] = useState(['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']);
     const [activeTab, setActiveTab] = useState('amountOverTime');
@@ -91,17 +93,39 @@ const Finance = () => {
         const sortedRecords = filteredRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         const dates = sortedRecords.map(record => record.date);
-        const amounts = sortedRecords.map(record => record.amount);
+        const purchases = sortedRecords.map(record => {
+            if (record.amount > 0) {
+                return record.amount;
+            } else if (record.amount < 0) {
+                return 0;
+            }
+        });
+        const payments = sortedRecords.map(record => {
+            if (record.amount < 0) {
+                return record.amount;
+            } else if (record.amount > 0) {
+                return 0;
+            }
+        });
+        console.log('purchases:', purchases);
+        console.log('payments:', payments);
         const descriptions = sortedRecords.map(record => record.description);
 
-        setChartData({
+        setLineData({
             labels: dates,
             datasets: [
                 {
-                    label: 'Amount',
-                    data: amounts,
+                    label: 'Purchases',
+                    data: purchases,
                     borderColor: 'rgba(75,192,192,1)',
                     backgroundColor: 'rgba(75,192,192,0.2)',
+                    descriptions: descriptions,
+                },
+                {
+                    label: 'Payments',
+                    data: payments,
+                    borderColor: 'rgb(40, 139, 58)',
+                    backgroundColor: 'rgba(26, 125, 35, 0.2)',
                     descriptions: descriptions,
                 },
             ],
@@ -120,7 +144,7 @@ const Finance = () => {
         const pieLabels = Object.keys(categoryData);
         const pieAmounts = Object.values(categoryData);
 
-        setPieChartData({
+        setPieData({
             labels: pieLabels,
             datasets: [
             {
@@ -194,8 +218,8 @@ const Finance = () => {
                             bankNames={bankNames}
                             setBankName={setBankName}
                             setActiveTab={setActiveTab}
-                            chartData={chartData}
-                            pieChartData={pieChartData}
+                            lineData={lineData}
+                            pieData={pieData}
                             totalAmount={totalAmount}
                             sortedRecords={sortedRecords}
                             requestSort={requestSort}
@@ -205,40 +229,11 @@ const Finance = () => {
                     </div>
                 )}
                 {activeFunctionTab === 'upload' && (
-                    <div>
-                        <h2>Upload</h2>
-                        <p>{uploadMessage}</p>
-                        <button className="my-button" onClick={() => document.getElementById('fileInput').click()}>
-                            Upload
-                        </button>
-                        <input
-                            type="file"
-                            id="fileInput"
-                            style={{ display: 'none' }}
-                            multiple
-                            onChange={async (e) => {
-                                const files = e.target.files;
-                                const formData = new FormData();
-                                for (let i = 0; i < files.length; i++) {
-                                    formData.append('pdf_files', files[i]);
-                                }
-
-                                try {
-                                    const response = await axios.post(`${API_URL}:${SERVER_PORT}/parse/`, formData, {
-                                        headers: {
-                                            'Content-Type': 'multipart/form-data',
-                                            'Access-Control-Allow-Origin': '*',
-                                        },
-                                    });
-                                    console.log(response.data);
-                                    setUploadMessage('Files uploaded!');
-                                    fetchRecords();
-                                } catch (error) {
-                                    console.error('Error uploading files:', error);
-                                }
-                            }}
-                        />
-                    </div>
+                    <UploadTab
+                        uploadMessage={uploadMessage}
+                        setUploadMessage={setUploadMessage}
+                        fetchRecords={fetchRecords}
+                    />
                 )}
             </div>
             <SupportedBanks />

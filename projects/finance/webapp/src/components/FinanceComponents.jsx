@@ -6,8 +6,12 @@ import amexLogo from '../assets/amex.svg'
 import citiLogo from '../assets/citi.svg'
 import discoverLogo from '../assets/discover.svg'
 import noPurchases from '../assets/no-purchases.svg'
+import axios from 'axios';
 import 'chart.js/auto';
 import '../app.css'
+
+const API_URL = "http://10.0.0.163";
+const SERVER_PORT = "8000";
 
 const Header = () => (
     <>
@@ -36,11 +40,11 @@ const BankSelector = ({ bankName, bankNames, setBankName }) => (
     </div>
 );
 
-const AmountLine = ({ chartData }) => (
+const AmountLine = ({ lineData }) => (
     <div style={{ width: '100%' }}>
         <h2>Purchases</h2>
         <Line
-            data={chartData}
+            data={lineData}
             options={{
                 scales: {
                     x: {
@@ -111,11 +115,11 @@ const MonthSelector = ({ selectedMonths, setSelectedMonths }) => (
     </div>
 );
 
-const AmountPie = ({ pieChartData, totalAmount }) => (
+const AmountPie = ({ pieData, totalAmount }) => (
     <div style={{ width: '100%' }}>
         <h2>Total Amount: {totalAmount}</h2>
         <Pie 
-            data={pieChartData} 
+            data={pieData} 
             options={{
                 plugins: {
                     legend: {
@@ -193,7 +197,7 @@ const TabNavigation = ({ activeTab, setActiveTab }) => (
     </div>
 );
 
-const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab, chartData, pieChartData, totalAmount, sortedRecords, searchText, setSearchText, requestSort, selectedMonths, setSelectedMonths }) => (
+const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab, lineData, pieData, totalAmount, sortedRecords, searchText, setSearchText, requestSort, selectedMonths, setSelectedMonths }) => (
     <>
         <TabNavigation
             activeTab={activeTab}
@@ -223,13 +227,13 @@ const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab
                     <>
                         {activeTab === 'amountOverTime' && (
                             <div>
-                                <AmountLine chartData={chartData} />
+                                <AmountLine lineData={lineData} />
                             </div>
                         )}
                         {activeTab === 'distribution' && (
                             <div>
                                 <AmountPie
-                                    pieChartData={pieChartData}
+                                    pieData={pieData}
                                     totalAmount={totalAmount}
                                 />
                             </div>
@@ -247,6 +251,43 @@ const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab
     </>
 );
 
+const UploadTab = ({uploadMessage, setUploadMessage, fetchRecords}) => (
+    <div>
+        <h2>Upload</h2>
+        <p>{uploadMessage}</p>
+        <button className="my-button" onClick={() => document.getElementById('fileInput').click()}>
+            Upload
+        </button>
+        <input
+            type="file"
+            id="fileInput"
+            style={{ display: 'none' }}
+            multiple
+            onChange={async (e) => {
+                const files = e.target.files;
+                const formData = new FormData();
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('pdf_files', files[i]);
+                }
+
+                try {
+                    const response = await axios.post(`${API_URL}:${SERVER_PORT}/parse/`, formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                            'Access-Control-Allow-Origin': '*',
+                        },
+                    });
+                    console.log(response.data);
+                    setUploadMessage('Files uploaded!');
+                    fetchRecords();
+                } catch (error) {
+                    console.error('Error uploading files:', error);
+                }
+            }}
+        />
+    </div>
+);
+
 const SupportedBanks = () => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             <h3>Supported Banks</h3>
@@ -256,4 +297,4 @@ const SupportedBanks = () => (
     </div>
 );
 
-export { Header, BankSelector, FinanceTabs, SupportedBanks };
+export { Header, BankSelector, FinanceTabs, SupportedBanks, UploadTab };
