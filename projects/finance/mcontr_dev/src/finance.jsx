@@ -199,9 +199,11 @@ const Finance = () => {
             ],
         });
 
-        // Prepare data for the pie chart
+        // Prepare data for the pie chart (purchases only - positive amounts)
         const categoryData = {};
-        sortedRecords.forEach(record => {
+        const purchaseRecords = sortedRecords.filter(record => record.amount > 0);
+        
+        purchaseRecords.forEach(record => {
             if (categoryData[record.category]) {
                 categoryData[record.category] += record.amount;
             } else {
@@ -216,7 +218,7 @@ const Finance = () => {
             labels: pieLabels,
             datasets: [
             {
-                label: 'Amount by Category',
+                label: 'Spending by Category',
                 data: pieAmounts,
                 backgroundColor: [
                 '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
@@ -228,8 +230,24 @@ const Finance = () => {
             ],
         });
 
-        const formattedTotalAmount = pieAmounts.reduce((acc, amount) => acc + amount, 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-        setTotalAmount(formattedTotalAmount);
+        // Calculate high-level metrics
+        const totalPurchases = sortedRecords.filter(record => record.amount > 0).reduce((sum, record) => sum + record.amount, 0);
+        const totalPayments = Math.abs(sortedRecords.filter(record => record.amount < 0).reduce((sum, record) => sum + record.amount, 0));
+        const netSpending = totalPurchases - totalPayments;
+        const avgPurchase = purchaseRecords.length > 0 ? totalPurchases / purchaseRecords.length : 0;
+        const transactionCount = sortedRecords.length;
+        const purchaseCount = purchaseRecords.length;
+
+        const metrics = {
+            totalPurchases: totalPurchases.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+            totalPayments: totalPayments.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+            netSpending: netSpending.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+            avgPurchase: avgPurchase.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+            transactionCount,
+            purchaseCount
+        };
+        
+        setTotalAmount(metrics);
     };
 
     const requestSort = (key) => {

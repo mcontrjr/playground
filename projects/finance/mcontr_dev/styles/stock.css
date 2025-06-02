@@ -804,22 +804,63 @@ input[type='text']::placeholder {
   color: var(--text-primary);
 }
 
-.finance-grid {
-  display: grid;
+.finance-layout {
+  display: flex;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: flex-start;
+  min-height: 600px;
 }
 
 .finance-sidebar {
+  flex: 0 0 22%;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   min-width: 280px;
 }
 
 .finance-main-content {
   flex: 1;
   min-width: 0;
+  max-width: 78%;
+}
+
+.finance-chart-card {
+  width: 100%;
+  max-width: none;
+}
+
+.finance-chart-container {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  padding: 1rem;
+}
+
+.finance-supported-banks {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.finance-month-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.finance-month-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.finance-records-table {
+  width: 100%;
+  min-height: 400px;
 }
 
 .chart-container {
@@ -885,6 +926,20 @@ input[type='text']::placeholder {
 
 /* Responsive finance layout */
 @media (max-width: 1024px) {
+  .finance-layout {
+    flex-direction: column;
+  }
+  
+  .finance-sidebar {
+    flex: none;
+    min-width: auto;
+    max-width: 100%;
+  }
+  
+  .finance-main-content {
+    max-width: 100%;
+  }
+  
   .game-layout {
     flex-direction: column;
   }
@@ -892,10 +947,6 @@ input[type='text']::placeholder {
   .game-sidebar {
     flex: none;
     min-width: auto;
-  }
-  
-  .finance-grid {
-    grid-template-columns: 1fr;
   }
 }
 
