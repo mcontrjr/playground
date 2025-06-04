@@ -247,13 +247,29 @@ function GameChart({ sessionAttempts, currentRound, theme }) {
       legend: {
         position: 'top',
         labels: {
-          color: colors.primary
+          color: colors.primary,
+          font: { family: '"Roboto Mono", monospace' }
         }
       },
       title: {
         display: true,
         text: `Game ${currentRound} - Guess Progress`,
+        font: { family: '"Roboto Mono", monospace' },
         color: colors.primary
+      },
+      tooltip: {
+          callbacks: {
+              label: function(context) {
+                  const value = context.raw;
+                  return `${context.dataset.label}: ${value.toLocaleString()}`;
+              }
+          },
+          titleFont: {
+              family: '"Roboto Mono", monospace'
+          },
+          bodyFont: {
+              family: '"Roboto Mono", monospace'
+          }
       },
     },
     scales: {
@@ -264,15 +280,24 @@ function GameChart({ sessionAttempts, currentRound, theme }) {
           color: colors.border,
         },
         ticks: {
-          color: colors.secondary
+          color: colors.secondary,
+          font: {
+              family: '"Roboto Mono", monospace'
+          }
         }
       },
       x: {
         grid: {
           color: colors.border,
+          font: {
+            family: '"Roboto Mono", monospace'
+          }
         },
         ticks: {
-          color: colors.secondary
+          color: colors.secondary,
+          font: {
+            family: '"Roboto Mono", monospace'
+          }
         }
       }
     },
