@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from 'react';
-import { Line, Pie } from 'react-chartjs-2';
+import { Bar, Pie } from 'react-chartjs-2';
+import { memo } from 'react';
 import walletLogo from '../assets/wallet.svg'
 import amexLogo from '../assets/amex.svg'
 import citiLogo from '../assets/citi.svg'
@@ -28,30 +29,62 @@ const BankSelector = ({ bankName, bankNames, setBankName }) => (
             <h4 className="my-card-title">Bank Selector</h4>
         </div>
         <div className="my-card-body">
-            <select
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                className='finance-select'
-                style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-primary)',
-                    fontFamily: 'inherit'
-                }}
-            >
-                <option value="">ALL</option>
-                {bankNames.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                ))}
-            </select>
+            {bankNames.length === 0 ? (
+                // No banks case
+                <div className="finance-select-dialog">
+                    <button
+                        className="my-button"
+                        style={{
+                            width: '100%',
+                            justifyContent: 'center',
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text-secondary)',
+                            fontFamily: '"Roboto Mono", monospace'
+                        }}
+                        disabled
+                    >
+                        None
+                    </button>
+                </div>
+            ) : (
+                // One or more banks case
+                <div className="finance-select-dialog">
+                    {/* ALL option when more than one bank */}
+                    {bankNames.length > 1 && (
+                        <button
+                            className="my-button"
+                            style={{
+                                marginBottom: '0.5rem',
+                                backgroundColor: bankName === '' ? 'var(--accent-hover)' : ' var(--accent)',
+                            }}
+                            onClick={() => setBankName('')}
+                        >
+                            <span>ALL</span>
+                        </button>
+                    )}
+                    
+                    {/* Individual bank options */}
+                    {bankNames.map((name) => (
+                        <button
+                            key={name}
+                            className="my-button"
+                            style={{
+                                marginBottom: '0.5rem',
+                                backgroundColor: bankName === name ? 'var(--accent-hover)' : ' var(--accent)',
+                            }}
+                            onClick={() => setBankName(name)}
+                        >
+                            <span>{name}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     </div>
 );
 
-const AmountLine = ({ lineData }) => {
+const AmountBar = ({ lineData }) => {
     const getThemeColors = () => {
         const computedStyle = getComputedStyle(document.documentElement);
         return {
@@ -62,11 +95,54 @@ const AmountLine = ({ lineData }) => {
     };
 
     const colors = getThemeColors();
+    
+    // Process data into weekly chunks
+    const processWeeklyData = (data) => {
+        const weeklyData = {};
+        
+        data.labels.forEach((date, index) => {
+            const [year, month, day] = date.split('-');
+            const weekNum = Math.ceil(parseInt(day) / 7);
+            const weekKey = `${year}-${month}-W${weekNum}`;
+            
+            if (!weeklyData[weekKey]) {
+                weeklyData[weekKey] = {
+                    purchases: 0,
+                    payments: 0,
+                    label: `Week ${weekNum} (${month}/${year})`
+                };
+            }
+            
+            // Add purchases and payments
+            weeklyData[weekKey].purchases += data.datasets[0].data[index] || 0;
+            weeklyData[weekKey].payments += Math.abs(data.datasets[1].data[index] || 0);
+        });
+        
+        return {
+            labels: Object.values(weeklyData).map(week => week.label),
+            datasets: [
+                {
+                    label: 'Purchases',
+                    data: Object.values(weeklyData).map(week => week.purchases),
+                    backgroundColor: '#f4d35e', // Yellow from logo
+                    barPercentage: 0.8,
+                },
+                {
+                    label: 'Payments',
+                    data: Object.values(weeklyData).map(week => week.payments),
+                    backgroundColor: '#006600', // Green from logo
+                    barPercentage: 0.8,
+                }
+            ]
+        };
+    };
+
+    const weeklyData = processWeeklyData(lineData);
 
     return (
         <div className="finance-chart-container">
-            <Line
-                data={lineData}
+            <Bar
+                data={weeklyData}
                 options={{
                     responsive: true,
                     maintainAspectRatio: false,
@@ -76,7 +152,10 @@ const AmountLine = ({ lineData }) => {
                                 color: colors.border
                             },
                             ticks: {
-                                color: colors.secondary
+                                color: colors.secondary,
+                                font: {
+                                    family: '"Roboto Mono", monospace'
+                                }
                             }
                         },
                         y: {
@@ -84,23 +163,35 @@ const AmountLine = ({ lineData }) => {
                                 color: colors.border
                             },
                             ticks: {
-                                color: colors.secondary
+                                color: colors.secondary,
+                                callback: (value) => `$${value.toLocaleString()}`,
+                                font: {
+                                    family: '"Roboto Mono", monospace'
+                                }
                             }
                         }
                     },
                     plugins: {
                         tooltip: {
                             callbacks: {
-                                label: function (context) {
-                                    const description = context.dataset.descriptions[context.dataIndex];
-                                    const amount = context.raw;
-                                    return `${description}: $${amount}`;
+                                label: function(context) {
+                                    const value = context.raw;
+                                    return `${context.dataset.label}: $${value.toLocaleString()}`;
                                 }
+                            },
+                            titleFont: {
+                                family: '"Roboto Mono", monospace'
+                            },
+                            bodyFont: {
+                                family: '"Roboto Mono", monospace'
                             }
                         },
                         legend: {
                             labels: {
-                                color: colors.primary
+                                color: colors.primary,
+                                font: {
+                                    family: '"Roboto Mono", monospace'
+                                }
                             }
                         }
                     }
@@ -156,21 +247,59 @@ const AmountPie = ({ pieData, totalAmount }) => {
 
     const colors = getThemeColors();
 
+    // Create a custom dataset with logo colors
+    const customPieData = {
+        ...pieData,
+        datasets: [{
+            ...pieData.datasets[0],
+            backgroundColor: [
+                '#0d3b66', // Navy blue from logo
+                '#006600', // Green from logo
+                '#f4d35e', // Yellow from logo
+                // Generate additional colors by adjusting opacity of the main colors
+                'rgba(50, 124, 194, 0.8)',   // Navy with 80% opacity
+                'rgba(4, 210, 4, 0.8)',     // Green with 80% opacity
+                'rgba(243, 210, 89, 0.8)',  // Yellow with 80% opacity
+                'rgba(87, 243, 241, 0.6)',   // Navy with 60% opacity
+                'rgba(245, 234, 40, 0.6)',     // Green with 60% opacity
+                'rgba(191, 35, 4, 0.6)',  // Yellow with 60% opacity
+                // Add more variations if needed
+            ]
+        }]
+    };
+
     return (
         <div style={{ display: 'flex', gap: '2rem', height: '500px' }}>
             {/* Pie Chart */}
             <div style={{ flex: '1', minWidth: '400px' }}>
                 <Pie 
-                    data={pieData} 
+                    data={customPieData} 
                     options={{
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
+                            tooltip: {
+                                titleFont: {
+                                    family: '"Roboto Mono", monospace'
+                                },
+                                bodyFont: {
+                                    family: '"Roboto Mono", monospace'
+                                },
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        return `${context.label}: $${value.toLocaleString()}`;
+                                    }
+                                }
+                            },
                             legend: {
                                 position: 'bottom',
                                 labels: {
                                     color: colors.primary,
-                                    padding: 20
+                                    padding: 20,
+                                    font: {
+                                        family: '"Roboto Mono", monospace'
+                                    }
                                 }
                             }
                         }
@@ -196,7 +325,7 @@ const AmountPie = ({ pieData, totalAmount }) => {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid var(--border)' }}>
                                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Net Spending:</span>
-                                <span style={{ color: totalAmount.netSpending.includes('-') ? '#ef4444' : 'var(--text-primary)', fontWeight: '600' }}>{totalAmount.netSpending}</span>
+                                <span style={{ color: totalAmount.netSpending.includes('-') ? '#006600' : 'var(--text-primary)', fontWeight: '600' }}>{totalAmount.netSpending}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid var(--border)' }}>
                                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Avg Purchase:</span>
@@ -214,6 +343,7 @@ const AmountPie = ({ pieData, totalAmount }) => {
                     </div>
                 </div>
             </div>
+
         </div>
     );
 };
@@ -228,7 +358,7 @@ const RecordTable = ({ sortedRecords, requestSort }) => {
     return (
         <div className="finance-records-table">
             <div className="mb-3">
-                <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Transaction Records [{filteredRecords.length}]</h3>
+                <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>All Statement Records [{filteredRecords.length}]</h3>
                 <input
                     type="text"
                     placeholder="Search records..."
@@ -273,7 +403,7 @@ const RecordTable = ({ sortedRecords, requestSort }) => {
                                 <td style={{ padding: '1rem', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{record.description}</td>
                                 <td style={{ 
                                     padding: '1rem',
-                                    color: record.amount >= 0 ? 'var(--text-primary)' : '#ff6b6b',
+                                    color: record.amount >= 0 ? 'var(--text-primary)' : '#006600',
                                     fontWeight: '600',
                                     whiteSpace: 'nowrap'
                                 }}>
@@ -322,7 +452,61 @@ const TabNavigation = ({ activeTab, setActiveTab }) => (
     </div>
 );
 
-const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab, lineData, pieData, totalAmount, sortedRecords, searchText, setSearchText, requestSort, selectedMonths, setSelectedMonths }) => (
+const MainContent = memo(({ sortedRecords, activeTab, lineData, pieData, totalAmount, requestSort }) => {
+    if (sortedRecords.length === 0) {
+        return (
+            <div className="text-center">
+                <div className="my-card" style={{ justifyContent: 'center', alignItems: 'center', maxWidth: '50%', margin: '0 auto' }}>
+                    <div className="my-card-body">
+                        <h3 style={{ color: 'var(--text-primary)' }}>No purchases for selected months</h3>
+                        <img src={noPurchases} className="custom-img" alt="No purchases" style={{ maxWidth: '200px', marginTop: '1rem' }} />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="gallery-tab-pane active">
+            {activeTab === 'amountOverTime' && (
+                <div className="my-card finance-chart-card">
+                    <div className="my-card-header">
+                        <h3 className="my-card-title">Weekly Purchases & Payments</h3>
+                    </div>
+                    <div className="my-card-body" style={{ padding: 0 }}>
+                        <AmountBar lineData={lineData} />
+                    </div>
+                </div>
+            )}
+            {activeTab === 'distribution' && (
+                <div className="my-card finance-chart-card">
+                    <div className="my-card-header">
+                        <h3 className="my-card-title">Spending Distribution & Metrics</h3>
+                        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Purchase categories and financial overview</p>
+                    </div>
+                    <div className="my-card-body" style={{ padding: '1rem' }}>
+                        <AmountPie
+                            pieData={pieData}
+                            totalAmount={totalAmount}
+                        />
+                    </div>
+                </div>
+            )}
+            {activeTab === 'records' && (
+                <div className="my-card finance-chart-card">
+                    <div className="my-card-body">
+                        <RecordTable
+                            sortedRecords={sortedRecords}
+                            requestSort={requestSort}
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+});
+
+const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab, lineData, pieData, totalAmount, sortedRecords, searchText, setSearchText, requestSort, selectedMonths, setSelectedMonths, loading }) => (
     <div className="gallery-tabs-container">
         <TabNavigation
             activeTab={activeTab}
@@ -346,52 +530,31 @@ const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab
                 
                 {/* Main Content Area (80% width) */}
                 <div className="finance-main-content">
-                    {sortedRecords.length === 0 ? (
-                        <div className="text-center">
-                            <div className="my-card">
-                                <div className="my-card-body">
-                                    <h3 style={{ color: 'var(--text-primary)' }}>No purchases for selected months</h3>
-                                    <img src={noPurchases} className="custom-img" alt="No purchases" style={{ maxWidth: '200px', marginTop: '1rem' }} />
-                                </div>
-                            </div>
+                    {loading ? (
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            alignItems: 'center', 
+                            height: '400px' 
+                        }}>
+                            <div style={{ 
+                                width: '40px', 
+                                height: '40px', 
+                                border: '4px solid var(--border)', 
+                                borderTop: '4px solid var(--accent)', 
+                                borderRadius: '50%', 
+                                animation: 'spin 1s linear infinite' 
+                            }}></div>
                         </div>
                     ) : (
-                        <div className="gallery-tab-pane active">
-                            {activeTab === 'amountOverTime' && (
-                                <div className="my-card finance-chart-card">
-                                    <div className="my-card-header">
-                                        <h3 className="my-card-title">Purchases Over Time</h3>
-                                    </div>
-                                    <div className="my-card-body" style={{ padding: 0 }}>
-                                        <AmountLine lineData={lineData} />
-                                    </div>
-                                </div>
-                            )}
-                            {activeTab === 'distribution' && (
-                                <div className="my-card finance-chart-card">
-                                    <div className="my-card-header">
-                                        <h3 className="my-card-title">Spending Distribution & Metrics</h3>
-                                        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Purchase categories and financial overview</p>
-                                    </div>
-                                    <div className="my-card-body" style={{ padding: '1rem' }}>
-                                        <AmountPie
-                                            pieData={pieData}
-                                            totalAmount={totalAmount}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                            {activeTab === 'records' && (
-                                <div className="my-card finance-chart-card">
-                                    <div className="my-card-body">
-                                        <RecordTable
-                                            sortedRecords={sortedRecords}
-                                            requestSort={requestSort}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <MainContent 
+                            sortedRecords={sortedRecords}
+                            activeTab={activeTab}
+                            lineData={lineData}
+                            pieData={pieData}
+                            totalAmount={totalAmount}
+                            requestSort={requestSort}
+                        />
                     )}
                 </div>
             </div>

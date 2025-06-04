@@ -94,43 +94,39 @@ const Finance = () => {
         return sortableRecords;
     }, [records, sortConfig]);
 
-    const fetchRecords = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            
-            const response = await fetch(`${API_URL}/records?bank_name=${bankName}`);
-            
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            
-            const data = await response.json();
-            let fetchedRecords = data.records.map(record => ({
-                ...record,
-                amount: parseFloat(record.amount),
-            }));
-
-            if (selectedMonths.length > 0) {
-                fetchedRecords = fetchedRecords.filter(record => selectedMonths.includes(record.date.split('-')[1]));
-            }
-
-            if (fetchedRecords.length === 0) {
-                setAnalyzeMessage('No records for this month. Please select another month.');
-            } else {
-                setAnalyzeMessage('');
-            }
-
-            setRecords(fetchedRecords);
-            prepareChartData(fetchedRecords);
-        } catch (error) {
-            console.error('Error fetching records:', error);
-            setError(error);
-            setAnalyzeMessage('Error loading records. Please try again.');
-        } finally {
-            setLoading(false);
+    // Modify the fetchRecords function to use local loading state
+const fetchRecords = async () => {
+    try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch(`${API_URL}/records?bank_name=${bankName}`);
+        
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
         }
-    };
+        
+        const data = await response.json();
+        let fetchedRecords = data.records.map(record => ({
+            ...record,
+            amount: parseFloat(record.amount),
+        }));
+
+        if (selectedMonths.length > 0) {
+            fetchedRecords = fetchedRecords.filter(record => 
+                selectedMonths.includes(record.date.split('-')[1])
+            );
+        }
+
+        setRecords(fetchedRecords);
+        prepareChartData(fetchedRecords);
+    } catch (error) {
+        console.error('Error fetching records:', error);
+        setError(error);
+    } finally {
+        setLoading(false);
+    }
+};
     
     useEffect(() => {
         const fetchBankNames = async () => {
@@ -271,26 +267,6 @@ const Finance = () => {
         };
     }, []);
 
-    if (loading) return (
-        <>
-            <ModernHeader theme={theme} toggleTheme={toggleTheme} />
-            <div className="my-container">
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                    <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
-                        border: '4px solid var(--border)', 
-                        borderTop: '4px solid var(--accent)', 
-                        borderRadius: '50%', 
-                        animation: 'spin 1s linear infinite',
-                        margin: '0 auto'
-                    }}></div>
-                    <p style={{ marginTop: '1rem', color: 'var(--text-secondary)' }}>Loading financial data...</p>
-                </div>
-            </div>
-        </>
-    )
-
     if (error) return (
         <>
             <ModernHeader theme={theme} toggleTheme={toggleTheme} />
@@ -347,12 +323,6 @@ const Finance = () => {
                             <div className="gallery-tab-content">
                                 {activeFunctionTab === 'analyze' && (
                                     <div className="gallery-tab-pane active">
-                                        {analyzeMessage && (
-                                            <div className="gallery-engine-info">
-                                                <h3 className="gallery-engine-title">Financial Analysis</h3>
-                                                <p className="gallery-engine-description">{analyzeMessage}</p>
-                                            </div>
-                                        )}
                                         
                                         <FinanceTabs
                                             activeTab={activeTab}
@@ -367,6 +337,7 @@ const Finance = () => {
                                             requestSort={requestSort}
                                             selectedMonths={selectedMonths}
                                             setSelectedMonths={setSelectedMonths}
+                                            loading={loading}
                                         />
                                     </div>
                                 )}
