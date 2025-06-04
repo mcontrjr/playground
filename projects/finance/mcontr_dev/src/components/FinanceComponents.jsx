@@ -42,7 +42,7 @@ const BankSelector = ({ bankName, bankNames, setBankName }) => (
                     fontFamily: 'inherit'
                 }}
             >
-                <option value="">ALL BANKS</option>
+                <option value="">ALL</option>
                 {bankNames.map((name) => (
                     <option key={name} value={name}>{name}</option>
                 ))}
@@ -228,7 +228,7 @@ const RecordTable = ({ sortedRecords, requestSort }) => {
     return (
         <div className="finance-records-table">
             <div className="mb-3">
-                <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Transaction Records ({filteredRecords.length})</h3>
+                <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Transaction Records [{filteredRecords.length}]</h3>
                 <input
                     type="text"
                     placeholder="Search records..."
@@ -402,14 +402,7 @@ const FinanceTabs = ({ activeTab, bankName, bankNames, setBankName, setActiveTab
 const UploadTab = ({uploadMessage, setUploadMessage, fetchRecords}) => (
     <div className="text-center">
         <div className="my-card" style={{ maxWidth: '500px', margin: '0 auto' }}>
-            <div className="my-card-header">
-                <h3 className="my-card-title">Upload Bank Statements</h3>
-            </div>
             <div className="my-card-body">
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-                    Select your PDF bank statements to analyze your financial data
-                </p>
-                
                 <button 
                     className="my-button" 
                     onClick={() => document.getElementById('fileInput').click()}

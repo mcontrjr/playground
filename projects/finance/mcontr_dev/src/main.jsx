@@ -156,19 +156,19 @@ function PlaygroundSection() {
   const features = [
     {
       title: "Guessing Game",
-      description: "Try to guess the number in just one attempt. It's definitely possible if you're lucky!",
+      description: "Can you get it in 1 attempt? You got a 1% chance.",
       route: "/guess",
       category: "Game"
     },
     {
       title: "Weather Check",
-      description: "Check local weather from the server and compare it with your own location data.",
+      description: "Check weather with any zip code or city name.",
       route: "/weather",
       category: "Utility"
     },
     {
       title: "Image Generator",
-      description: "Generate random images from who knows where. See if you get something cool!",
+      description: "Get random images from a single word!",
       route: "/random",
       category: "Creative"
     }
@@ -198,10 +198,9 @@ function PlaygroundSection() {
 function ToolsSection() {
   const tools = [
     {
-      title: "Finance Parser",
-      description: "Upload your financial data and get insights into where your money is going. Track expenses and analyze spending patterns.",
-      route: "/finance",
-      status: "coming soon"
+      title: "Statement Parser",
+      description: "Upload your bank statements and get find out where your money is going.",
+      route: "/finance"
     }
   ];
 

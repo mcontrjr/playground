@@ -64,7 +64,7 @@ const Finance = () => {
     const { theme, toggleTheme } = useTheme();
     const [bankName, setBankName] = useState('');
     const [bankNames, setBankNames] = useState([]);
-    const [uploadMessage, setUploadMessage] = useState('Upload your financial data here.');
+    const [uploadMessage, setUploadMessage] = useState('Upload your statements here..');
     const [analyzeMessage, setAnalyzeMessage] = useState('No records to analyze. Upload in the next tab!');
     const [records, setRecords] = useState([]);
     const [lineData, setLineData] = useState({});
@@ -323,9 +323,7 @@ const Finance = () => {
             <ModernHeader theme={theme} toggleTheme={toggleTheme} />
             <main>
                 <section className="my-section">
-                    <div className="my-container">
-                        <h2 className="my-section-title animate-fade-in-up">Finance Dashboard</h2>
-                        
+                    <div className="my-container">                        
                         {/* Main Finance Card */}
                         <div className="gallery-tabs-container animate-fade-in-up">
                             <div className="gallery-tabs-header">
@@ -333,16 +331,16 @@ const Finance = () => {
                                     className={`gallery-tab ${activeFunctionTab === 'upload' ? 'active' : ''}`}
                                     onClick={() => setActiveFunctionTab('upload')}
                                 >
-                                    Upload Documents
+                                    Upload Center
                                 </button>
                                 <button
                                     className={`gallery-tab ${activeFunctionTab === 'analyze' ? 'active' : ''}`}
                                     onClick={() => {
                                         setActiveFunctionTab('analyze')
-                                        setUploadMessage('Upload your financial data here.')
+                                        setUploadMessage('Upload more statements here.')
                                     }}
                                 >
-                                    Analyze Data
+                                    Breakdown
                                 </button>
                             </div>
                             
@@ -374,12 +372,7 @@ const Finance = () => {
                                 )}
                                 
                                 {activeFunctionTab === 'upload' && (
-                                    <div className="gallery-tab-pane active">
-                                        <div className="gallery-engine-info">
-                                            <h3 className="gallery-engine-title">Document Upload</h3>
-                                            <p className="gallery-engine-description">Upload your PDF bank statements to analyze your financial data</p>
-                                        </div>
-                                        
+                                    <div className="gallery-tab-pane active">                                        
                                         <UploadTab
                                             uploadMessage={uploadMessage}
                                             setUploadMessage={setUploadMessage}

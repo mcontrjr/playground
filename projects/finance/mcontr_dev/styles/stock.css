@@ -816,7 +816,8 @@ input[type='text']::placeholder {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-width: 280px;
+  min-width: 15%;
+  max-width: 20%;
 }
 
 .finance-main-content {
@@ -838,7 +839,7 @@ input[type='text']::placeholder {
 }
 
 .finance-supported-banks {
-  max-width: 600px;
+  max-width: 30%;
   margin: 0 auto;
 }
 
@@ -861,6 +862,7 @@ input[type='text']::placeholder {
 .finance-records-table {
   width: 100%;
   min-height: 400px;
+  font-size: small;
 }
 
 .chart-container {

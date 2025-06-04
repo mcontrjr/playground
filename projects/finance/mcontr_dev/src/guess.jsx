@@ -423,11 +423,24 @@ export default function GuessPage() {
     setGuess('');
   }
 
+  const concludingMessage = (attemptNum) => {
+    if (attemptNum === 1) {
+      setMessage('Damn I\'m pretty sure you cheated but good job!')
+    } else if (attemptNum < 5) {
+      setMessage(`Less than 5 is super solid!`);
+    } else if (attemptNum < 10) {
+      setMessage(`Not great but you finally got it!`);
+    }
+    else {
+      setMessage(`You should keep playing for the practice!`);
+    }
+  }
+
   const compareGuess = (guess, attemptNum) => {
     if (guess === randomNum) {
-      setMessage(`Amazing! You got it in ${attemptNum} ${attemptNum === 1 ? 'attempt' : 'attempts'}!`);
       setGameWon(true);
       setGameHistory(prev => [...prev, { round: currentRound, attempts: attemptNum, target: randomNum }]);
+      concludingMessage(attemptNum);
     } else if (guess < randomNum) {
       setMessage(`Too low! Your guess: ${guess}. Try higher!`);
     } else {
