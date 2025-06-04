@@ -199,7 +199,7 @@ function ToolsSection() {
   const tools = [
     {
       title: "Statement Parser",
-      description: "Upload your bank statements and get find out where your money is going.",
+      description: "Upload your bank statements and find out where your money is going.",
       route: "/finance"
     }
   ];

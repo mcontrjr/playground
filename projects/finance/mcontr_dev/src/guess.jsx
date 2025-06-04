@@ -138,19 +138,9 @@ function GameInterface({
   
   return (
     <div className="game-interface">
-      {hasActiveGame && (
-        <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
-          Guessing Game
-        </h3>
-      )}
       
       <div className="game-right-panel animate-fade-in-up">
         <div className="my-card-body">
-          {!hasActiveGame && (
-            <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
-              Guessing Game
-            </h3>
-          )}
           
           <p className="mb-3" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
             {message}
@@ -253,7 +243,7 @@ function GameChart({ sessionAttempts, currentRound, theme }) {
       },
       title: {
         display: true,
-        text: `Game ${currentRound} - Guess Progress`,
+        text: `Game ${currentRound}`,
         font: { family: '"Roboto Mono", monospace' },
         color: colors.primary
       },
