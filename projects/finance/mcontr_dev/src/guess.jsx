@@ -138,19 +138,9 @@ function GameInterface({
   
   return (
     <div className="game-interface">
-      {hasActiveGame && (
-        <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
-          Guessing Game
-        </h3>
-      )}
       
       <div className="game-right-panel animate-fade-in-up">
         <div className="my-card-body">
-          {!hasActiveGame && (
-            <h3 className="text-center mb-3" style={{ color: 'var(--text-primary)' }}>
-              Guessing Game
-            </h3>
-          )}
           
           <p className="mb-3" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
             {message}
@@ -247,13 +237,29 @@ function GameChart({ sessionAttempts, currentRound, theme }) {
       legend: {
         position: 'top',
         labels: {
-          color: colors.primary
+          color: colors.primary,
+          font: { family: '"Roboto Mono", monospace' }
         }
       },
       title: {
         display: true,
-        text: `Game ${currentRound} - Guess Progress`,
+        text: `Game ${currentRound}`,
+        font: { family: '"Roboto Mono", monospace' },
         color: colors.primary
+      },
+      tooltip: {
+          callbacks: {
+              label: function(context) {
+                  const value = context.raw;
+                  return `${context.dataset.label}: ${value.toLocaleString()}`;
+              }
+          },
+          titleFont: {
+              family: '"Roboto Mono", monospace'
+          },
+          bodyFont: {
+              family: '"Roboto Mono", monospace'
+          }
       },
     },
     scales: {
@@ -264,15 +270,24 @@ function GameChart({ sessionAttempts, currentRound, theme }) {
           color: colors.border,
         },
         ticks: {
-          color: colors.secondary
+          color: colors.secondary,
+          font: {
+              family: '"Roboto Mono", monospace'
+          }
         }
       },
       x: {
         grid: {
           color: colors.border,
+          font: {
+            family: '"Roboto Mono", monospace'
+          }
         },
         ticks: {
-          color: colors.secondary
+          color: colors.secondary,
+          font: {
+            family: '"Roboto Mono", monospace'
+          }
         }
       }
     },
@@ -423,11 +438,24 @@ export default function GuessPage() {
     setGuess('');
   }
 
+  const concludingMessage = (attemptNum) => {
+    if (attemptNum === 1) {
+      setMessage('Damn I\'m pretty sure you cheated but good job!')
+    } else if (attemptNum < 5) {
+      setMessage(`Less than 5 is super solid!`);
+    } else if (attemptNum < 10) {
+      setMessage(`Not great but you finally got it!`);
+    }
+    else {
+      setMessage(`You should keep playing for the practice!`);
+    }
+  }
+
   const compareGuess = (guess, attemptNum) => {
     if (guess === randomNum) {
-      setMessage(`Amazing! You got it in ${attemptNum} ${attemptNum === 1 ? 'attempt' : 'attempts'}!`);
       setGameWon(true);
       setGameHistory(prev => [...prev, { round: currentRound, attempts: attemptNum, target: randomNum }]);
+      concludingMessage(attemptNum);
     } else if (guess < randomNum) {
       setMessage(`Too low! Your guess: ${guess}. Try higher!`);
     } else {

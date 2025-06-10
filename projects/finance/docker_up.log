@@ -1,0 +1,17 @@
+Attaching to finance_frontend, finance_postgres, finance_server
+finance_postgres  | 
+finance_postgres  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+finance_postgres  | 
+finance_frontend  | 
+finance_frontend  | > mcontr.dev@0.0.0 dev
+finance_frontend  | > vite --host --host 0.0.0.0 --port 5173
+finance_frontend  | 
+finance_frontend  | Re-optimizing dependencies because vite config has changed
+finance_frontend  | 
+finance_frontend  |   VITE v5.4.11  ready in 1165 ms
+finance_frontend  | 
+finance_frontend  |   ➜  Local:   http://localhost:5173/
+finance_frontend  |   ➜  Network: http://172.18.0.2:5173/
+finance_server    | INFO:     172.19.0.1:57594 - "GET /specs HTTP/1.1" 404 Not Found
+finance_server    | INFO:     172.19.0.1:57594 - "GET /specs HTTP/1.1" 404 Not Found
+finance_frontend  | 8:32:04 AM [vite] hmr update /src/info.jsx

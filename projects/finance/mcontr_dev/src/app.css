@@ -1,0 +1,223 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+.my-bank-logo {
+  height: 2em;
+  padding: 0.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+.logo-spin {
+  animation: logo-spin infinite 20s linear;
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+.my-button {
+  background-color: #2b6c88; /* Green background */
+  color: white; /* White text */
+  border: none; /* No borders */
+  border-radius: 5px; /* Rounded corners */
+  padding: 10px 20px; /* Padding for height and width */
+  font-size: 1rem; /* Font size */
+  font-weight: bold; /* Bold text */
+  text-align: center; /* Center text */
+  text-decoration: none; /* Remove underline */
+  display: inline-block; /* Make the button inline-block */
+  transition: background-color 0.3s ease, transform 0.2s; /* Transition effects */
+  cursor: pointer; /* Pointer cursor on hover */
+  margin: 20px;
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.my-table {
+  width: 100%; /* Increase the width of the table */
+  border-collapse: collapse; /* Ensure borders are collapsed */
+  margin: 20px 0; /* Add some margin around the table */
+  font-size: 1rem; /* Set font size */
+  text-align: left; /* Align text to the left */
+}
+
+.my-table th, .my-table td {
+  border: 1px solid #ddd; /* Add grid lines */
+  padding: 12px 15px; /* Add padding to table cells */
+}
+
+.my-table th {
+  background-color: #2b6c88; /* Set header background color */
+  color: white; /* Set header text color */
+}
+
+.my-table tr:nth-child(even) {
+  background-color: #2b2b2b; /* Set fill color for even rows */
+}
+
+.my-table tr:hover {
+  background-color: #747474; /* Set hover color for rows */
+}
+
+.my-select {
+  width: 200px; /* Ensure the width is 100% */
+  padding: 10px; /* Add padding */
+  font-size: 1rem; /* Set font size */
+  border: 1px solid #ddd; /* Add border */
+  border-radius: 5px; /* Add rounded corners */
+  margin: 10px auto; /* Add margin */
+  margin-top: 0;
+  box-sizing: border-box; /* Ensure padding and border are included in the element's total width and height */
+  background-color: #103042;
+}
+
+.my-checkbox {
+  display: block; /* Make the list vertical */
+  margin: 10px 0; /* Add some margin between checkboxes */
+  margin-right: 10px 0;
+}
+
+.my-checkbox input[type="checkbox"] {
+  accent-color: teal; /* Set the checkbox color to teal */
+}
+
+.my-checkbox input[type="checkbox"]::before {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  text-align: center;
+  line-height: 1em;
+  color: white;
+  background-color: teal;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.my-tab-navigation {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.my-tab-navigation button {
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  margin: 0 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s;
+}
+
+.my-tab-navigation button:hover {
+  background-color: #1e4d66;
+}
+
+.my-tab-navigation button.active {
+  background-color: #103042;
+  transform: scale(1.05);
+}
+
+.my-card {
+  background-color: #223e4a; /* Light background color */
+  border: 1px solid #ddd; /* Light border */
+  border-radius: 10px; /* Rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  padding: 20px; /* Padding inside the card */
+  margin: 20px; /* Margin around the card */
+  width: 1000px; /* Full width */
+}
