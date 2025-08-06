@@ -1,0 +1,144 @@
+name: Generate Changelog
+
+on:
+  # Trigger on PR merge to main
+  push:
+    branches:
+      - main
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      base_commit:
+        description: 'Base commit (default: previous commit on main)'
+        required: false
+        type: string
+      head_commit:
+        description: 'Head commit (default: HEAD)'
+        required: false
+        type: string
+        default: 'HEAD'
+      output_file:
+        description: 'Output file path (default: CHANGELOG_LATEST.md)'
+        required: false
+        type: string
+        default: 'CHANGELOG_LATEST.md'
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for git diff
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Determine commit range
+        id: commits
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # For push events (PR merge), compare with previous commit
+            BASE_COMMIT="${{ github.event.before }}"
+            HEAD_COMMIT="${{ github.sha }}"
+
+            # If this is the first commit, use the commit itself
+            if [[ "$BASE_COMMIT" == "0000000000000000000000000000000000000000" ]]; then
+              BASE_COMMIT="${HEAD_COMMIT}^"
+            fi
+          else
+            # For manual trigger, use inputs or defaults
+            if [[ -n "${{ github.event.inputs.base_commit }}" ]]; then
+              BASE_COMMIT="${{ github.event.inputs.base_commit }}"
+            else
+              BASE_COMMIT="HEAD^"
+            fi
+            HEAD_COMMIT="${{ github.event.inputs.head_commit }}"
+          fi
+
+          echo "base_commit=$BASE_COMMIT" >> $GITHUB_OUTPUT
+          echo "head_commit=$HEAD_COMMIT" >> $GITHUB_OUTPUT
+          echo "Comparing $BASE_COMMIT to $HEAD_COMMIT"
+
+      - name: Generate changelog
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        working-directory: projects/claude
+        run: |
+          OUTPUT_FILE="${{ github.event.inputs.output_file || 'CHANGELOG_LATEST.md' }}"
+
+          python changelog_generator.py \
+            "${{ steps.commits.outputs.base_commit }}" \
+            "${{ steps.commits.outputs.head_commit }}" \
+            --output "$OUTPUT_FILE"
+
+          echo "Generated changelog in $OUTPUT_FILE"
+
+          # Show the changelog content in the action log
+          echo "=== Changelog Content ==="
+          cat "$OUTPUT_FILE"
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: changelog
+          path: |
+            CHANGELOG_LATEST.md
+            CHANGELOG_*.md
+          retention-days: 30
+
+      - name: Create or update PR with changelog
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Only create PR if we have actual changelog content
+          if [[ -f "CHANGELOG_LATEST.md" ]] && [[ -s "CHANGELOG_LATEST.md" ]]; then
+            # Create a new branch for the changelog
+            BRANCH_NAME="changelog/auto-$(date +%Y%m%d-%H%M%S)"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git checkout -b "$BRANCH_NAME"
+            git add CHANGELOG_LATEST.md
+
+            # Check if there are any changes to commit
+            if git diff --cached --quiet; then
+              echo "No changelog changes to commit"
+              exit 0
+            fi
+
+            git commit -m "docs: auto-generated changelog for latest changes
+
+            Generated from commits ${{ steps.commits.outputs.base_commit }} to ${{ steps.commits.outputs.head_commit }}"
+
+            git push origin "$BRANCH_NAME"
+
+            # Create PR using GitHub CLI if available, otherwise use API
+            if command -v gh &> /dev/null; then
+              gh pr create \
+                --title "📝 Auto-generated Changelog" \
+                --body "This PR contains the auto-generated changelog for the latest changes merged to main.
+
+                **Commit Range:** \`${{ steps.commits.outputs.base_commit }}\` → \`${{ steps.commits.outputs.head_commit }}\`
+
+                The changelog has been generated automatically using AI analysis of the git diff." \
+                --head "$BRANCH_NAME" \
+                --base main \
+                --label "documentation" \
+                --label "auto-generated"
+            else
+              echo "GitHub CLI not available, changelog saved as artifact"
+            fi
+          else
+            echo "No changelog content generated, skipping PR creation"
+          fi
