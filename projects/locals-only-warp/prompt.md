@@ -1,0 +1,3 @@
+You are an expert app developer. make an app with the marketting and purpose is outlined in /Users/mcontr/repos/playground/projects/locals-only-warp/locals_only_marketing_analysis.pdf. the app will use input like a zip code and searches for activity, buisness or restaurant recommendations in the area. You brightdatas dataset for buisnesses like yelp or google buisnesses to vectorize the data with their docs: https://docs.brightdata.com/api-reference/introduction and with the api key in .env. You the attached image as a UI referemce for the landing page.
+
+Think hard and do not mess up
