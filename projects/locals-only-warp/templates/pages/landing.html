@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Locals Only - Discover Your Neighborhood</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="landing-page">
+    <div class="landing-container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-background">
+                <div class="hero-overlay"></div>
+            </div>
+            
+            <div class="hero-content">
+                <div class="logo-large">
+                    <img src="{{ url_for('static', filename='localsonly.jpg') }}" alt="Locals Only" class="logo-img-large">
+                    <h1>Locals Only</h1>
+                </div>
+                
+                <p class="hero-tagline">Discover hidden gems and local favorites in your neighborhood</p>
+                
+                <div class="hero-features">
+                    <div class="feature-item">
+                        <i class="fas fa-map"></i>
+                        <span>Interactive Maps</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-star"></i>
+                        <span>Curated Recommendations</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-users"></i>
+                        <span>Local Insights</span>
+                    </div>
+                </div>
+                
+                <button class="cta-button" onclick="startOnboarding()">
+                    <span>Get Started</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+        
+        <!-- Features Section -->
+        <section class="features-section">
+            <div class="container">
+                <h2>Why Choose Locals Only?</h2>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-location-dot"></i>
+                        </div>
+                        <h3>Location-Based</h3>
+                        <p>Find places specifically in your area with precise location matching</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <h3>Multiple Categories</h3>
+                        <p>Restaurants, activities, entertainment, shopping - we've got it all</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>AI-Powered</h3>
+                        <p>Smart recommendations enhanced with local knowledge and insights</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-map"></i>
+                        </div>
+                        <h3>Interactive Maps</h3>
+                        <p>See recommendations on Google Maps with easy navigation</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function startOnboarding() {
+            window.location.href = '/onboarding';
+        }
+    </script>
+</body>
+</html>

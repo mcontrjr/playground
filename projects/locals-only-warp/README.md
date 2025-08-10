@@ -1,125 +1,216 @@
-# Locals Only - Discover Your Area 🏘️
+# Locals Only - Enhanced with Google Maps
 
-A modern, AI-powered web app that helps users discover local businesses, restaurants, and activities in their neighborhood using just their zip code.
+A modern web application for discovering local businesses and hidden gems in your neighborhood, featuring Google Maps integration and a complete app-like experience.
 
-## Features ✨
+## ✨ Features
 
-- **Smart Recommendations**: Uses LangChain + Anthropic Claude to provide intelligent local recommendations
-- **Zip Code Search**: Simple zip code input to find local gems
-- **Category Filtering**: Filter by restaurants, activities, entertainment, shopping, or view all
-- **Mobile-First Design**: Optimized for mobile devices with responsive design
-- **Real-time Location Data**: Geocoding integration for accurate location information
-- **Modern UI**: Clean, intuitive interface with local-inspired color palette
+### 🗺️ Google Maps Integration
+- Interactive Google Maps with custom markers
+- Real-time location services
+- Google Places API for authentic business data
+- Street View and satellite map views
+- Turn-by-turn directions with business names
 
-## Tech Stack 🛠️
+### 📱 App-Like Experience
+- **Landing Page**: Beautiful introduction with feature highlights
+- **Onboarding Flow**: 3-step setup process for first-time users
+- **Dashboard**: Main app interface with category bubbles and full-screen map
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
 
-- **Backend**: Flask (Python)
-- **AI**: LangChain + Anthropic Claude
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **APIs**: Geopy for geocoding
-- **Styling**: Modern CSS with mobile-first responsive design
+### 🎯 Enhanced Categories
+- **Restaurants** 🍽️ - Local eateries and dining
+- **Coffee** ☕ - Coffee shops and cafes
+- **Thrift Stores** 👕 - Second-hand and vintage shops
+- **Nightlife** 🍸 - Bars, clubs, and nightlife
+- **Hiking** 🥾 - Trails and outdoor activities
+- **Beaches & Lakes** 🏖️ - Waterfront and swimming spots
+- **Shopping** 🛍️ - Retail and markets
 
-## Setup & Installation 🚀
+### 🤖 AI-Enhanced Recommendations
+- Local insights powered by Claude AI
+- Contextual descriptions and recommendations
+- Authentic local knowledge integration
 
-1. **Clone and navigate to the project**:
-   ```bash
-   cd /path/to/locals-only-warp
-   ```
+## 🚀 Quick Start
 
-2. **Ensure Python environment is set up**:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate  # or `.venv/bin/activate` on Linux/Mac
-   ```
+### Prerequisites
+- Python 3.8+
+- Google Maps API Key with the following services enabled:
+  - Geocoding API
+  - Geolocation API
+  - Maps JavaScript API
+  - Maps Embed API
+  - Places API
+  - Street View Static API
+  - Maps Platform Datasets API
+  - Places API (New)
 
-3. **Install dependencies**:
-   ```bash
-   pip install flask langchain langchain-anthropic requests python-dotenv geopy folium
-   ```
+### Installation
 
-4. **Set up environment variables**:
-   Create a `.env` file with your Anthropic API key:
-   ```
-   ANTHROPIC_API_KEY=your_api_key_here
-   SECRET_KEY=your_secret_key_here
-   ```
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd locals-only-warp
+```
 
-5. **Run the application**:
-   ```bash
-   python main.py
-   ```
+2. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
 
-6. **Access the app**:
-   Open your browser and go to `http://localhost:5005`
+3. **Set up environment variables**
+```bash
+cp .env.example .env
+```
 
-## Usage 📱
+Edit `.env` and add your API keys:
+```env
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here  # Optional
+SECRET_KEY=your_secret_key_here
+```
 
-1. **Enter your zip code** in the search field
-2. **Select a category** (All, Food, Activities, Fun, Shopping)
-3. **Click search** or press Enter
-4. **Browse recommendations** powered by local AI knowledge
-5. **Change categories** to see different types of recommendations for the same area
+4. **Run the application**
+```bash
+python app.py
+```
 
-## API Endpoints 🔌
+5. **Open your browser**
+Navigate to `http://localhost:5005`
 
-- `GET /` - Main application interface
-- `POST /api/recommendations` - Get recommendations for a zip code and category
-- `GET /api/health` - Health check endpoint
+## 🏗️ Architecture
 
-## Mobile Development 📱
+### Frontend
+- **Vanilla JavaScript**: Modern ES6+ with classes and async/await
+- **Responsive CSS**: Mobile-first design with CSS Grid and Flexbox
+- **Google Maps JavaScript API**: Interactive maps and location services
+- **Font Awesome**: Icons and UI elements
 
-The app is designed to work seamlessly on mobile devices and can be accessed via:
+### Backend
+- **Flask**: Python web framework
+- **Google Places API**: Real business data and reviews
+- **LangChain + Anthropic**: AI-enhanced local insights
+- **Session Management**: User preferences and location storage
 
-- **Web browser** on any device
-- **iOS Safari** for iPhone/iPad testing
-- **Development server** accessible on local network for device testing
+### User Flow
+1. **Landing Page**: Introduction and call-to-action
+2. **Onboarding**: 3-step setup (welcome → location → preferences)
+3. **Dashboard**: Main app with category bubbles, map, and recommendations
 
-For iOS development and testing:
-- The app runs on `0.0.0.0:5005` making it accessible on your local network
-- Test on physical iPhone by connecting to the same WiFi and visiting `http://[your-computer-ip]:5005`
-- Use iOS Simulator through Xcode if available
-
-## Project Structure 📁
-
+## 📁 Project Structure
 ```
 locals-only-warp/
-├── app.py              # Main Flask application
-├── main.py             # Application entry point
-├── templates/
-│   └── index.html      # Main HTML template
+├── app.py                      # Main Flask application
+├── templates/pages/
+│   ├── landing.html           # Landing page
+│   ├── onboarding.html        # Setup flow
+│   └── dashboard.html         # Main app
 ├── static/
-│   ├── css/
-│   │   └── style.css   # Responsive styles
+│   ├── css/app.css           # All styles
 │   ├── js/
-│   │   └── app.js      # Frontend JavaScript
-│   └── sw.js           # Service Worker (PWA)
-├── .env                # Environment variables
-├── requirements.txt    # Python dependencies
-└── README.md          # This file
+│   │   ├── onboarding.js     # Setup logic
+│   │   └── dashboard.js      # Main app logic
+│   └── localsonly.jpg        # Logo
+├── requirements.txt           # Dependencies
+├── .env.example              # Environment template
+└── start.sh                  # Easy startup script
 ```
 
-## Color Palette 🎨
+## 🎨 Design System
 
-The app uses a warm, local-inspired color scheme:
-- **Primary**: Deep Forest Green (#2D5A27)
-- **Secondary**: Warm Brown (#8B4513) 
-- **Accent**: Vibrant Orange (#FF6B35)
-- **Fresh Green**: (#7FB069)
-- **Warm Beige**: (#F4F1DE)
+### Colors (Logo-Inspired)
+- Primary Teal: `#2d8f83`
+- Primary Orange: `#e67e22`
+- Secondary Navy: `#2c3e50`
+- Accent Coral: `#e74c3c`
+- Warm Beige: `#f4e5d3`
+- Soft Mint: `#7fb069`
+- Deep Brown: `#8b4513`
 
-## Development Notes 💡
+### Typography
+- Font: Inter (Google Fonts)
+- Weights: 300, 400, 500, 600, 700
 
-- Built with mobile-first responsive design
-- Uses modern CSS features and animations
-- Implements proper error handling and loading states
-- Includes local storage for user preferences
-- Progressive Web App (PWA) ready with service worker
-- Accessible design with proper focus states and semantic HTML
+## 🔧 Development
 
-## Contributing 🤝
+### API Endpoints
+- `GET /` - Landing page or redirect to dashboard
+- `GET /onboarding` - Setup flow
+- `GET /dashboard` - Main application (requires location)
+- `POST /api/set-location` - Save user location
+- `POST /api/recommendations` - Get recommendations
+- `GET /api/photo` - Proxy for Google Places photos
+- `GET /api/health` - Health check
 
-This is a development project. Feel free to extend functionality or improve the design!
+### Development Commands
+```bash
+# Using Make
+make install        # Install dependencies
+make run           # Start dev server
+make lint          # Check code quality
+make format        # Format code
+make clean         # Clean up
+
+# Direct commands
+python app.py      # Start server
+pip install -r requirements.txt
+```
+
+## 🚀 Production Deployment
+
+### Environment Variables
+```env
+GOOGLE_MAPS_API_KEY=your_production_api_key
+ANTHROPIC_API_KEY=your_anthropic_key
+SECRET_KEY=secure_random_key
+```
+
+### Docker Deployment
+```bash
+# Build and run
+docker-compose up --build
+
+# Or with Docker directly
+docker build -t locals-only .
+docker run -p 5005:5005 --env-file .env locals-only
+```
+
+### Production Server
+```bash
+gunicorn --bind 0.0.0.0:5005 --workers 4 app:app
+```
+
+## 🔑 Google Maps API Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable required APIs (listed in Prerequisites)
+4. Create API Key
+5. Set up restrictions for security
+
+### API Restrictions (Recommended)
+- **API Restrictions**: Limit to the services listed above
+- **Application Restrictions**: HTTP referrers for your domain
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- Google Maps Platform for location services
+- Anthropic for AI capabilities
+- Font Awesome for icons
+- Inter font family
 
 ---
 
-**Powered by local knowledge & AI** 🤖✨
+**Ready to discover your neighborhood? Start exploring with Locals Only!** 🗺️✨

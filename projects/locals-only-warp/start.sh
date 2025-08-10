@@ -1,31 +1,79 @@
 #!/bin/bash
 
-echo "🏘️ Locals Only - Starting development server..."
-echo ""
+# Locals Only - Enhanced Startup Script
 
-# Get the local IP address
-LOCAL_IP=$(hostname -I | awk '{print $1}')
+echo "🗺️ Locals Only - Enhanced with Google Maps"
+echo "=========================================="
 
-# Activate virtual environment
-source .venv/bin/activate
-
-# Check if API key is set
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-    echo "⚠️  Warning: ANTHROPIC_API_KEY not found in environment"
-    echo "   Make sure your .env file contains your Anthropic API key"
+# Check if .env file exists
+if [ ! -f .env ]; then
+    echo "⚠️  No .env file found. Creating from template..."
+    cp .env.example .env
+    echo "📝 Please edit .env and add your API keys:"
+    echo "   - GOOGLE_MAPS_API_KEY (required)"
+    echo "   - ANTHROPIC_API_KEY (optional)"
+    echo "   - SECRET_KEY (required)"
     echo ""
+    echo "Then run this script again."
+    exit 1
 fi
 
-# Start the Flask app
-echo "🚀 Starting Flask server on port 5005"
-echo "🌐 Local access: http://localhost:5005"
-echo "📱 Network access: http://$LOCAL_IP:5005"
+# Check for required API keys
+source .env
+
+if [ -z "$GOOGLE_MAPS_API_KEY" ]; then
+    echo "❌ GOOGLE_MAPS_API_KEY not set in .env file"
+    echo "   Get your API key from: https://console.cloud.google.com/"
+    echo "   Enable these APIs:"
+    echo "   - Geocoding API"
+    echo "   - Maps JavaScript API"
+    echo "   - Places API"
+    echo "   - And others listed in .env.example"
+    exit 1
+fi
+
+if [ -z "$SECRET_KEY" ]; then
+    echo "❌ SECRET_KEY not set in .env file"
+    echo "   Generate a random secret key for Flask sessions"
+    exit 1
+fi
+
+echo "✅ Environment configuration looks good!"
+
+# Check if Python dependencies are installed
+if ! python -c "import flask, requests, langchain" 2>/dev/null; then
+    echo "📦 Installing Python dependencies..."
+    
+    # Try pyproject.toml first, then requirements.txt
+    if [ -f pyproject.toml ]; then
+        echo "   Using pyproject.toml..."
+        pip install -e .
+    elif [ -f requirements.txt ]; then
+        echo "   Using requirements.txt..."
+        pip install -r requirements.txt
+    else
+        echo "❌ No dependency file found (pyproject.toml or requirements.txt)"
+        exit 1
+    fi
+fi
+
+echo "🚀 Starting Locals Only Enhanced..."
 echo ""
-echo "📲 To test on mobile devices:"
-echo "   1. Connect your phone to the same WiFi network"
-echo "   2. Open browser and go to: http://$LOCAL_IP:5005"
+echo "🌐 Application will be available at:"
+echo "   http://localhost:5005"
 echo ""
-echo "🛑 Press Ctrl+C to stop the server"
+echo "🎯 Features available:"
+echo "   ✓ Google Maps integration"
+echo "   ✓ Google Places API recommendations"
+echo "   ✓ Onboarding flow"
+echo "   ✓ Interactive dashboard"
+echo "   ✓ AI-enhanced descriptions (if Anthropic key provided)"
+echo ""
+echo "📱 Try it on different devices for responsive experience!"
+echo ""
+echo "🔄 Starting Flask development server..."
+echo "   (Press Ctrl+C to stop)"
 echo ""
 
-python main.py
+# Start the application
+python app.py

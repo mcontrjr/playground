@@ -1,7 +1,7 @@
 [project]
 name = "locals-only-warp"
-version = "0.1.0"
-description = "Local business and activity recommendations app"
+version = "0.3.0"
+description = "Local business recommendations app with Google Maps integration"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
@@ -10,8 +10,7 @@ dependencies = [
     "langchain-anthropic>=0.1.0",
     "requests>=2.31.0",
     "python-dotenv>=1.0.0",
-    "geopy>=2.3.0",
-    "folium>=0.14.0",
+    "gunicorn>=21.2.0",
 ]
 
 [build-system]
