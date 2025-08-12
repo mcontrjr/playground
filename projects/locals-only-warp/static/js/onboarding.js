@@ -240,6 +240,38 @@ class OnboardingFlow {
             card.classList.add('selected');
             this.selectedPreferences.push(category);
         }
+        
+        // Save preferences to sessionStorage whenever they change
+        this.savePreferences();
+    }
+    
+    savePreferences() {
+        try {
+            sessionStorage.setItem('userPreferences', JSON.stringify(this.selectedPreferences));
+            console.log('User preferences saved:', this.selectedPreferences);
+        } catch (error) {
+            console.error('Error saving preferences:', error);
+        }
+    }
+    
+    loadPreferences() {
+        try {
+            const stored = sessionStorage.getItem('userPreferences');
+            if (stored) {
+                this.selectedPreferences = JSON.parse(stored);
+                console.log('User preferences loaded:', this.selectedPreferences);
+                
+                // Update UI to reflect loaded preferences
+                this.selectedPreferences.forEach(category => {
+                    const card = document.querySelector(`[data-category="${category}"]`);
+                    if (card) {
+                        card.classList.add('selected');
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error loading preferences:', error);
+        }
     }
     
     nextStep() {
@@ -252,6 +284,11 @@ class OnboardingFlow {
         this.currentStep++;
         this.showStep(this.currentStep);
         this.updateProgress();
+        
+        // Load preferences when entering step 3 (preferences step)
+        if (this.currentStep === 3) {
+            this.loadPreferences();
+        }
     }
     
     previousStep() {
@@ -292,6 +329,9 @@ class OnboardingFlow {
         loadingOverlay.classList.remove('hidden');
         
         try {
+            // Save preferences one final time before completing
+            this.savePreferences();
+            
             const response = await fetch('/api/set-location', {
                 method: 'POST',
                 headers: {
@@ -306,6 +346,14 @@ class OnboardingFlow {
             const result = await response.json();
             
             if (result.success) {
+                // Mark onboarding as complete in sessionStorage
+                sessionStorage.setItem('onboardingCompleted', 'true');
+                
+                // Ensure preferences are saved
+                this.savePreferences();
+                
+                console.log('Onboarding completed with preferences:', this.selectedPreferences);
+                
                 // Redirect to dashboard
                 window.location.href = '/dashboard';
             } else {

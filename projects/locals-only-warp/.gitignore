@@ -3,6 +3,7 @@ venv/
 .venv/
 *.pyc
 __pycache__/
+*.ini
 # Environment files
 .env
 
@@ -17,6 +18,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+*.md
 
 # Temporary files
 *.tmp

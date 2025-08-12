@@ -5,174 +5,166 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Locals Only</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="dashboard-page">
-    <!-- Navigation Header -->
-    <nav class="dashboard-nav">
-        <div class="nav-container">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <nav class="dashboard-nav">
             <div class="nav-brand">
-                <img src="{{ url_for('static', filename='localsonly.jpg') }}" alt="Locals Only" class="logo-img">
-                <span>Locals Only</span>
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="dashboard-logo">
             </div>
-            
-            <div class="nav-location">
-                <i class="fas fa-location-dot"></i>
-                <span id="currentLocation">{{ user_location.city or 'Unknown' }}, {{ user_location.state or '' }}</span>
-            </div>
-            
-            <div class="nav-actions">
-                <button class="nav-btn" onclick="changeLocation()" title="Change Location">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </div>
-        </div>
-    </nav>
 
-    <div class="dashboard-container">
-        <!-- Category Bubbles Header -->
-        <div class="dashboard-header">
-            <div class="category-bubbles">
-                <button class="category-bubble active" data-category="restaurants" onclick="switchCategory('restaurants')">
+            <div class="nav-info">
+                {% if user_location %}
+                <div class="nav-location">
+                    <i class="fas fa-location-dot nav-location-icon"></i>
+                    <span>{{ user_location.city }}, {{ user_location.state }} {{ user_location.zip_code }}</span>
+                </div>
+                {% endif %}
+
+                <div class="nav-actions">
+                    <a href="{{ url_for('change_location') }}" class="btn btn-ghost btn-sm">
+                        <i class="fas fa-edit"></i>
+                        <span>Change Location</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="dashboard-content">
+        <!-- Category Selection -->
+        <section class="category-section">
+            <h2 class="category-title">What are you looking for?</h2>
+            <div class="category-grid">
+                <button class="category-bubble active" data-category="restaurants">
                     <i class="fas fa-utensils"></i>
                     <span>Restaurants</span>
                 </button>
-                <button class="category-bubble" data-category="coffee" onclick="switchCategory('coffee')">
-                    <i class="fas fa-coffee"></i>
+                <button class="category-bubble" data-category="coffee">
+                    <i class="fas fa-mug-saucer"></i>
                     <span>Coffee</span>
                 </button>
-                <button class="category-bubble" data-category="thrift" onclick="switchCategory('thrift')">
-                    <i class="fas fa-tshirt"></i>
-                    <span>Thrift Stores</span>
+                <button class="category-bubble" data-category="thrift">
+                    <i class="fas fa-shirt"></i>
+                    <span>Thrift</span>
                 </button>
-                <button class="category-bubble" data-category="nightlife" onclick="switchCategory('nightlife')">
-                    <i class="fas fa-cocktail"></i>
+                <button class="category-bubble" data-category="nightlife">
+                    <i class="fas fa-martini-glass-citrus"></i>
                     <span>Nightlife</span>
                 </button>
-                <button class="category-bubble" data-category="hiking" onclick="switchCategory('hiking')">
+                <button class="category-bubble" data-category="hiking">
                     <i class="fas fa-mountain"></i>
                     <span>Hiking</span>
                 </button>
-                <button class="category-bubble" data-category="beaches" onclick="switchCategory('beaches')">
+                <button class="category-bubble" data-category="beaches">
                     <i class="fas fa-water"></i>
-                    <span>Beaches & Lakes</span>
+                    <span>Beaches</span>
                 </button>
-                <button class="category-bubble" data-category="shopping" onclick="switchCategory('shopping')">
-                    <i class="fas fa-shopping-bag"></i>
+                <button class="category-bubble" data-category="shopping">
+                    <i class="fas fa-bag-shopping"></i>
                     <span>Shopping</span>
                 </button>
             </div>
-        </div>
+        </section>
 
-        <!-- Main Content Grid -->
-        <div class="dashboard-content">
+        <!-- Main Content -->
+        <div class="dashboard-layout">
             <!-- Sidebar -->
             <aside class="dashboard-sidebar">
-                <div class="recommendations-list" id="recommendationsList">
-                    <!-- Recommendations will be populated here -->
+                <div class="sidebar-header">
+                    <h3 class="sidebar-title">Local Recommendations</h3>
+                </div>
+
+                <div id="recommendationsList" class="recommendations-list">
+                    <div class="no-results" style="text-align: center; padding: 48px 24px; color: var(--gray-500);">
+                        <i class="fas fa-compass" style="font-size: 48px; margin-bottom: 16px; display: block; color: var(--gray-300);"></i>
+                        <p style="margin-bottom: 16px;">Select a category above to discover local gems in your area!</p>
+                    </div>
+                </div>
+
+                <div id="loadingState" class="hidden" style="text-align: center; padding: 48px 24px;">
+                    <div class="spinner"></div>
+                    <p style="color: var(--gray-600); margin-top: 16px;">Finding local recommendations...</p>
+                </div>
+
+                <div id="errorState" class="hidden" style="text-align: center; padding: 48px 24px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px; display: block; color: var(--error);"></i>
+                    <p style="color: var(--gray-600); margin-bottom: 16px;">Unable to load recommendations</p>
+                    <button class="btn btn-primary btn-sm" onclick="loadRecommendations()">
+                        <i class="fas fa-refresh"></i>
+                        <span>Try Again</span>
+                    </button>
                 </div>
             </aside>
 
-            <!-- Main Content -->
+            <!-- Map -->
             <main class="dashboard-main">
                 <div class="map-container">
                     <div id="map" class="google-map"></div>
-                    <div class="map-overlay">
-                        <div class="map-controls">
-                            <button class="map-btn" onclick="centerOnUser()" title="Center on My Location">
-                                <i class="fas fa-crosshairs"></i>
-                            </button>
-                            <button class="map-btn" onclick="toggleMapType()" title="Toggle Map Type">
-                                <i class="fas fa-layer-group"></i>
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </main>
         </div>
-    </div>
+    </main>
 
-    <!-- Recommendation Card Modal -->
+    <!-- Recommendation Modal -->
     <div id="recommendationModal" class="modal hidden">
-        <div class="modal-overlay" onclick="closeModal()"></div>
+        <div class="modal-backdrop" onclick="closeRecommendationModal()"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle"></h3>
-                <button class="modal-close" onclick="closeModal()">
+                <h3 class="modal-title" id="modalTitle">Place Details</h3>
+                <button class="modal-close" onclick="closeRecommendationModal()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
-                <div class="modal-image" id="modalImage"></div>
+                <div id="modalImage" class="modal-image">
+                    <i class="fas fa-image" style="font-size: 24px;"></i>
+                </div>
+
                 <div class="modal-info">
-                    <div class="rating-section">
-                        <div class="stars" id="modalRating"></div>
-                        <span class="rating-text" id="modalRatingText"></span>
+                    <div class="rating-section" id="modalRating">
+                        <div class="stars" id="modalStars"></div>
+                        <span id="modalRatingText"></span>
                     </div>
-                    <p class="modal-address" id="modalAddress"></p>
-                    <p class="modal-description" id="modalDescription"></p>
-                    <p class="modal-reason" id="modalReason"></p>
+
+                    <div class="modal-address" id="modalAddress"></div>
+                    <div class="modal-description" id="modalDescription"></div>
+                    <div class="modal-reason" id="modalReason"></div>
                 </div>
             </div>
-            <div class="modal-actions">
-                <button class="action-btn directions-btn" onclick="getDirections()">
+            <div style="padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; gap: 12px;">
+                <button class="btn btn-secondary" onclick="openDirections()" style="flex: 1;">
                     <i class="fas fa-directions"></i>
-                    Directions
+                    <span>Directions</span>
                 </button>
-                <button class="action-btn" onclick="openInMaps()">
+                <button class="btn btn-primary" onclick="openInMaps()" style="flex: 1;">
                     <i class="fas fa-external-link-alt"></i>
-                    Open in Maps
+                    <span>Open in Maps</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Loading overlay -->
-    <div id="loadingOverlay" class="loading-overlay hidden">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <p>Finding local recommendations...</p>
-        </div>
-    </div>
-
-    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-    
     {% if google_maps_api_key %}
     <script>
         window.GOOGLE_MAPS_API_KEY = "{{ google_maps_api_key }}";
+        {% if user_location %}
         window.USER_LOCATION = {
-            latitude: {{ user_location.latitude or 'null' }},
-            longitude: {{ user_location.longitude or 'null' }},
-            zip_code: "{{ user_location.zip_code or '' }}",
-            city: "{{ user_location.city or '' }}",
-            state: "{{ user_location.state or '' }}"
+            latitude: {{ user_location.latitude }},
+            longitude: {{ user_location.longitude }},
+            city: "{{ user_location.city }}",
+            state: "{{ user_location.state }}",
+            zip_code: "{{ user_location.zip_code }}"
         };
+        {% endif %}
     </script>
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=places">
-    </script>
-    {% else %}
-    <script>
-        console.error('Google Maps API key not available');
+            src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=places">
     </script>
     {% endif %}
-
-    <script>
-        // Global function for category switching
-        function switchCategory(category) {
-            if (window.dashboardApp) {
-                // Update bubble UI
-                document.querySelectorAll('.category-bubble').forEach(bubble => {
-                    bubble.classList.remove('active');
-                });
-                document.querySelector(`[data-category="${category}"]`).classList.add('active');
-                
-                // Load recommendations
-                window.dashboardApp.switchCategory(category);
-            }
-        }
-    </script>
 </body>
 </html>

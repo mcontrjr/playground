@@ -16,6 +16,8 @@ isort>=5.13.2
 
 # Type checking
 mypy>=1.8.0
+types-requests>=2.31.0
+types-Flask>=1.1.6
 
 # Development server with auto-reload
 flask-cors>=4.0.0  # For CORS during development
