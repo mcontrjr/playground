@@ -4,388 +4,531 @@ class OnboardingFlow {
         this.totalSteps = 3;
         this.userLocation = null;
         this.selectedPreferences = [];
-        
-        this.initializeEventListeners();
-        this.updateProgress();
+        this.geocodeTimeout = null; // For auto-checking zip codes
+        this.isAutoChecking = false;
+
+        this.init();
     }
-    
-    initializeEventListeners() {
-        // Zip code input validation
+
+    init() {
+        console.log('🚀 Onboarding flow initialized');
+        this.updateProgress();
+        this.loadPreferences();
+        this.setupLocationInput();
+        this.setupPreferenceCards();
+    }
+
+    setupPreferenceCards() {
+        const preferenceCards = document.querySelectorAll('.preference-card');
+        preferenceCards.forEach(card => {
+            // Add click event listener
+            card.addEventListener('click', (e) => {
+                const category = e.currentTarget.dataset.category;
+                this.togglePreference(category);
+            });
+            
+            // Make cards keyboard accessible
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-pressed', 'false');
+            
+            // Add keyboard support
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const category = e.currentTarget.dataset.category;
+                    this.togglePreference(category);
+                }
+            });
+        });
+        
+        console.log(`Set up ${preferenceCards.length} preference card listeners`);
+    }
+
+    setupLocationInput() {
         const zipInput = document.getElementById('zipCodeInput');
+        const verifyBtn = document.getElementById('verifyLocationBtn');
+
         if (zipInput) {
-            zipInput.addEventListener('input', this.validateZipCode.bind(this));
-            zipInput.addEventListener('keypress', (e) => {
+            // Auto-check as user types with debouncing
+            zipInput.addEventListener('input', (e) => {
+                const zipCode = e.target.value.trim();
+
+                // Clear existing timeout
+                if (this.geocodeTimeout) {
+                    clearTimeout(this.geocodeTimeout);
+                }
+
+                // Only auto-check if we have a reasonable zip code format
+                if (zipCode.length >= 5) {
+                    this.geocodeTimeout = setTimeout(() => {
+                        this.autoCheckZipCode(zipCode);
+                    }, 1000); // Wait 1 second after user stops typing
+                }
+            });
+
+            // Still keep Enter key functionality
+            zipInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     this.verifyLocation();
                 }
             });
         }
-        
-        // Verify location button
-        const verifyBtn = document.getElementById('verifyLocationBtn');
+
         if (verifyBtn) {
-            verifyBtn.addEventListener('click', this.verifyLocation.bind(this));
-        }
-        
-        // Preference cards
-        const preferenceCards = document.querySelectorAll('.preference-card');
-        preferenceCards.forEach(card => {
-            card.addEventListener('click', () => this.togglePreference(card));
-        });
-    }
-    
-    validateZipCode() {
-        const zipInput = document.getElementById('zipCodeInput');
-        const verifyBtn = document.getElementById('verifyLocationBtn');
-        const nextBtn = document.getElementById('step2NextBtn');
-        
-        const zipCode = zipInput.value.trim();
-        const zipPattern = /^\d{5}(-\d{4})?$/;
-        
-        const isValid = zipPattern.test(zipCode);
-        verifyBtn.disabled = !isValid;
-        
-        if (isValid) {
-            verifyBtn.style.opacity = '1';
-        } else {
-            verifyBtn.style.opacity = '0.5';
-            nextBtn.disabled = true;
-            this.hideLocationResult();
+            verifyBtn.addEventListener('click', () => {
+                this.verifyLocation();
+            });
         }
     }
-    
+
+    async autoCheckZipCode(zipCode) {
+        // Don't auto-check if user is actively verifying
+        if (this.isAutoChecking) return;
+
+        const zipClean = zipCode.replace('-', '').replace(' ', '');
+        if (!(zipClean.match(/^\d{5}$/) || zipClean.match(/^\d{9}$/))) {
+            return; // Invalid format, don't auto-check
+        }
+
+        console.log('🔄 Auto-checking zip code:', zipCode);
+        this.isAutoChecking = true;
+
+        try {
+            const response = await fetch('https://api.zippopotam.us/us/' + zipCode.slice(0, 5));
+
+            if (response.ok) {
+                const data = await response.json();
+                const city = data.places[0]['place name'];
+                const state = data.places[0]['state abbreviation'];
+
+                // Show success indication but don't enable next button yet
+                this.showLocationResult({
+                    city: city,
+                    state: state,
+                    zip_code: zipCode,
+                    formatted_address: `${city}, ${state} ${zipCode}`,
+                    auto_checked: true
+                });
+                this.enableNextButton();
+                console.log('✅ Auto-check successful:', { city, state, zipCode });
+            }
+        } catch (error) {
+            // Silently fail auto-checks, user can still manually verify
+            console.log('⚠️ Auto-check failed, user can manually verify');
+        } finally {
+            this.isAutoChecking = false;
+        }
+    }
+
     async verifyLocation() {
         const zipInput = document.getElementById('zipCodeInput');
-        const zipCode = zipInput.value.trim();
-        
-        if (!zipCode) return;
-        
-        this.showLoadingState(true);
-        this.hideLocationError();
-        
-        try {
-            // Use Google Geocoding API if available
-            if (window.GOOGLE_MAPS_API_KEY) {
-                const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(zipCode)}&components=country:US&key=${window.GOOGLE_MAPS_API_KEY}`);
-                const data = await response.json();
-                
-                if (data.status === 'OK' && data.results.length > 0) {
-                    const result = data.results[0];
-                    const location = result.geometry.location;
-                    
-                    let city = '';
-                    let state = '';
-                    
-                    result.address_components.forEach(component => {
-                        if (component.types.includes('locality')) {
-                            city = component.long_name;
-                        } else if (component.types.includes('administrative_area_level_1')) {
-                            state = component.short_name;
-                        }
-                    });
-                    
-                    this.userLocation = {
-                        zip_code: zipCode,
-                        latitude: location.lat,
-                        longitude: location.lng,
-                        city: city,
-                        state: state,
-                        formatted_address: result.formatted_address
-                    };
-                    
-                    this.showLocationResult(this.userLocation);
-                    document.getElementById('step2NextBtn').disabled = false;
-                } else {
-                    this.showLocationError('Location not found. Please check your zip code.');
-                }
-            } else {
-                this.showLocationError('Location service unavailable. Please check your internet connection.');
-            }
-        } catch (error) {
-            console.error('Location verification error:', error);
-            this.showLocationError('Unable to verify location. Please try again.');
-        } finally {
-            this.showLoadingState(false);
-        }
-    }
-    
-    async requestCurrentLocation() {
-        if (!navigator.geolocation) {
-            this.showLocationError('Geolocation is not supported by this browser.');
+        const zipCode = zipInput?.value.trim();
+
+        if (!zipCode) {
+            this.showLocationError('Please enter a zip code.');
             return;
         }
-        
-        this.showLoadingState(true);
-        
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                try {
-                    const { latitude, longitude } = position.coords;
-                    
-                    // Reverse geocoding with Google Maps API
-                    if (window.GOOGLE_MAPS_API_KEY) {
-                        const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${window.GOOGLE_MAPS_API_KEY}`);
-                        const data = await response.json();
-                        
-                        if (data.status === 'OK' && data.results.length > 0) {
-                            const result = data.results[0];
-                            
-                            let city = '';
-                            let state = '';
-                            let zipCode = '';
-                            
-                            result.address_components.forEach(component => {
-                                if (component.types.includes('locality')) {
-                                    city = component.long_name;
-                                } else if (component.types.includes('administrative_area_level_1')) {
-                                    state = component.short_name;
-                                } else if (component.types.includes('postal_code')) {
-                                    zipCode = component.long_name;
-                                }
-                            });
-                            
-                            this.userLocation = {
-                                zip_code: zipCode,
-                                latitude: latitude,
-                                longitude: longitude,
-                                city: city,
-                                state: state,
-                                formatted_address: result.formatted_address
-                            };
-                            
-                            // Update zip code input
-                            document.getElementById('zipCodeInput').value = zipCode;
-                            
-                            this.showLocationResult(this.userLocation);
-                            document.getElementById('step2NextBtn').disabled = false;
-                        } else {
-                            this.showLocationError('Unable to determine your location details.');
-                        }
-                    }
-                } catch (error) {
-                    console.error('Reverse geocoding error:', error);
-                    this.showLocationError('Unable to get location details.');
-                } finally {
-                    this.showLoadingState(false);
-                }
-            },
-            (error) => {
-                this.showLoadingState(false);
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        this.showLocationError('Location access denied. Please enable location services.');
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        this.showLocationError('Location information is unavailable.');
-                        break;
-                    case error.TIMEOUT:
-                        this.showLocationError('Location request timed out.');
-                        break;
-                    default:
-                        this.showLocationError('An unknown error occurred while retrieving location.');
-                        break;
-                }
-            }
-        );
-    }
-    
-    showLocationResult(location) {
-        const resultDiv = document.getElementById('locationResult');
-        const cityEl = document.getElementById('locationCity');
-        const addressEl = document.getElementById('locationAddress');
-        
-        cityEl.textContent = `${location.city}, ${location.state}`;
-        addressEl.textContent = location.formatted_address;
-        
-        resultDiv.classList.remove('hidden');
-        this.hideLocationError();
-    }
-    
-    hideLocationResult() {
-        const resultDiv = document.getElementById('locationResult');
-        resultDiv.classList.add('hidden');
-    }
-    
-    showLocationError(message) {
-        const errorDiv = document.getElementById('locationError');
-        const errorText = document.getElementById('locationErrorText');
-        
-        errorText.textContent = message;
-        errorDiv.classList.remove('hidden');
-    }
-    
-    hideLocationError() {
-        const errorDiv = document.getElementById('locationError');
-        errorDiv.classList.add('hidden');
-    }
-    
-    showLoadingState(show) {
-        const verifyBtn = document.getElementById('verifyLocationBtn');
-        if (show) {
-            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            verifyBtn.disabled = true;
-        } else {
-            verifyBtn.innerHTML = '<i class="fas fa-check"></i>';
-            verifyBtn.disabled = false;
-        }
-    }
-    
-    togglePreference(card) {
-        const category = card.dataset.category;
-        
-        if (card.classList.contains('selected')) {
-            card.classList.remove('selected');
-            this.selectedPreferences = this.selectedPreferences.filter(pref => pref !== category);
-        } else {
-            card.classList.add('selected');
-            this.selectedPreferences.push(category);
-        }
-        
-        // Save preferences to sessionStorage whenever they change
-        this.savePreferences();
-    }
-    
-    savePreferences() {
-        try {
-            sessionStorage.setItem('userPreferences', JSON.stringify(this.selectedPreferences));
-            console.log('User preferences saved:', this.selectedPreferences);
-        } catch (error) {
-            console.error('Error saving preferences:', error);
-        }
-    }
-    
-    loadPreferences() {
-        try {
-            const stored = sessionStorage.getItem('userPreferences');
-            if (stored) {
-                this.selectedPreferences = JSON.parse(stored);
-                console.log('User preferences loaded:', this.selectedPreferences);
-                
-                // Update UI to reflect loaded preferences
-                this.selectedPreferences.forEach(category => {
-                    const card = document.querySelector(`[data-category="${category}"]`);
-                    if (card) {
-                        card.classList.add('selected');
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error loading preferences:', error);
-        }
-    }
-    
-    nextStep() {
-        // Validate current step
-        if (this.currentStep === 2 && !this.userLocation) {
-            this.showLocationError('Please verify your location first.');
+
+        // Validate US zip code format (5 or 9 digits)
+        const zipClean = zipCode.replace('-', '').replace(' ', '');
+        if (!(zipClean.match(/^\d{5}$/) || zipClean.match(/^\d{9}$/))) {
+            this.showLocationError('Please enter a valid US zip code (e.g., 12345 or 12345-6789).');
             return;
         }
-        
-        this.currentStep++;
-        this.showStep(this.currentStep);
-        this.updateProgress();
-        
-        // Load preferences when entering step 3 (preferences step)
-        if (this.currentStep === 3) {
-            this.loadPreferences();
-        }
-    }
-    
-    previousStep() {
-        this.currentStep--;
-        this.showStep(this.currentStep);
-        this.updateProgress();
-    }
-    
-    showStep(stepNumber) {
-        // Hide all steps
-        document.querySelectorAll('.onboarding-step').forEach(step => {
-            step.classList.remove('active');
-        });
-        
-        // Show current step
-        const currentStepEl = document.getElementById(`step${stepNumber}`);
-        if (currentStepEl) {
-            currentStepEl.classList.add('active');
-        }
-    }
-    
-    updateProgress() {
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-        
-        const progressPercentage = (this.currentStep / this.totalSteps) * 100;
-        progressFill.style.width = `${progressPercentage}%`;
-        progressText.textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
-    }
-    
-    async completeOnboarding() {
-        if (!this.userLocation) {
-            this.showLocationError('Please set your location first.');
-            return;
-        }
-        
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        loadingOverlay.classList.remove('hidden');
-        
+
+        console.log('🔄 Verifying location:', zipCode);
+
         try {
-            // Save preferences one final time before completing
-            this.savePreferences();
-            
-            const response = await fetch('/api/set-location', {
+            // Show loading on verify button
+            const verifyBtn = document.getElementById('verifyLocationBtn');
+            if (verifyBtn) {
+                verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                verifyBtn.disabled = true;
+            }
+
+            // Use Google Geocoding API through our backend
+            const response = await fetch('/api/recommendations', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    ...this.userLocation,
-                    preferences: this.selectedPreferences
+                    zip_code: zipCode,
+                    category: 'restaurants' // Just for location verification
                 })
             });
-            
-            const result = await response.json();
-            
-            if (result.success) {
+
+            const data = await response.json();
+
+            if (data.success && data.location) {
+                this.userLocation = data.location;
+                this.showLocationResult(data.location);
+                this.enableNextButton();
+                console.log('✅ Location verified:', data.location);
+            } else {
+                this.showLocationError(data.error || 'Unable to verify this zip code. Please check and try again.');
+            }
+        } catch (error) {
+            console.error('Location verification error:', error);
+            this.showLocationError('Network error. Please check your connection and try again.');
+        } finally {
+            // Reset verify button
+            const verifyBtn = document.getElementById('verifyLocationBtn');
+            if (verifyBtn) {
+                verifyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                verifyBtn.disabled = false;
+            }
+        }
+    }
+
+    showLocationResult(location) {
+        const resultDiv = document.getElementById('locationResult');
+        const errorDiv = document.getElementById('locationError');
+        const cityElement = document.getElementById('locationCity');
+        const addressElement = document.getElementById('locationAddress');
+
+        // Hide error if showing
+        if (errorDiv) {
+            errorDiv.classList.add('hidden');
+        }
+
+        // Show result
+        if (resultDiv && cityElement && addressElement) {
+            cityElement.textContent = `${location.city}, ${location.state}`;
+            addressElement.textContent = location.formatted_address;
+
+            // Add visual indicator if this was auto-checked
+            if (location.auto_checked) {
+                addressElement.innerHTML += ' <span style="color: var(--primary-gold); font-size: 0.75rem;"><i class="fas fa-magic"></i> Auto-detected</span>';
+            }
+
+            resultDiv.classList.remove('hidden');
+        }
+    }
+
+    showLocationError(message) {
+        const errorDiv = document.getElementById('locationError');
+        const errorText = document.getElementById('locationErrorText');
+        const resultDiv = document.getElementById('locationResult');
+
+        // Hide result if showing
+        if (resultDiv) {
+            resultDiv.classList.add('hidden');
+        }
+
+        // Show error
+        if (errorDiv && errorText) {
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        this.disableNextButton();
+        this.userLocation = null;
+    }
+
+    enableNextButton() {
+        const nextBtn = document.getElementById('step2NextBtn');
+        if (nextBtn) {
+            nextBtn.disabled = false;
+        }
+    }
+
+    disableNextButton() {
+        const nextBtn = document.getElementById('step2NextBtn');
+        if (nextBtn) {
+            nextBtn.disabled = true;
+        }
+    }
+
+    async requestCurrentLocation() {
+        if (!navigator.geolocation) {
+            this.showLocationError('Geolocation is not supported by your browser.');
+            return;
+        }
+
+        console.log('🔄 Requesting current location...');
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+
+                try {
+                    // Reverse geocode to get zip code
+                    const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+                    const data = await response.json();
+
+                    if (data.postcode) {
+                        // Update input and verify
+                        const zipInput = document.getElementById('zipCodeInput');
+                        if (zipInput) {
+                            zipInput.value = data.postcode;
+                        }
+
+                        // Verify the detected zip code
+                        await this.verifyLocation();
+                    } else {
+                        this.showLocationError('Unable to determine zip code from your location.');
+                    }
+                } catch (error) {
+                    console.error('Reverse geocoding error:', error);
+                    this.showLocationError('Unable to determine your zip code.');
+                }
+            },
+            (error) => {
+                console.error('Geolocation error:', error);
+                let message = 'Unable to access your location. ';
+
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        message += 'Please enable location access and try again.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message += 'Location information is unavailable.';
+                        break;
+                    case error.TIMEOUT:
+                        message += 'Location request timed out.';
+                        break;
+                    default:
+                        message += 'An unknown error occurred.';
+                        break;
+                }
+
+                this.showLocationError(message);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }
+
+    nextStep() {
+        if (this.currentStep < this.totalSteps) {
+            // Hide current step
+            const currentStepElement = document.getElementById(`step${this.currentStep}`);
+            if (currentStepElement) {
+                currentStepElement.classList.remove('active');
+            }
+
+            // Show next step
+            this.currentStep++;
+            const nextStepElement = document.getElementById(`step${this.currentStep}`);
+            if (nextStepElement) {
+                nextStepElement.classList.add('active');
+            }
+
+            this.updateProgress();
+
+            console.log(`Step ${this.currentStep} of ${this.totalSteps}`);
+        }
+    }
+
+    previousStep() {
+        if (this.currentStep > 1) {
+            // Hide current step
+            const currentStepElement = document.getElementById(`step${this.currentStep}`);
+            if (currentStepElement) {
+                currentStepElement.classList.remove('active');
+            }
+
+            // Show previous step
+            this.currentStep--;
+            const previousStepElement = document.getElementById(`step${this.currentStep}`);
+            if (previousStepElement) {
+                previousStepElement.classList.add('active');
+            }
+
+            this.updateProgress();
+
+            console.log(`Step ${this.currentStep} of ${this.totalSteps}`);
+        }
+    }
+
+    togglePreference(category) {
+        const card = document.querySelector(`[data-category="${category}"]`);
+        if (!card) return;
+
+        const index = this.selectedPreferences.indexOf(category);
+
+        if (index > -1) {
+            // Remove from preferences
+            this.selectedPreferences.splice(index, 1);
+            card.classList.remove('selected');
+            card.setAttribute('aria-pressed', 'false');
+        } else {
+            // Add to preferences
+            this.selectedPreferences.push(category);
+            card.classList.add('selected');
+            card.setAttribute('aria-pressed', 'true');
+        }
+
+        // Save preferences to sessionStorage whenever they change
+        this.savePreferences();
+
+        console.log('Updated preferences:', this.selectedPreferences);
+    }
+
+    savePreferences() {
+        try {
+            sessionStorage.setItem('userPreferences', JSON.stringify(this.selectedPreferences));
+            console.log('✅ User preferences saved to sessionStorage:', this.selectedPreferences);
+        } catch (error) {
+            console.error('❌ Error saving preferences:', error);
+        }
+    }
+
+    loadPreferences() {
+        try {
+            const stored = sessionStorage.getItem('userPreferences');
+            if (stored) {
+                this.selectedPreferences = JSON.parse(stored);
+                console.log('✅ User preferences loaded from sessionStorage:', this.selectedPreferences);
+
+                // Update UI to reflect loaded preferences
+                this.selectedPreferences.forEach(category => {
+                    const card = document.querySelector(`[data-category="${category}"]`);
+                    if (card) {
+                        card.classList.add('selected');
+                        card.setAttribute('aria-pressed', 'true');
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error loading preferences:', error);
+            this.selectedPreferences = [];
+        }
+    }
+
+    showAlert(title, message) {
+        const modal = document.getElementById('alertModal');
+        const titleElement = document.getElementById('alertTitle');
+        const messageElement = document.getElementById('alertMessage');
+
+        if (modal && titleElement && messageElement) {
+            titleElement.textContent = title;
+            messageElement.textContent = message;
+            modal.classList.remove('hidden');
+        }
+    }
+
+    updateProgress() {
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+
+        if (!progressFill || !progressText) return;
+
+        const progressPercentage = (this.currentStep / this.totalSteps) * 100;
+        progressFill.style.width = `${progressPercentage}%`;
+        progressText.textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
+    }
+
+    async completeOnboarding() {
+        if (!this.userLocation) {
+            this.showLocationError('Please set your location first.');
+            return;
+        }
+
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        loadingOverlay.classList.remove('hidden');
+
+        try {
+            // Save preferences one final time before completing
+            this.savePreferences();
+
+            // Save location to backend session
+            const locationResponse = await fetch('/api/set-location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(this.userLocation)
+            });
+
+            const locationResult = await locationResponse.json();
+
+            if (locationResult.success) {
+                // Save starred categories to backend
+                if (this.selectedPreferences.length > 0) {
+                    const prefsResponse = await fetch('/api/update-preferences', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            starred_categories: this.selectedPreferences
+                        })
+                    });
+
+                    const prefsResult = await prefsResponse.json();
+                    if (prefsResult.success) {
+                        console.log('✅ Preferences saved to backend:', this.selectedPreferences);
+                    } else {
+                        console.warn('⚠️ Failed to save preferences to backend:', prefsResult.error);
+                    }
+                }
+
                 // Mark onboarding as complete in sessionStorage
                 sessionStorage.setItem('onboardingCompleted', 'true');
-                
-                // Ensure preferences are saved
-                this.savePreferences();
-                
-                console.log('Onboarding completed with preferences:', this.selectedPreferences);
-                
+
+                console.log('✅ Onboarding completed with preferences:', this.selectedPreferences);
+
                 // Redirect to dashboard
                 window.location.href = '/dashboard';
             } else {
-                throw new Error(result.error || 'Failed to complete setup');
+                throw new Error(locationResult.error || 'Failed to save location');
             }
         } catch (error) {
-            console.error('Onboarding completion error:', error);
-            alert('Failed to complete setup. Please try again.');
+            console.error('❌ Onboarding completion error:', error);
+            this.showAlert('Setup Error', 'There was an error completing your setup. Please try again.');
         } finally {
             loadingOverlay.classList.add('hidden');
         }
     }
 }
 
-// Initialize onboarding when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.onboardingFlow = new OnboardingFlow();
-});
-
-// Global functions for template
+// Global functions for HTML onclick handlers
 function nextStep() {
-    window.onboardingFlow.nextStep();
+    if (window.onboardingFlow) {
+        window.onboardingFlow.nextStep();
+    }
 }
 
 function previousStep() {
-    window.onboardingFlow.previousStep();
+    if (window.onboardingFlow) {
+        window.onboardingFlow.previousStep();
+    }
+}
+
+function togglePreference(category) {
+    if (window.onboardingFlow) {
+        window.onboardingFlow.togglePreference(category);
+    }
 }
 
 function requestCurrentLocation() {
-    window.onboardingFlow.requestCurrentLocation();
+    if (window.onboardingFlow) {
+        window.onboardingFlow.requestCurrentLocation();
+    }
 }
 
 function completeOnboarding() {
-    window.onboardingFlow.completeOnboarding();
+    if (window.onboardingFlow) {
+        window.onboardingFlow.completeOnboarding();
+    }
 }
+
+function closeAlert() {
+    const modal = document.getElementById('alertModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Initialize onboarding when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('📱 Onboarding page loaded, initializing flow...');
+    window.onboardingFlow = new OnboardingFlow();
+});

@@ -8,6 +8,8 @@ class DashboardApp {
         this.selectedRecommendation = null;
         this.userLocation = window.USER_LOCATION || null;
         this.userPreferences = this.getUserPreferences();
+        this.starredCategories = [];
+        this.modalAnimating = false; // Fix for double flicker
         
         this.init();
     }
@@ -16,18 +18,229 @@ class DashboardApp {
         try {
             const stored = sessionStorage.getItem('userPreferences');
             const preferences = stored ? JSON.parse(stored) : [];
-            console.log('User preferences loaded:', preferences);
+            console.log('📥 User preferences loaded from sessionStorage:', preferences);
             return preferences;
         } catch (error) {
-            console.error('Error loading preferences:', error);
+            console.error('❌ Error loading preferences from sessionStorage:', error);
             return [];
         }
     }
     
-    init() {
+    async loadStarredCategories() {
+        try {
+            console.log('🔄 Loading starred categories from backend...');
+            
+            // First, try to sync sessionStorage preferences to backend if they exist
+            if (this.userPreferences.length > 0) {
+                console.log('🔄 Syncing sessionStorage preferences to backend...');
+                await this.syncPreferencesToBackend();
+            }
+            
+            const response = await fetch('/api/get-preferences');
+            const data = await response.json();
+            if (data.success) {
+                this.starredCategories = data.starred_categories || [];
+                console.log('✅ Starred categories loaded from backend:', this.starredCategories);
+                
+                // If backend is empty but we have sessionStorage preferences, use those and sync
+                if (this.starredCategories.length === 0 && this.userPreferences.length > 0) {
+                    console.log('🔄 Backend empty, syncing sessionStorage preferences...');
+                    this.starredCategories = [...this.userPreferences];
+                    await this.syncPreferencesToBackend();
+                }
+            } else {
+                console.warn('⚠️ Failed to load starred categories from backend:', data.error);
+                // Fallback to sessionStorage preferences
+                this.starredCategories = [...this.userPreferences];
+            }
+        } catch (error) {
+            console.error('❌ Error loading starred categories:', error);
+            // Fallback to sessionStorage preferences
+            this.starredCategories = [...this.userPreferences];
+        }
+    }
+    
+    async syncPreferencesToBackend() {
+        try {
+            const response = await fetch('/api/update-preferences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    starred_categories: this.userPreferences
+                })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                console.log('✅ SessionStorage preferences synced to backend');
+                this.starredCategories = data.starred_categories || this.userPreferences;
+            } else {
+                console.warn('⚠️ Failed to sync preferences to backend:', data.error);
+            }
+        } catch (error) {
+            console.error('❌ Error syncing preferences to backend:', error);
+        }
+    }
+    
+    async init() {
+        console.log('🚀 Initializing dashboard app...');
+        await this.loadStarredCategories();
         this.setupCategoryButtons();
+        this.setupLocationEditor();
         this.setupPreferredCategories();
         this.loadInitialRecommendations();
+        console.log('✅ Dashboard app initialized');
+    }
+    
+    setupLocationEditor() {
+        const locationDisplay = document.getElementById('locationDisplay');
+        const locationEditor = document.getElementById('locationEditor');
+        const locationInput = document.getElementById('locationInput');
+        
+        if (locationDisplay) {
+            locationDisplay.addEventListener('click', () => {
+                this.startLocationEdit();
+            });
+        }
+        
+        if (locationInput) {
+            locationInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    this.saveLocation();
+                } else if (e.key === 'Escape') {
+                    this.cancelLocationEdit();
+                }
+            });
+        }
+    }
+    
+    startLocationEdit() {
+        const locationDisplay = document.getElementById('locationDisplay');
+        const locationEditor = document.getElementById('locationEditor');
+        const locationInput = document.getElementById('locationInput');
+        
+        if (locationDisplay && locationEditor && locationInput) {
+            locationDisplay.classList.add('hidden');
+            locationEditor.classList.remove('hidden');
+            locationInput.focus();
+            locationInput.value = this.userLocation?.zip_code || '';
+        }
+    }
+    
+    cancelLocationEdit() {
+        const locationDisplay = document.getElementById('locationDisplay');
+        const locationEditor = document.getElementById('locationEditor');
+        
+        if (locationDisplay && locationEditor) {
+            locationDisplay.classList.remove('hidden');
+            locationEditor.classList.add('hidden');
+        }
+    }
+    
+    async saveLocation() {
+        const locationInput = document.getElementById('locationInput');
+        const newZipCode = locationInput?.value.trim();
+        
+        if (!newZipCode) {
+            this.showLocationError('Please enter a zip code');
+            return;
+        }
+        
+        // Validate zip code format
+        const zipClean = newZipCode.replace('-', '').replace(' ', '');
+        if (!(zipClean.match(/^\d{5}$/) || zipClean.match(/^\d{9}$/))) {
+            this.showLocationError('Please enter a valid US zip code');
+            return;
+        }
+        
+        try {
+            // Show loading state
+            locationInput.disabled = true;
+            
+            // Get location details from zip code
+            const response = await fetch('/api/recommendations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    zip_code: newZipCode,
+                    category: 'restaurants' // Just to get location info
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.location) {
+                // Update user location
+                this.userLocation = data.location;
+                window.USER_LOCATION = data.location;
+                
+                // Update session
+                await fetch('/api/set-location', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data.location)
+                });
+                
+                // Update display
+                this.updateLocationDisplay();
+                this.cancelLocationEdit();
+                
+                // Reload recommendations for current category
+                await this.loadRecommendations(this.currentCategory);
+                
+                // Update map center
+                if (this.map) {
+                    this.map.setCenter({
+                        lat: data.location.latitude,
+                        lng: data.location.longitude
+                    });
+                }
+                
+                this.showLocationSuccess('Location updated successfully!');
+            } else {
+                this.showLocationError(data.error || 'Invalid zip code');
+            }
+        } catch (error) {
+            console.error('Error updating location:', error);
+            this.showLocationError('Failed to update location');
+        } finally {
+            locationInput.disabled = false;
+        }
+    }
+    
+    updateLocationDisplay() {
+        const locationText = document.querySelector('.location-text');
+        if (locationText && this.userLocation) {
+            locationText.textContent = `${this.userLocation.city}, ${this.userLocation.state} ${this.userLocation.zip_code}`;
+        }
+    }
+    
+    showLocationSuccess(message) {
+        const locationInput = document.getElementById('locationInput');
+        if (locationInput) {
+            locationInput.classList.add('location-success');
+            setTimeout(() => {
+                locationInput.classList.remove('location-success');
+            }, 2000);
+        }
+        console.log('✅', message);
+    }
+    
+    showLocationError(message) {
+        const locationInput = document.getElementById('locationInput');
+        if (locationInput) {
+            locationInput.classList.add('location-error');
+            setTimeout(() => {
+                locationInput.classList.remove('location-error');
+            }, 2000);
+        }
+        console.error('❌', message);
     }
     
     setupCategoryButtons() {
@@ -42,17 +255,20 @@ class DashboardApp {
     }
     
     setupPreferredCategories() {
-        if (this.userPreferences.length > 0) {
-            // Set the first preference as the default category
-            this.currentCategory = this.userPreferences[0];
+        if (this.starredCategories.length > 0) {
+            // Set the first starred category as the default category
+            this.currentCategory = this.starredCategories[0];
             
-            // Update the UI to show preferred categories first
+            // Update the UI to show starred categories first
             this.reorderCategoryButtons();
             
             // Set the active category button
             this.updateActiveCategoryButton(this.currentCategory);
             
-            console.log(`Set preferred category: ${this.currentCategory}`);
+            console.log(`✅ Set preferred category: ${this.currentCategory}`);
+        } else {
+            // No starred categories, just update display
+            this.reorderCategoryButtons();
         }
     }
     
@@ -62,39 +278,56 @@ class DashboardApp {
         
         const allButtons = Array.from(categoryGrid.querySelectorAll('.category-bubble'));
         
-        // Sort buttons: preferred categories first, then others
+        // Sort buttons: starred categories first, then others
         allButtons.sort((a, b) => {
             const categoryA = a.dataset.category;
             const categoryB = b.dataset.category;
             
-            const isPreferredA = this.userPreferences.includes(categoryA);
-            const isPreferredB = this.userPreferences.includes(categoryB);
+            const isStarredA = this.starredCategories.includes(categoryA);
+            const isStarredB = this.starredCategories.includes(categoryB);
             
-            if (isPreferredA && !isPreferredB) return -1;
-            if (!isPreferredA && isPreferredB) return 1;
+            if (isStarredA && !isStarredB) return -1;
+            if (!isStarredA && isStarredB) return 1;
+            
+            // For starred categories, maintain the order from starredCategories array
+            if (isStarredA && isStarredB) {
+                return this.starredCategories.indexOf(categoryA) - this.starredCategories.indexOf(categoryB);
+            }
+            
             return 0;
         });
         
-        // Add visual indicators for preferred categories
+        // Add visual indicators for starred categories
         allButtons.forEach(button => {
             const category = button.dataset.category;
-            if (this.userPreferences.includes(category)) {
+            
+            // Remove existing star if any
+            const existingStar = button.querySelector('.preference-star');
+            if (existingStar) {
+                existingStar.remove();
+            }
+            
+            if (this.starredCategories.includes(category)) {
                 button.classList.add('preferred');
                 // Add a small star indicator
-                if (!button.querySelector('.preference-star')) {
-                    const star = document.createElement('i');
-                    star.className = 'fas fa-star preference-star';
-                    star.style.fontSize = '10px';
-                    star.style.marginLeft = '4px';
-                    star.style.color = 'var(--primary-gold)';
-                    button.appendChild(star);
-                }
+                const star = document.createElement('i');
+                star.className = 'fas fa-star preference-star';
+                star.style.fontSize = '10px';
+                star.style.marginLeft = '4px';
+                star.style.color = 'var(--primary-gold)';
+                star.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.1)';
+                button.appendChild(star);
+                console.log(`⭐ Added star to ${category} button`);
+            } else {
+                button.classList.remove('preferred');
             }
         });
         
         // Re-append buttons in new order
         categoryGrid.innerHTML = '';
         allButtons.forEach(button => categoryGrid.appendChild(button));
+        
+        console.log('✅ Category buttons reordered with starred categories first');
     }
     
     switchCategory(category) {
@@ -404,6 +637,170 @@ class DashboardApp {
     }
 }
 
+// Global functions for HTML onclick handlers
+// Location editing functions
+function saveLocation() {
+    console.log('🔄 saveLocation called');
+    if (window.dashboardApp) {
+        window.dashboardApp.saveLocation();
+    } else {
+        console.error('❌ Dashboard app not available');
+    }
+}
+
+function cancelLocationEdit() {
+    console.log('🔄 cancelLocationEdit called');
+    if (window.dashboardApp) {
+        window.dashboardApp.cancelLocationEdit();
+    } else {
+        console.error('❌ Dashboard app not available');
+    }
+}
+
+// Categories modal functions - Fixed to prevent double flicker
+function openCategoriesModal() {
+    console.log('🔄 openCategoriesModal called');
+    
+    // Prevent opening if already animating
+    if (window.dashboardApp && window.dashboardApp.modalAnimating) {
+        console.log('⚠️ Modal already animating, ignoring request');
+        return;
+    }
+    
+    console.log('Dashboard app available:', !!window.dashboardApp);
+    console.log('Starred categories:', window.dashboardApp?.starredCategories);
+    
+    const modal = document.getElementById('categoriesModal');
+    console.log('Modal element found:', !!modal);
+    
+    if (modal && window.dashboardApp) {
+        // Set animating flag to prevent double calls
+        window.dashboardApp.modalAnimating = true;
+        
+        // Update modal state before showing
+        updateCategoriesModal();
+        
+        // Show modal with single animation
+        modal.classList.remove('hidden');
+        
+        // Reset animating flag after animation completes
+        setTimeout(() => {
+            window.dashboardApp.modalAnimating = false;
+        }, 300);
+        
+        console.log('✅ Modal opened');
+    } else {
+        console.error('❌ Modal element or dashboard app not found');
+    }
+}
+
+function closeCategoriesModal() {
+    console.log('🔄 closeCategoriesModal called');
+    const modal = document.getElementById('categoriesModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        console.log('✅ Modal closed');
+    }
+}
+
+function updateCategoriesModal() {
+    console.log('🔄 updateCategoriesModal called');
+    const starredCategories = window.dashboardApp?.starredCategories || [];
+    console.log('Current starred categories:', starredCategories);
+    
+    // Update toggle states
+    document.querySelectorAll('.category-toggle').forEach(toggle => {
+        const category = toggle.dataset.category;
+        const isStarred = starredCategories.includes(category);
+        
+        const starBtn = toggle.querySelector('.category-star-btn');
+        
+        if (isStarred) {
+            toggle.classList.add('starred');
+            if (starBtn) starBtn.classList.add('starred');
+        } else {
+            toggle.classList.remove('starred');
+            if (starBtn) starBtn.classList.remove('starred');
+        }
+        
+        console.log(`Category ${category}: starred=${isStarred}`);
+    });
+}
+
+function toggleCategoryStar(category) {
+    console.log('🔄 toggleCategoryStar called for:', category);
+    if (!window.dashboardApp) {
+        console.error('❌ Dashboard app not available');
+        return;
+    }
+    
+    const index = window.dashboardApp.starredCategories.indexOf(category);
+    
+    if (index > -1) {
+        // Remove from starred
+        window.dashboardApp.starredCategories.splice(index, 1);
+        console.log(`⭐ Removed ${category} from starred`);
+    } else {
+        // Add to starred
+        window.dashboardApp.starredCategories.push(category);
+        console.log(`⭐ Added ${category} to starred`);
+    }
+    
+    console.log('Updated starred categories:', window.dashboardApp.starredCategories);
+    
+    // Update modal display immediately
+    updateCategoriesModal();
+}
+
+async function saveCategoryPreferences() {
+    console.log('🔄 saveCategoryPreferences called');
+    if (!window.dashboardApp) {
+        console.error('❌ Dashboard app not available');
+        return;
+    }
+    
+    console.log('Saving starred categories:', window.dashboardApp.starredCategories);
+    
+    try {
+        const response = await fetch('/api/update-preferences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                starred_categories: window.dashboardApp.starredCategories
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update local state
+            window.dashboardApp.starredCategories = data.starred_categories || [];
+            
+            // Also update sessionStorage to keep in sync
+            try {
+                sessionStorage.setItem('userPreferences', JSON.stringify(window.dashboardApp.starredCategories));
+                console.log('✅ SessionStorage updated with saved preferences');
+            } catch (error) {
+                console.warn('⚠️ Failed to update sessionStorage:', error);
+            }
+            
+            // Reorder category buttons to show visual changes
+            window.dashboardApp.reorderCategoryButtons();
+            
+            // Close modal
+            closeCategoriesModal();
+            
+            console.log('✅ Category preferences saved successfully');
+        } else {
+            console.error('❌ Failed to save preferences:', data.error);
+        }
+    } catch (error) {
+        console.error('❌ Error saving preferences:', error);
+    }
+}
+
 function initMap() {
     if (!window.USER_LOCATION || !window.USER_LOCATION.latitude || !window.USER_LOCATION.longitude) {
         console.error('No user location data available for map initialization');
@@ -446,7 +843,7 @@ function initMap() {
     if (window.dashboardApp) {
         window.dashboardApp.map = map;
         window.dashboardApp.infoWindow = new google.maps.InfoWindow();
-        console.log('Map connected to dashboard app');
+        console.log('✅ Map connected to dashboard app');
         // Update markers for current recommendations
         window.dashboardApp.updateMapMarkers();
     } else {
@@ -456,11 +853,12 @@ function initMap() {
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Dashboard page loaded, initializing app...');
+    console.log('📱 Dashboard page loaded, initializing app...');
     
     // Initialize dashboard app immediately, don't wait for Google Maps
     if (!window.dashboardApp) {
         window.dashboardApp = new DashboardApp();
-        console.log('Dashboard app initialized');
+        // The init method is now async and will handle everything in the right order
+        console.log('✅ Dashboard app initialized and available globally');
     }
 });

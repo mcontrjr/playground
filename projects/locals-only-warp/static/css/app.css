@@ -1959,3 +1959,661 @@ html {
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
 }
+
+/* UI Improvements for Dashboard */
+
+/* Centered logo that's 20% bigger */
+.nav-brand-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+}
+
+.dashboard-logo-large {
+    height: 38.4px; /* 20% larger than original 32px */
+    width: auto;
+    object-fit: contain;
+    transition: all 0.2s ease;
+}
+
+.dashboard-logo-large:hover {
+    opacity: 0.8;
+}
+
+/* Editable location with unified functionality */
+.nav-location-editable {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.nav-location-editable:hover {
+    background: var(--gray-100);
+    border-color: var(--primary-gold-light);
+}
+
+.location-edit-icon {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    font-size: 0.75rem;
+    color: var(--primary-gold);
+}
+
+.nav-location-editable:hover .location-edit-icon {
+    opacity: 1;
+}
+
+.nav-location-editor {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.location-input {
+    padding: var(--space-xs) var(--space-sm);
+    border: 2px solid var(--primary-gold);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    background: var(--white);
+    min-width: 120px;
+}
+
+.location-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(245, 187, 0, 0.1);
+}
+
+.location-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+/* Category buttons with improved contrast matching landing page */
+.category-bubble {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--white);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+    font-weight: 600; /* Increased font weight */
+    color: var(--secondary-dark); /* Better contrast */
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+}
+
+.category-bubble:hover {
+    border-color: var(--primary-gold);
+    background: rgba(245, 187, 0, 0.05);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.category-bubble.active {
+    background: var(--gradient-gold);
+    border-color: var(--primary-gold);
+    color: var(--white);
+    box-shadow: var(--shadow-gold);
+    transform: translateY(-1px);
+}
+
+.category-bubble.preferred {
+    border-color: var(--primary-gold-light);
+    background: rgba(245, 187, 0, 0.08);
+}
+
+/* Edit categories button */
+.edit-categories-btn {
+    margin-left: auto;
+    color: var(--primary-gold);
+    font-size: 0.8125rem;
+}
+
+.edit-categories-btn:hover {
+    background: rgba(245, 187, 0, 0.1);
+    color: var(--primary-gold-dark);
+}
+
+/* Categories modal */
+.categories-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+}
+
+.category-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.category-toggle:hover {
+    background: var(--white);
+    border-color: var(--gray-200);
+}
+
+.category-toggle.starred {
+    background: rgba(245, 187, 0, 0.05);
+    border-color: var(--primary-gold-light);
+}
+
+.category-toggle-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--white);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-600);
+    font-size: 1.125rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.category-toggle.starred .category-toggle-icon {
+    background: var(--gradient-gold);
+    color: var(--white);
+}
+
+.category-toggle-info {
+    flex: 1;
+}
+
+.category-toggle-name {
+    font-weight: 600;
+    color: var(--secondary-dark);
+}
+
+.category-star-btn {
+    background: none;
+    border: none;
+    padding: var(--space-xs);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--gray-400);
+    font-size: 1.125rem;
+}
+
+.category-star-btn:hover {
+    background: var(--gray-100);
+    color: var(--primary-gold);
+}
+
+.category-star-btn.starred {
+    color: var(--primary-gold);
+}
+
+/* Responsive adjustments for dashboard */
+@media (max-width: 768px) {
+    .dashboard-nav {
+        padding: var(--space-md);
+        flex-direction: column;
+        gap: var(--space-md);
+        align-items: flex-start;
+    }
+
+    .nav-brand-center {
+        position: relative;
+        left: auto;
+        transform: none;
+        order: -1;
+    }
+
+    .nav-info {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .category-title {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+        align-items: flex-start;
+    }
+
+    .edit-categories-btn {
+        margin-left: 0;
+    }
+
+    .categories-modal-grid {
+        gap: var(--space-sm);
+    }
+
+    .category-toggle {
+        padding: var(--space-sm);
+    }
+
+    .category-toggle-icon {
+        width: 2rem;
+        height: 2rem;
+        font-size: 1rem;
+    }
+}
+
+/* Enhanced star indicators for preferred categories */
+.preference-star {
+    opacity: 0.9;
+    font-size: 10px !important;
+    margin-left: 4px !important;
+    color: var(--primary-gold) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading states improvements */
+.loading-state .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--gray-200);
+    border-top: 3px solid var(--primary-gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--space-md);
+}
+
+/* Modal improvements */
+.modal-content {
+    max-width: 600px;
+}
+
+/* Enhanced button interactions */
+.btn:active {
+    transform: scale(0.98);
+}
+
+/* Improved focus states */
+.nav-location-editable:focus-visible {
+    outline: 2px solid var(--primary-gold);
+    outline-offset: 2px;
+}
+
+.category-star-btn:focus-visible {
+    outline: 2px solid var(--primary-gold);
+    outline-offset: 2px;
+}
+
+/* Better visual hierarchy */
+.category-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+}
+
+/* Success states for location updates */
+.location-success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: var(--success) !important;
+}
+
+.location-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--error) !important;
+}
+
+/* Enhanced tooltips would go here if needed */
+.tooltip {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--secondary-dark);
+    color: var(--white);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: var(--z-tooltip);
+    pointer-events: none;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Ensure proper spacing in the nav */
+.nav-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    position: relative;
+    z-index: 1;
+}
+
+/* Make sure modals appear above everything */
+.modal {
+    z-index: var(--z-modal);
+}
+
+.modal-backdrop {
+    z-index: var(--z-modal-backdrop);
+}
+
+/* Animation improvements */
+@media (prefers-reduced-motion: no-preference) {
+    .category-bubble {
+        animation: fade-in-up 0.3s ease-out;
+    }
+
+    .category-bubble:nth-child(2) { animation-delay: 0.05s; }
+    .category-bubble:nth-child(3) { animation-delay: 0.1s; }
+    .category-bubble:nth-child(4) { animation-delay: 0.15s; }
+    .category-bubble:nth-child(5) { animation-delay: 0.2s; }
+    .category-bubble:nth-child(6) { animation-delay: 0.25s; }
+
+    @keyframes fade-in-up {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+/* Edit categories button fix */
+.edit-categories-btn {
+    margin-left: auto !important;
+    color: var(--primary-gold) !important;
+    font-size: 0.8125rem !important;
+    border: 2px solid transparent !important;
+    padding: var(--space-xs) var(--space-sm) !important;
+}
+
+.edit-categories-btn:hover {
+    background: rgba(245, 187, 0, 0.1) !important;
+    color: var(--primary-gold-dark) !important;
+    border-color: var(--primary-gold-light) !important;
+}
+
+/* Ensure category title uses flexbox properly */
+.category-title {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: var(--space-lg) !important;
+    width: 100% !important;
+}
+
+/* Fix modal z-index issues */
+.modal {
+    z-index: 9999 !important;
+}
+
+.modal-backdrop {
+    z-index: 9998 !important;
+}
+
+.modal-content {
+    z-index: 10000 !important;
+    position: relative !important;
+}
+
+/* Fix button visibility in modal */
+.category-star-btn {
+    background: var(--white) !important;
+    border: 2px solid var(--gray-300) !important;
+    padding: var(--space-xs) !important;
+    border-radius: var(--radius-md) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    color: var(--gray-400) !important;
+    font-size: 1.125rem !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.category-star-btn:hover {
+    background: var(--gray-100) !important;
+    color: var(--primary-gold) !important;
+    border-color: var(--primary-gold) !important;
+    transform: scale(1.05) !important;
+}
+
+.category-star-btn.starred {
+    background: var(--gradient-gold) !important;
+    color: var(--white) !important;
+    border-color: var(--primary-gold) !important;
+    box-shadow: var(--shadow-gold) !important;
+}
+
+.category-star-btn.starred:hover {
+    background: var(--primary-gold-dark) !important;
+    transform: scale(1.05) !important;
+}
+
+/* Fix category toggle styling */
+.category-toggle {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--space-md) !important;
+    padding: var(--space-md) !important;
+    background: var(--white) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 2px solid var(--gray-200) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+.category-toggle:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--gray-300) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.category-toggle.starred {
+    background: rgba(245, 187, 0, 0.08) !important;
+    border-color: var(--primary-gold-light) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.category-toggle.starred:hover {
+    background: rgba(245, 187, 0, 0.12) !important;
+    border-color: var(--primary-gold) !important;
+}
+
+/* Ensure proper spacing in categories modal */
+.categories-modal-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: var(--space-md) !important;
+}
+
+.category-toggle-icon {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    background: var(--gray-100) !important;
+    border-radius: var(--radius-md) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--gray-600) !important;
+    font-size: 1.125rem !important;
+    box-shadow: var(--shadow-xs) !important;
+    transition: all 0.2s ease !important;
+}
+
+.category-toggle.starred .category-toggle-icon {
+    background: var(--gradient-gold) !important;
+    color: var(--white) !important;
+    box-shadow: var(--shadow-gold) !important;
+}
+
+.category-toggle-info {
+    flex: 1 !important;
+}
+
+.category-toggle-name {
+    font-weight: 600 !important;
+    color: var(--secondary-dark) !important;
+    font-size: 1rem !important;
+}
+
+
+
+/* Fix modal flicker and animation issues */
+.modal {
+    transition: none !important; /* Remove transitions that cause flicker */
+}
+
+.modal.hidden {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+.modal:not(.hidden) {
+    display: flex !important;
+    opacity: 1 !important;
+}
+
+/* Remove problematic modal animation classes */
+.modal-entering,
+.modal-leaving {
+    /* These were causing the double flicker, now managed by JS */
+}
+
+/* Fix star visibility on category buttons */
+.preference-star {
+    opacity: 1 !important; /* Force full opacity */
+    font-size: 10px !important;
+    margin-left: 4px !important;
+    color: var(--primary-gold) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important; /* Better contrast */
+    font-weight: 900 !important; /* Make stars bolder */
+    display: inline !important; /* Ensure they're visible */
+    z-index: 10 !important; /* Above other elements */
+}
+
+/* Ensure category buttons show stars properly */
+.category-bubble.preferred {
+    position: relative !important;
+}
+
+.category-bubble .preference-star {
+    position: relative !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* Fix z-index stacking for modals */
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+.modal-content {
+    z-index: 1050 !important;
+}
+
+/* Improve auto-check styling for onboarding */
+.auto-detected {
+    color: var(--primary-gold) !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+}
+
+/* Better input field styling */
+.input-field {
+    transition: all 0.2s ease !important;
+}
+
+.input-field:focus {
+    border-color: var(--primary-gold) !important;
+    box-shadow: 0 0 0 3px rgba(245, 187, 0, 0.1) !important;
+    outline: none !important;
+}
+
+/* Loading states for location verification */
+.input-field:disabled {
+    background-color: var(--gray-100) !important;
+    opacity: 0.7 !important;
+}
+
+/* Better button states */
+.btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* Ensure proper spacing in category grid after reordering */
+.category-grid {
+    gap: var(--space-sm) !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding-bottom: var(--space-xs) !important;
+}
+
+/* Fix category button focus states */
+.category-bubble:focus-visible {
+    outline: 2px solid var(--primary-gold) !important;
+    outline-offset: 2px !important;
+}
+
+/* Success/error states for location input */
+.location-success {
+    border-color: var(--success) !important;
+    background-color: rgba(34, 197, 94, 0.05) !important;
+}
+
+.location-error {
+    border-color: var(--error) !important;
+    background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+/* Smooth transitions for reordered buttons */
+.category-bubble {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Make sure star indicators are always visible in high contrast */
+@media (prefers-contrast: high) {
+    .preference-star {
+        color: #000 !important;
+        text-shadow: 1px 1px 0 #fff !important;
+    }
+}
+
+/* Dark mode support for stars */
+@media (prefers-color-scheme: dark) {
+    .preference-star {
+        color: var(--primary-gold) !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    }
+}
+

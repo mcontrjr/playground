@@ -125,7 +125,7 @@
             <p class="step-description">Select your favorite categories to personalize your local recommendations. You can change these anytime.</p>
 
             <div class="preferences-grid">
-                <div class="preference-card" data-category="restaurants">
+                <div class="preference-card" data-category="restaurants" onclick="togglePreference('restaurants')">
                     <div class="preference-icon">
                         <i class="fas fa-utensils"></i>
                     </div>
@@ -133,7 +133,7 @@
                     <p class="preference-description">Local eateries and dining spots</p>
                 </div>
 
-                <div class="preference-card" data-category="coffee">
+                <div class="preference-card" data-category="coffee" onclick="togglePreference('coffee')">
                     <div class="preference-icon">
                         <i class="fas fa-mug-saucer"></i>
                     </div>
@@ -141,7 +141,7 @@
                     <p class="preference-description">Cafes and coffee roasters</p>
                 </div>
 
-                <div class="preference-card" data-category="thrift">
+                <div class="preference-card" data-category="thrift" onclick="togglePreference('thrift')">
                     <div class="preference-icon">
                         <i class="fas fa-shirt"></i>
                     </div>
@@ -149,7 +149,7 @@
                     <p class="preference-description">Second-hand and vintage finds</p>
                 </div>
 
-                <div class="preference-card" data-category="nightlife">
+                <div class="preference-card" data-category="nightlife" onclick="togglePreference('nightlife')">
                     <div class="preference-icon">
                         <i class="fas fa-martini-glass-citrus"></i>
                     </div>
@@ -157,23 +157,15 @@
                     <p class="preference-description">Bars, clubs, and evening spots</p>
                 </div>
 
-                <div class="preference-card" data-category="hiking">
+                <div class="preference-card" data-category="outdoors" onclick="togglePreference('outdoors')">
                     <div class="preference-icon">
                         <i class="fas fa-mountain"></i>
                     </div>
-                    <h3 class="preference-title">Outdoor Activities</h3>
-                    <p class="preference-description">Trails, parks, and nature spots</p>
+                    <h3 class="preference-title">Outdoors</h3>
+                    <p class="preference-description">Hiking, beaches, parks, and nature</p>
                 </div>
 
-                <div class="preference-card" data-category="beaches">
-                    <div class="preference-icon">
-                        <i class="fas fa-water"></i>
-                    </div>
-                    <h3 class="preference-title">Water Activities</h3>
-                    <p class="preference-description">Beaches, lakes, and swimming</p>
-                </div>
-
-                <div class="preference-card" data-category="shopping">
+                <div class="preference-card" data-category="shopping" onclick="togglePreference('shopping')">
                     <div class="preference-icon">
                         <i class="fas fa-bag-shopping"></i>
                     </div>

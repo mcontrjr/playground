@@ -12,24 +12,31 @@
     <!-- Header -->
     <header class="dashboard-header">
         <nav class="dashboard-nav">
-            <div class="nav-brand">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="dashboard-logo">
+            <div class="nav-brand-center">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="dashboard-logo-large">
             </div>
 
             <div class="nav-info">
                 {% if user_location %}
-                <div class="nav-location">
+                <div class="nav-location-editable" id="locationDisplay">
                     <i class="fas fa-location-dot nav-location-icon"></i>
-                    <span>{{ user_location.city }}, {{ user_location.state }} {{ user_location.zip_code }}</span>
+                    <span class="location-text">{{ user_location.city }}, {{ user_location.state }} {{ user_location.zip_code }}</span>
+                    <i class="fas fa-edit location-edit-icon"></i>
+                </div>
+                
+                <div class="nav-location-editor hidden" id="locationEditor">
+                    <i class="fas fa-location-dot nav-location-icon"></i>
+                    <input type="text" id="locationInput" class="location-input" placeholder="Enter new zip code...">
+                    <div class="location-actions">
+                        <button class="btn btn-sm btn-primary" onclick="saveLocation()">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-ghost" onclick="cancelLocationEdit()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 {% endif %}
-
-                <div class="nav-actions">
-                    <a href="{{ url_for('change_location') }}" class="btn btn-ghost btn-sm">
-                        <i class="fas fa-edit"></i>
-                        <span>Change Location</span>
-                    </a>
-                </div>
             </div>
         </nav>
     </header>
@@ -37,7 +44,13 @@
     <main class="dashboard-content">
         <!-- Category Selection -->
         <section class="category-section">
-            <h2 class="category-title">What are you looking for?</h2>
+            <h2 class="category-title">
+                What are you looking for?
+                <button class="btn btn-ghost btn-sm edit-categories-btn" onclick="openCategoriesModal()">
+                    <i class="fas fa-star"></i>
+                    <span>Edit Starred</span>
+                </button>
+            </h2>
             <div class="category-grid">
                 <button class="category-bubble active" data-category="restaurants">
                     <i class="fas fa-utensils"></i>
@@ -55,13 +68,9 @@
                     <i class="fas fa-martini-glass-citrus"></i>
                     <span>Nightlife</span>
                 </button>
-                <button class="category-bubble" data-category="hiking">
+                <button class="category-bubble" data-category="outdoors">
                     <i class="fas fa-mountain"></i>
-                    <span>Hiking</span>
-                </button>
-                <button class="category-bubble" data-category="beaches">
-                    <i class="fas fa-water"></i>
-                    <span>Beaches</span>
+                    <span>Outdoors</span>
                 </button>
                 <button class="category-bubble" data-category="shopping">
                     <i class="fas fa-bag-shopping"></i>
@@ -108,6 +117,101 @@
             </main>
         </div>
     </main>
+
+    <!-- Categories Edit Modal -->
+    <div id="categoriesModal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeCategoriesModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Starred Categories</h3>
+                <button class="modal-close" onclick="closeCategoriesModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: var(--space-lg); color: var(--gray-600);">
+                    Star your favorite categories to prioritize them in the interface.
+                </p>
+                <div class="categories-modal-grid">
+                    <div class="category-toggle" data-category="restaurants">
+                        <div class="category-toggle-icon">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <div class="category-toggle-info">
+                            <span class="category-toggle-name">Restaurants</span>
+                        </div>
+                        <button class="category-star-btn" onclick="toggleCategoryStar('restaurants')">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                    <div class="category-toggle" data-category="coffee">
+                        <div class="category-toggle-icon">
+                            <i class="fas fa-mug-saucer"></i>
+                        </div>
+                        <div class="category-toggle-info">
+                            <span class="category-toggle-name">Coffee</span>
+                        </div>
+                        <button class="category-star-btn" onclick="toggleCategoryStar('coffee')">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                    <div class="category-toggle" data-category="thrift">
+                        <div class="category-toggle-icon">
+                            <i class="fas fa-shirt"></i>
+                        </div>
+                        <div class="category-toggle-info">
+                            <span class="category-toggle-name">Thrift</span>
+                        </div>
+                        <button class="category-star-btn" onclick="toggleCategoryStar('thrift')">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                    <div class="category-toggle" data-category="nightlife">
+                        <div class="category-toggle-icon">
+                            <i class="fas fa-martini-glass-citrus"></i>
+                        </div>
+                        <div class="category-toggle-info">
+                            <span class="category-toggle-name">Nightlife</span>
+                        </div>
+                        <button class="category-star-btn" onclick="toggleCategoryStar('nightlife')">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                    <div class="category-toggle" data-category="outdoors">
+                        <div class="category-toggle-icon">
+                            <i class="fas fa-mountain"></i>
+                        </div>
+                        <div class="category-toggle-info">
+                            <span class="category-toggle-name">Outdoors</span>
+                        </div>
+                        <button class="category-star-btn" onclick="toggleCategoryStar('outdoors')">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                    <div class="category-toggle" data-category="shopping">
+                        <div class="category-toggle-icon">
+                            <i class="fas fa-bag-shopping"></i>
+                        </div>
+                        <div class="category-toggle-info">
+                            <span class="category-toggle-name">Shopping</span>
+                        </div>
+                        <button class="category-star-btn" onclick="toggleCategoryStar('shopping')">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-ghost" onclick="closeCategoriesModal()">
+                    <span>Cancel</span>
+                </button>
+                <button class="btn btn-primary" onclick="saveCategoryPreferences()">
+                    <i class="fas fa-save"></i>
+                    <span>Save Changes</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Recommendation Modal -->
     <div id="recommendationModal" class="modal hidden">
