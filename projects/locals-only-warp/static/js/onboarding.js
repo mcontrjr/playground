@@ -26,12 +26,12 @@ class OnboardingFlow {
                 const category = e.currentTarget.dataset.category;
                 this.togglePreference(category);
             });
-            
+
             // Make cards keyboard accessible
             card.setAttribute('tabindex', '0');
             card.setAttribute('role', 'button');
             card.setAttribute('aria-pressed', 'false');
-            
+
             // Add keyboard support
             card.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -41,7 +41,7 @@ class OnboardingFlow {
                 }
             });
         });
-        
+
         console.log(`Set up ${preferenceCards.length} preference card listeners`);
     }
 
@@ -63,6 +63,7 @@ class OnboardingFlow {
                 if (zipCode.length >= 5) {
                     this.geocodeTimeout = setTimeout(() => {
                         this.autoCheckZipCode(zipCode);
+                        this.verifyLocation()
                     }, 1000); // Wait 1 second after user stops typing
                 }
             });
@@ -427,7 +428,7 @@ class OnboardingFlow {
 
     async completeOnboarding() {
         if (!this.userLocation) {
-            this.showLocationError('Please set your location first.');
+            this.showAlert('Location Required', 'Please go back to Step 2 and set your location before completing setup.');
             return;
         }
 
@@ -450,21 +451,32 @@ class OnboardingFlow {
             const locationResult = await locationResponse.json();
 
             if (locationResult.success) {
+                // Sort preferences into starred and not starred, both alphabetically
+                const allCategories = [
+                    'restaurants', 'cafes', 'bars', 'gyms', 'parks', 'museums', 'theaters', 'shops', 'events', 'services'
+                    // Add all possible categories here
+                ];
+                const starred = this.selectedPreferences.slice().sort();
+                const notStarred = allCategories
+                    .filter(cat => !this.selectedPreferences.includes(cat))
+                    .sort();
+
                 // Save starred categories to backend
-                if (this.selectedPreferences.length > 0) {
+                if (starred.length > 0) {
                     const prefsResponse = await fetch('/api/update-preferences', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            starred_categories: this.selectedPreferences
+                            starred_categories: starred,
+                            not_starred_categories: notStarred
                         })
                     });
 
                     const prefsResult = await prefsResponse.json();
                     if (prefsResult.success) {
-                        console.log('✅ Preferences saved to backend:', this.selectedPreferences);
+                        console.log('✅ Preferences saved to backend:', starred, notStarred);
                     } else {
                         console.warn('⚠️ Failed to save preferences to backend:', prefsResult.error);
                     }

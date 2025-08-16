@@ -10,10 +10,10 @@ class DashboardApp {
         this.userPreferences = this.getUserPreferences();
         this.starredCategories = [];
         this.modalAnimating = false; // Fix for double flicker
-        
+
         this.init();
     }
-    
+
     getUserPreferences() {
         try {
             const stored = sessionStorage.getItem('userPreferences');
@@ -25,23 +25,23 @@ class DashboardApp {
             return [];
         }
     }
-    
+
     async loadStarredCategories() {
         try {
             console.log('🔄 Loading starred categories from backend...');
-            
+
             // First, try to sync sessionStorage preferences to backend if they exist
             if (this.userPreferences.length > 0) {
                 console.log('🔄 Syncing sessionStorage preferences to backend...');
                 await this.syncPreferencesToBackend();
             }
-            
+
             const response = await fetch('/api/get-preferences');
             const data = await response.json();
             if (data.success) {
                 this.starredCategories = data.starred_categories || [];
                 console.log('✅ Starred categories loaded from backend:', this.starredCategories);
-                
+
                 // If backend is empty but we have sessionStorage preferences, use those and sync
                 if (this.starredCategories.length === 0 && this.userPreferences.length > 0) {
                     console.log('🔄 Backend empty, syncing sessionStorage preferences...');
@@ -59,7 +59,7 @@ class DashboardApp {
             this.starredCategories = [...this.userPreferences];
         }
     }
-    
+
     async syncPreferencesToBackend() {
         try {
             const response = await fetch('/api/update-preferences', {
@@ -71,7 +71,7 @@ class DashboardApp {
                     starred_categories: this.userPreferences
                 })
             });
-            
+
             const data = await response.json();
             if (data.success) {
                 console.log('✅ SessionStorage preferences synced to backend');
@@ -83,7 +83,7 @@ class DashboardApp {
             console.error('❌ Error syncing preferences to backend:', error);
         }
     }
-    
+
     async init() {
         console.log('🚀 Initializing dashboard app...');
         await this.loadStarredCategories();
@@ -93,18 +93,18 @@ class DashboardApp {
         this.loadInitialRecommendations();
         console.log('✅ Dashboard app initialized');
     }
-    
+
     setupLocationEditor() {
         const locationDisplay = document.getElementById('locationDisplay');
         const locationEditor = document.getElementById('locationEditor');
         const locationInput = document.getElementById('locationInput');
-        
+
         if (locationDisplay) {
             locationDisplay.addEventListener('click', () => {
                 this.startLocationEdit();
             });
         }
-        
+
         if (locationInput) {
             locationInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -115,12 +115,12 @@ class DashboardApp {
             });
         }
     }
-    
+
     startLocationEdit() {
         const locationDisplay = document.getElementById('locationDisplay');
         const locationEditor = document.getElementById('locationEditor');
         const locationInput = document.getElementById('locationInput');
-        
+
         if (locationDisplay && locationEditor && locationInput) {
             locationDisplay.classList.add('hidden');
             locationEditor.classList.remove('hidden');
@@ -128,37 +128,37 @@ class DashboardApp {
             locationInput.value = this.userLocation?.zip_code || '';
         }
     }
-    
+
     cancelLocationEdit() {
         const locationDisplay = document.getElementById('locationDisplay');
         const locationEditor = document.getElementById('locationEditor');
-        
+
         if (locationDisplay && locationEditor) {
             locationDisplay.classList.remove('hidden');
             locationEditor.classList.add('hidden');
         }
     }
-    
+
     async saveLocation() {
         const locationInput = document.getElementById('locationInput');
         const newZipCode = locationInput?.value.trim();
-        
+
         if (!newZipCode) {
             this.showLocationError('Please enter a zip code');
             return;
         }
-        
+
         // Validate zip code format
         const zipClean = newZipCode.replace('-', '').replace(' ', '');
         if (!(zipClean.match(/^\d{5}$/) || zipClean.match(/^\d{9}$/))) {
             this.showLocationError('Please enter a valid US zip code');
             return;
         }
-        
+
         try {
             // Show loading state
             locationInput.disabled = true;
-            
+
             // Get location details from zip code
             const response = await fetch('/api/recommendations', {
                 method: 'POST',
@@ -170,14 +170,14 @@ class DashboardApp {
                     category: 'restaurants' // Just to get location info
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success && data.location) {
                 // Update user location
                 this.userLocation = data.location;
                 window.USER_LOCATION = data.location;
-                
+
                 // Update session
                 await fetch('/api/set-location', {
                     method: 'POST',
@@ -186,14 +186,14 @@ class DashboardApp {
                     },
                     body: JSON.stringify(data.location)
                 });
-                
+
                 // Update display
                 this.updateLocationDisplay();
                 this.cancelLocationEdit();
-                
+
                 // Reload recommendations for current category
                 await this.loadRecommendations(this.currentCategory);
-                
+
                 // Update map center
                 if (this.map) {
                     this.map.setCenter({
@@ -201,7 +201,7 @@ class DashboardApp {
                         lng: data.location.longitude
                     });
                 }
-                
+
                 this.showLocationSuccess('Location updated successfully!');
             } else {
                 this.showLocationError(data.error || 'Invalid zip code');
@@ -213,14 +213,14 @@ class DashboardApp {
             locationInput.disabled = false;
         }
     }
-    
+
     updateLocationDisplay() {
         const locationText = document.querySelector('.location-text');
         if (locationText && this.userLocation) {
             locationText.textContent = `${this.userLocation.city}, ${this.userLocation.state} ${this.userLocation.zip_code}`;
         }
     }
-    
+
     showLocationSuccess(message) {
         const locationInput = document.getElementById('locationInput');
         if (locationInput) {
@@ -231,7 +231,7 @@ class DashboardApp {
         }
         console.log('✅', message);
     }
-    
+
     showLocationError(message) {
         const locationInput = document.getElementById('locationInput');
         if (locationInput) {
@@ -242,7 +242,7 @@ class DashboardApp {
         }
         console.error('❌', message);
     }
-    
+
     setupCategoryButtons() {
         const categoryButtons = document.querySelectorAll('.category-bubble');
         categoryButtons.forEach(button => {
@@ -253,60 +253,54 @@ class DashboardApp {
         });
         console.log(`Set up ${categoryButtons.length} category button listeners`);
     }
-    
+
     setupPreferredCategories() {
         if (this.starredCategories.length > 0) {
             // Set the first starred category as the default category
             this.currentCategory = this.starredCategories[0];
-            
+
             // Update the UI to show starred categories first
             this.reorderCategoryButtons();
-            
-            // Set the active category button
-            this.updateActiveCategoryButton(this.currentCategory);
-            
+
+
             console.log(`✅ Set preferred category: ${this.currentCategory}`);
         } else {
             // No starred categories, just update display
             this.reorderCategoryButtons();
         }
     }
-    
+
     reorderCategoryButtons() {
         const categoryGrid = document.querySelector('.category-grid');
         if (!categoryGrid) return;
-        
+
         const allButtons = Array.from(categoryGrid.querySelectorAll('.category-bubble'));
-        
-        // Sort buttons: starred categories first, then others
+
+        // Sort buttons: starred categories first (alphabetically), then others (alphabetically)
         allButtons.sort((a, b) => {
             const categoryA = a.dataset.category;
             const categoryB = b.dataset.category;
-            
+
             const isStarredA = this.starredCategories.includes(categoryA);
             const isStarredB = this.starredCategories.includes(categoryB);
-            
+
             if (isStarredA && !isStarredB) return -1;
             if (!isStarredA && isStarredB) return 1;
-            
-            // For starred categories, maintain the order from starredCategories array
-            if (isStarredA && isStarredB) {
-                return this.starredCategories.indexOf(categoryA) - this.starredCategories.indexOf(categoryB);
-            }
-            
-            return 0;
+
+            // Within each group, sort alphabetically
+            return categoryA.localeCompare(categoryB);
         });
-        
+
         // Add visual indicators for starred categories
         allButtons.forEach(button => {
             const category = button.dataset.category;
-            
+
             // Remove existing star if any
             const existingStar = button.querySelector('.preference-star');
             if (existingStar) {
                 existingStar.remove();
             }
-            
+
             if (this.starredCategories.includes(category)) {
                 button.classList.add('preferred');
                 // Add a small star indicator
@@ -322,57 +316,56 @@ class DashboardApp {
                 button.classList.remove('preferred');
             }
         });
-        
+
         // Re-append buttons in new order
         categoryGrid.innerHTML = '';
         allButtons.forEach(button => categoryGrid.appendChild(button));
-        
+
         console.log('✅ Category buttons reordered with starred categories first');
     }
-    
+
     switchCategory(category) {
         console.log(`Switching to category: ${category}`);
         this.currentCategory = category;
-        this.updateActiveCategoryButton(category);
         this.loadRecommendations(category);
     }
-    
+
     updateActiveCategoryButton(category) {
         // Remove active class from all buttons
         document.querySelectorAll('.category-bubble').forEach(btn => {
             btn.classList.remove('active');
         });
-        
+
         // Add active class to selected button
         const activeButton = document.querySelector(`[data-category="${category}"]`);
         if (activeButton) {
             activeButton.classList.add('active');
         }
     }
-    
+
     async loadInitialRecommendations() {
         if (!this.userLocation || !this.userLocation.zip_code) {
             console.error('No user location available');
             this.showError('Location not available. Please refresh the page.');
             return;
         }
-        
+
         await this.loadRecommendations(this.currentCategory);
     }
-    
+
     async loadRecommendations(category) {
         console.log(`Loading recommendations for ${category}`);
         console.log('User location:', this.userLocation);
-        
+
         if (!this.userLocation || !this.userLocation.zip_code) {
             console.error('No user location available');
             this.showError('Location not available. Please refresh the page.');
             return;
         }
-        
+
         // Show loading state
         this.showLoadingState();
-        
+
         try {
             console.log('Making request to /api/recommendations...');
             const response = await fetch('/api/recommendations', {
@@ -385,16 +378,16 @@ class DashboardApp {
                     category: category
                 })
             });
-            
+
             console.log('Response status:', response.status);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
             console.log('Received recommendations:', data);
-            
+
             if (data.success) {
                 this.recommendations = data.recommendations || [];
                 this.updateRecommendationsList();
@@ -410,7 +403,7 @@ class DashboardApp {
             this.hideLoadingState();
         }
     }
-    
+
     showLoadingState() {
         const listContainer = document.getElementById('recommendationsList');
         if (listContainer) {
@@ -422,11 +415,11 @@ class DashboardApp {
             `;
         }
     }
-    
+
     hideLoadingState() {
         // Loading state will be replaced by updateRecommendationsList
     }
-    
+
     showError(message) {
         const listContainer = document.getElementById('recommendationsList');
         if (listContainer) {
@@ -442,11 +435,11 @@ class DashboardApp {
             `;
         }
     }
-    
+
     updateRecommendationsList() {
         const listContainer = document.getElementById('recommendationsList');
         if (!listContainer) return;
-        
+
         if (this.recommendations.length === 0) {
             listContainer.innerHTML = `
                 <div class="no-results" style="text-align: center; padding: 48px 24px;">
@@ -460,7 +453,7 @@ class DashboardApp {
             `;
             return;
         }
-        
+
         const html = this.recommendations.map((rec, index) => {
             const stars = this.generateStars(rec.rating);
             return `
@@ -478,9 +471,9 @@ class DashboardApp {
                 </div>
             `;
         }).join('');
-        
+
         listContainer.innerHTML = html;
-        
+
         // Add click event listeners
         listContainer.querySelectorAll('.recommendation-card').forEach(card => {
             card.addEventListener('keydown', (e) => {
@@ -493,46 +486,46 @@ class DashboardApp {
             card.setAttribute('tabindex', '0');
         });
     }
-    
+
     selectRecommendation(index) {
         console.log(`Selecting recommendation ${index}`);
-        
+
         // Update UI
         document.querySelectorAll('.recommendation-card').forEach(card => {
             card.classList.remove('active');
         });
-        
+
         const selectedCard = document.querySelector(`[data-index="${index}"]`);
         if (selectedCard) {
             selectedCard.classList.add('active');
         }
-        
+
         const recommendation = this.recommendations[index];
         if (recommendation && this.map && recommendation.latitude && recommendation.longitude) {
             // Pan to location on map
             const position = { lat: recommendation.latitude, lng: recommendation.longitude };
             this.map.panTo(position);
             this.map.setZoom(15);
-            
+
             // Highlight marker
             if (this.markers[index]) {
                 this.markers[index].setAnimation(google.maps.Animation.BOUNCE);
                 setTimeout(() => this.markers[index].setAnimation(null), 2000);
             }
         }
-        
+
         // Show details (you can implement a modal here)
         this.selectedRecommendation = recommendation;
         console.log('Selected recommendation:', recommendation);
     }
-    
+
     updateMapMarkers() {
         if (!this.map) return;
-        
+
         // Clear existing markers
         this.markers.forEach(marker => marker.setMap(null));
         this.markers = [];
-        
+
         // Add new markers
         this.recommendations.forEach((rec, index) => {
             if (rec.latitude && rec.longitude) {
@@ -543,7 +536,7 @@ class DashboardApp {
                     icon: {
                         url: 'data:image/svg+xml,' + encodeURIComponent(`
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
-                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" 
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
                                       fill="#F5BB00" stroke="#1B1B1E" stroke-width="1"/>
                                 <circle cx="12" cy="9" r="2.5" fill="#1B1B1E"/>
                             </svg>
@@ -552,7 +545,7 @@ class DashboardApp {
                         anchor: new google.maps.Point(16, 32)
                     }
                 });
-                
+
                 // Info window
                 const infoWindow = new google.maps.InfoWindow({
                     content: `
@@ -569,7 +562,7 @@ class DashboardApp {
                         </div>
                     `
                 });
-                
+
                 marker.addListener('click', () => {
                     // Close other info windows
                     this.markers.forEach(m => {
@@ -577,32 +570,32 @@ class DashboardApp {
                             m.infoWindow.close();
                         }
                     });
-                    
+
                     infoWindow.open(this.map, marker);
                     this.selectRecommendation(index);
                 });
-                
+
                 marker.infoWindow = infoWindow;
                 this.markers.push(marker);
             }
         });
-        
+
         // Adjust map bounds if we have markers
         if (this.markers.length > 0) {
             const bounds = new google.maps.LatLngBounds();
-            
+
             // Include user location
             if (this.userLocation && this.userLocation.latitude && this.userLocation.longitude) {
                 bounds.extend({ lat: this.userLocation.latitude, lng: this.userLocation.longitude });
             }
-            
+
             // Include all markers
             this.markers.forEach(marker => {
                 bounds.extend(marker.getPosition());
             });
-            
+
             this.map.fitBounds(bounds);
-            
+
             // Ensure minimum zoom level
             google.maps.event.addListenerOnce(this.map, 'bounds_changed', () => {
                 if (this.map.getZoom() > 15) {
@@ -611,19 +604,19 @@ class DashboardApp {
             });
         }
     }
-    
+
     generateStars(rating) {
         if (!rating || rating === 0) {
             return '<span class="star empty">★</span>'.repeat(5);
         }
-        
+
         const fullStars = Math.floor(rating);
         const emptyStars = 5 - fullStars;
-        
-        return '<span class="star">★</span>'.repeat(fullStars) + 
+
+        return '<span class="star">★</span>'.repeat(fullStars) +
                '<span class="star empty">★</span>'.repeat(emptyStars);
     }
-    
+
     escapeHtml(text) {
         if (!text) return '';
         const map = {
@@ -660,34 +653,34 @@ function cancelLocationEdit() {
 // Categories modal functions - Fixed to prevent double flicker
 function openCategoriesModal() {
     console.log('🔄 openCategoriesModal called');
-    
+
     // Prevent opening if already animating
     if (window.dashboardApp && window.dashboardApp.modalAnimating) {
         console.log('⚠️ Modal already animating, ignoring request');
         return;
     }
-    
+
     console.log('Dashboard app available:', !!window.dashboardApp);
     console.log('Starred categories:', window.dashboardApp?.starredCategories);
-    
+
     const modal = document.getElementById('categoriesModal');
     console.log('Modal element found:', !!modal);
-    
+
     if (modal && window.dashboardApp) {
         // Set animating flag to prevent double calls
         window.dashboardApp.modalAnimating = true;
-        
+
         // Update modal state before showing
         updateCategoriesModal();
-        
+
         // Show modal with single animation
         modal.classList.remove('hidden');
-        
+
         // Reset animating flag after animation completes
         setTimeout(() => {
             window.dashboardApp.modalAnimating = false;
         }, 300);
-        
+
         console.log('✅ Modal opened');
     } else {
         console.error('❌ Modal element or dashboard app not found');
@@ -707,14 +700,14 @@ function updateCategoriesModal() {
     console.log('🔄 updateCategoriesModal called');
     const starredCategories = window.dashboardApp?.starredCategories || [];
     console.log('Current starred categories:', starredCategories);
-    
+
     // Update toggle states
     document.querySelectorAll('.category-toggle').forEach(toggle => {
         const category = toggle.dataset.category;
         const isStarred = starredCategories.includes(category);
-        
+
         const starBtn = toggle.querySelector('.category-star-btn');
-        
+
         if (isStarred) {
             toggle.classList.add('starred');
             if (starBtn) starBtn.classList.add('starred');
@@ -722,7 +715,7 @@ function updateCategoriesModal() {
             toggle.classList.remove('starred');
             if (starBtn) starBtn.classList.remove('starred');
         }
-        
+
         console.log(`Category ${category}: starred=${isStarred}`);
     });
 }
@@ -733,9 +726,9 @@ function toggleCategoryStar(category) {
         console.error('❌ Dashboard app not available');
         return;
     }
-    
+
     const index = window.dashboardApp.starredCategories.indexOf(category);
-    
+
     if (index > -1) {
         // Remove from starred
         window.dashboardApp.starredCategories.splice(index, 1);
@@ -745,9 +738,9 @@ function toggleCategoryStar(category) {
         window.dashboardApp.starredCategories.push(category);
         console.log(`⭐ Added ${category} to starred`);
     }
-    
+
     console.log('Updated starred categories:', window.dashboardApp.starredCategories);
-    
+
     // Update modal display immediately
     updateCategoriesModal();
 }
@@ -758,9 +751,9 @@ async function saveCategoryPreferences() {
         console.error('❌ Dashboard app not available');
         return;
     }
-    
+
     console.log('Saving starred categories:', window.dashboardApp.starredCategories);
-    
+
     try {
         const response = await fetch('/api/update-preferences', {
             method: 'POST',
@@ -771,13 +764,13 @@ async function saveCategoryPreferences() {
                 starred_categories: window.dashboardApp.starredCategories
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             // Update local state
             window.dashboardApp.starredCategories = data.starred_categories || [];
-            
+
             // Also update sessionStorage to keep in sync
             try {
                 sessionStorage.setItem('userPreferences', JSON.stringify(window.dashboardApp.starredCategories));
@@ -785,13 +778,13 @@ async function saveCategoryPreferences() {
             } catch (error) {
                 console.warn('⚠️ Failed to update sessionStorage:', error);
             }
-            
+
             // Reorder category buttons to show visual changes
             window.dashboardApp.reorderCategoryButtons();
-            
+
             // Close modal
             closeCategoriesModal();
-            
+
             console.log('✅ Category preferences saved successfully');
         } else {
             console.error('❌ Failed to save preferences:', data.error);
@@ -854,7 +847,7 @@ function initMap() {
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log('📱 Dashboard page loaded, initializing app...');
-    
+
     // Initialize dashboard app immediately, don't wait for Google Maps
     if (!window.dashboardApp) {
         window.dashboardApp = new DashboardApp();

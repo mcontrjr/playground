@@ -105,7 +105,7 @@ class GooglePlacesService:
                 'coffee': {'type': 'cafe', 'keyword': 'coffee'},
                 'thrift': {'type': 'store', 'keyword': 'thrift second hand consignment'},
                 'nightlife': {'type': 'bar', 'keyword': 'bar club nightlife'},
-                'outdoors': {'type': 'tourist_attraction', 'keyword': 'hiking trail park nature beach lake outdoor recreation'},
+                'outdoors': {'type': 'hiking_area', 'keyword': 'hiking outdoor recreation'},
                 'shopping': {'type': 'shopping_mall', 'keyword': None}
             }
 
