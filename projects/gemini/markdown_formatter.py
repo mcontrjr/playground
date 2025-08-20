@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import re
-from typing import List
+import json
+from typing import List, Optional, Tuple
 
 class TerminalColors:
     """ANSI color codes for terminal output"""
@@ -43,7 +44,6 @@ class MarkdownFormatter:
         formatted_lines = []
         in_code_block = False
         code_block_lang = ""
-        list_level = 0
         
         i = 0
         while i < len(lines):
@@ -75,9 +75,9 @@ class MarkdownFormatter:
             
             # Inside code block
             if in_code_block:
+                formatted_code_line = self._format_code_line(line, code_block_lang)
                 formatted_lines.append(
-                    f"{self.colors.DIM}{self.colors.CYAN}│{self.colors.RESET} "
-                    f"{self.colors.BRIGHT_WHITE}{self.colors.DIM}{line}{self.colors.RESET}"
+                    f"{self.colors.DIM}{self.colors.CYAN}│{self.colors.RESET} {formatted_code_line}"
                 )
                 i += 1
                 continue
@@ -148,6 +148,15 @@ class MarkdownFormatter:
                     f"{indent}{self.colors.BRIGHT_MAGENTA}{number}.{self.colors.RESET} {formatted_content}"
                 )
                 i += 1
+                continue
+            
+            # Tables
+            if self._is_table_row(line) and i < len(lines) - 1 and self._is_table_separator(lines[i + 1]):
+                # Found a table - process it all at once
+                table_lines, consumed = self._extract_table(lines, i)
+                formatted_table = self._format_table(table_lines)
+                formatted_lines.extend(formatted_table)
+                i += consumed
                 continue
             
             # Block quotes
@@ -223,6 +232,256 @@ class MarkdownFormatter:
         
         return text
     
+    def _is_table_row(self, line: str) -> bool:
+        """Check if line looks like a table row"""
+        stripped = line.strip()
+        return '|' in stripped
+    
+    def _is_table_separator(self, line: str) -> bool:
+        """Check if line is a table separator (like | :--- | :---: | ---: |)"""
+        stripped = line.strip()
+        if not stripped:
+            return False
+        # Remove pipes and check if it's mostly dashes and colons
+        content = re.sub(r'\|', '', stripped)
+        return bool(re.match(r'^[\s:-]+$', content)) and '-' in content
+    
+    def _extract_table(self, lines: List[str], start_idx: int) -> Tuple[List[str], int]:
+        """Extract all lines of a table starting from start_idx"""
+        table_lines = []
+        idx = start_idx
+        
+        # Get header row
+        table_lines.append(lines[idx])
+        idx += 1
+        
+        # Get separator row
+        if idx < len(lines) and self._is_table_separator(lines[idx]):
+            table_lines.append(lines[idx])
+            idx += 1
+        
+        # Get data rows
+        while idx < len(lines) and self._is_table_row(lines[idx]):
+            table_lines.append(lines[idx])
+            idx += 1
+        
+        return table_lines, idx - start_idx
+    
+    def _format_table(self, table_lines: List[str]) -> List[str]:
+        """Format a markdown table with borders and colors"""
+        if len(table_lines) < 2:
+            return table_lines
+        
+        # Parse the table structure
+        header_cells = [cell.strip() for cell in table_lines[0].split('|') if cell.strip()]
+        separator_line = table_lines[1]
+        
+        # Parse alignment from separator
+        alignments = []
+        sep_cells = [cell.strip() for cell in separator_line.split('|') if cell.strip()]
+        for cell in sep_cells:
+            if cell.startswith(':') and cell.endswith(':'):
+                alignments.append('center')
+            elif cell.endswith(':'):
+                alignments.append('right')
+            else:
+                alignments.append('left')
+        
+        # Calculate column widths
+        col_widths = []
+        all_rows = [header_cells]
+        
+        # Parse data rows
+        for line in table_lines[2:]:
+            cells = [cell.strip() for cell in line.split('|') if cell.strip()]
+            all_rows.append(cells)
+        
+        # Calculate widths
+        for i in range(len(header_cells)):
+            max_width = max(len(str(row[i] if i < len(row) else '')) for row in all_rows)
+            col_widths.append(max(max_width, 8))  # Minimum width of 8
+        
+        formatted_lines = []
+        
+        # Top border
+        border_line = '┌' + '┬'.join('─' * (width + 2) for width in col_widths) + '┐'
+        formatted_lines.append(f"{self.colors.DIM}{self.colors.BRIGHT_BLACK}{border_line}{self.colors.RESET}")
+        
+        # Header row
+        header_line = '│'
+        for i, (cell, width, align) in enumerate(zip(header_cells, col_widths, alignments)):
+            formatted_cell = self._format_inline(cell)
+            # Remove color codes for width calculation
+            plain_cell = re.sub(r'\033\[[0-9;]*m', '', formatted_cell)
+            
+            if align == 'center':
+                padded = plain_cell.center(width)
+                # Re-apply formatting
+                colored_content = formatted_cell + ' ' * (len(padded) - len(plain_cell))
+            elif align == 'right':
+                padded = plain_cell.rjust(width)
+                colored_content = ' ' * (len(padded) - len(plain_cell)) + formatted_cell
+            else:
+                padded = plain_cell.ljust(width)
+                colored_content = formatted_cell + ' ' * (len(padded) - len(plain_cell))
+            
+            header_line += f' {self.colors.BOLD}{self.colors.BRIGHT_YELLOW}{colored_content}{self.colors.RESET} │'
+        
+        formatted_lines.append(header_line)
+        
+        # Header separator
+        sep_line = '├' + '┼'.join('─' * (width + 2) for width in col_widths) + '┤'
+        formatted_lines.append(f"{self.colors.DIM}{self.colors.BRIGHT_BLACK}{sep_line}{self.colors.RESET}")
+        
+        # Data rows
+        for row in all_rows[1:]:
+            row_line = '│'
+            for i, width in enumerate(col_widths):
+                cell = row[i] if i < len(row) else ''
+                formatted_cell = self._format_inline(cell)
+                plain_cell = re.sub(r'\033\[[0-9;]*m', '', formatted_cell)
+                
+                align = alignments[i] if i < len(alignments) else 'left'
+                
+                if align == 'center':
+                    padded = plain_cell.center(width)
+                    colored_content = formatted_cell + ' ' * (len(padded) - len(plain_cell))
+                elif align == 'right':
+                    padded = plain_cell.rjust(width)
+                    colored_content = ' ' * (len(padded) - len(plain_cell)) + formatted_cell
+                else:
+                    padded = plain_cell.ljust(width)
+                    colored_content = formatted_cell + ' ' * (len(padded) - len(plain_cell))
+                
+                row_line += f' {colored_content} │'
+            
+            formatted_lines.append(row_line)
+        
+        # Bottom border
+        bottom_line = '└' + '┴'.join('─' * (width + 2) for width in col_widths) + '┘'
+        formatted_lines.append(f"{self.colors.DIM}{self.colors.BRIGHT_BLACK}{bottom_line}{self.colors.RESET}")
+        
+        return [''] + formatted_lines + ['']
+    
+    def _format_code_line(self, line: str, language: str) -> str:
+        """Format a line of code with syntax highlighting based on language"""
+        if not line.strip():
+            return line
+        
+        lang = language.lower()
+        
+        if lang == 'json':
+            return self._format_json_line(line)
+        elif lang in ['python', 'py']:
+            return self._format_python_line(line)
+        elif lang in ['javascript', 'js']:
+            return self._format_javascript_line(line)
+        else:
+            # Default code formatting
+            return f"{self.colors.BRIGHT_WHITE}{self.colors.DIM}{line}{self.colors.RESET}"
+    
+    def _format_json_line(self, line: str) -> str:
+        """Format a JSON line with syntax highlighting"""
+        # Handle strings
+        formatted = re.sub(
+            r'"([^"]*?)"(?=\s*:)',  # Keys
+            f'{self.colors.BRIGHT_BLUE}"\\1"{self.colors.RESET}',
+            line
+        )
+        formatted = re.sub(
+            r':\s*"([^"]*?)"',  # String values
+            f': {self.colors.BRIGHT_GREEN}"\\1"{self.colors.RESET}',
+            formatted
+        )
+        
+        # Handle numbers
+        formatted = re.sub(
+            r':\s*(-?\d+\.?\d*)',
+            f': {self.colors.BRIGHT_YELLOW}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        # Handle booleans and null
+        formatted = re.sub(
+            r'\b(true|false|null)\b',
+            f'{self.colors.BRIGHT_MAGENTA}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        # Handle brackets and braces
+        formatted = re.sub(
+            r'([\[\]{}])',
+            f'{self.colors.BRIGHT_CYAN}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        # Handle commas and colons
+        formatted = re.sub(
+            r'([,:])(?![^"]*")',
+            f'{self.colors.DIM}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        return formatted
+    
+    def _format_python_line(self, line: str) -> str:
+        """Format a Python line with basic syntax highlighting"""
+        # Keywords
+        keywords = ['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'try', 'except', 'import', 'from', 'as', 'return', 'yield', 'with', 'in', 'not', 'and', 'or']
+        
+        formatted = line
+        for keyword in keywords:
+            formatted = re.sub(
+                f'\\b{keyword}\\b',
+                f'{self.colors.BRIGHT_BLUE}{keyword}{self.colors.RESET}',
+                formatted
+            )
+        
+        # Strings (simplified pattern)
+        formatted = re.sub(
+            r'(["\'][^"\']*["\'])',
+            f'{self.colors.BRIGHT_GREEN}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        # Comments
+        formatted = re.sub(
+            r'(#.*$)',
+            f'{self.colors.DIM}{self.colors.BRIGHT_BLACK}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        return formatted
+    
+    def _format_javascript_line(self, line: str) -> str:
+        """Format a JavaScript line with basic syntax highlighting"""
+        # Keywords
+        keywords = ['function', 'var', 'let', 'const', 'if', 'else', 'for', 'while', 'try', 'catch', 'return', 'class', 'extends', 'import', 'export', 'from']
+        
+        formatted = line
+        for keyword in keywords:
+            formatted = re.sub(
+                f'\\b{keyword}\\b',
+                f'{self.colors.BRIGHT_BLUE}{keyword}{self.colors.RESET}',
+                formatted
+            )
+        
+        # Strings (simplified pattern)
+        formatted = re.sub(
+            r'(["\'][^"\']*["\'])',
+            f'{self.colors.BRIGHT_GREEN}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        # Comments
+        formatted = re.sub(
+            r'(//.*$)',
+            f'{self.colors.DIM}{self.colors.BRIGHT_BLACK}\\1{self.colors.RESET}',
+            formatted
+        )
+        
+        return formatted
+    
     def remove_markdown(self, text: str) -> str:
         """Remove all markdown formatting, returning plain text"""
         # Remove headers
@@ -238,7 +497,7 @@ class MarkdownFormatter:
         text = re.sub(r'~~(.*?)~~', r'\1', text)
         
         # Remove code blocks
-        text = re.sub(r'```[^`]*```', '', text, flags=re.DOTALL)
+        text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
         
         # Remove inline code
         text = re.sub(r'`([^`]+)`', r'\1', text)

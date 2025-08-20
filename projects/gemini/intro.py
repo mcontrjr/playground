@@ -6,7 +6,7 @@ import argparse
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from google import genai
+import google.generativeai as genai
 
 # Import our custom modules
 from markdown_formatter import MarkdownFormatter
@@ -74,12 +74,12 @@ def main():
 
     logger.debug(f"API key loaded: {'*' * 10}{api_key[-4:] if len(api_key) > 4 else '****'}")
 
-    # Initialize Gemini client
+    # Configure Gemini API
     try:
-        client = genai.Client(api_key=api_key)
-        logger.debug("Gemini client initialized successfully")
+        genai.configure(api_key=api_key)
+        logger.debug("Gemini API configured successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize Gemini client: {e}")
+        logger.error(f"Failed to configure Gemini API: {e}")
         return
 
     # Handle command to clear history
@@ -110,34 +110,98 @@ def main():
     if len(conversation_history) < original_length:
         logger.debug(f"Context trimmed from {original_length} to {len(conversation_history)} messages")
 
-    # Add user message to history
-    user_message = format_message_for_api(args.content, "user")
-    conversation_history.append(user_message)
-    text_content = " ".join([conv for conv in conversation_history if isinstance(conv, str)])
+    # Prepare the current user message with optional file
     if args.file:
         if os.path.exists(args.file):
-            f = client.files.upload(file=args.file)
-            contents = [f, text_content]
+            try:
+                # Upload the file using the Gemini API
+                f = genai.upload_file(path=args.file)
+                logger.debug(f"File uploaded successfully: {f.name}")
+                
+                # Create user message with both file and text for API
+                user_message_for_api = {
+                    "role": "user",
+                    "parts": [f, {"text": args.content}]
+                }
+                # Create user message for history (without file object)
+                user_message_for_history = {
+                    "role": "user",
+                    "parts": [{"text": args.content}],
+                    "file_uploaded": args.file
+                }
+            except Exception as e:
+                logger.error(f"Failed to upload file {args.file}: {e}")
+                return
+        else:
+            logger.error(f"File not found: {args.file}")
+            return
     else:
-        contents = [text_content]
+        # Create user message with just text
+        user_message_for_api = format_message_for_api(args.content, "user")
+        user_message_for_history = user_message_for_api
+    
+    # Add user message to history (for saving to file)
+    conversation_history.append(user_message_for_history)
+    
+    # Create the actual request content (includes file object if present)
+    # Always clean the conversation history first to remove file_uploaded fields
+    clean_conversation_history = []
+    for msg in conversation_history[:-1]:  # Exclude the last message (current user input)
+        if 'file_uploaded' in msg:
+            # Create a clean version without file_uploaded field
+            clean_msg = {k: v for k, v in msg.items() if k != 'file_uploaded'}
+            clean_conversation_history.append(clean_msg)
+        else:
+            clean_conversation_history.append(msg)
+    
+    if args.file:
+        # Add the API version of the current message (with file object)
+        api_conversation_history = clean_conversation_history + [user_message_for_api]
+    else:
+        # Add the current message as-is (no file object)
+        api_conversation_history = clean_conversation_history + [user_message_for_api]
 
     # Make API request with spinner
-    with Spinner("Generating response") as spinner:
-        try:
-            logger.debug("Sending request to Gemini API")
-            response = client.models.generate_content_stream(
-                model="gemini-2.5-flash",
-                contents=conversation_history
-            )
-            raw_text = ""
-            for chunk in response:
-                raw_text += chunk.text
-                formatted_text = formatter.format_for_terminal(chunk.text)
-                print(formatted_text, end="")
+    spinner = Spinner("Generating response")
+    try:
+        logger.debug("Sending request to Gemini API")
+        spinner.start()
+        
+        # Get the model
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        response = model.generate_content(
+            api_conversation_history,
+            stream=True
+        )
 
-        except Exception as e:
-            logger.error(f"API request failed: {e}")
-            return
+        raw_text = ""
+        first_chunk = True
+
+        for chunk in response:
+            if first_chunk:
+                # Stop spinner before first chunk and ensure clean line
+                spinner.stop()
+                first_chunk = False
+
+            raw_text += chunk.text
+            formatted_text = formatter.format_for_terminal(chunk.text)
+            print(formatted_text, end="", flush=True)
+
+        # Add a newline after streaming is complete
+        print()
+
+    except Exception as e:
+        spinner.stop()  # Make sure spinner stops on error
+        logger.error(f"API request failed: {e}")
+        return
+
+    finally:
+        # Clean up uploaded file if it exists
+        if args.file and 'f' in locals():
+            try:
+                genai.delete_file(name=f.name)
+            except Exception as e:
+                logger.warning(f"Failed to delete uploaded file: {e}")
 
     # Add model response to history (store original, not formatted)
     model_message = format_message_for_api(raw_text, "model")
