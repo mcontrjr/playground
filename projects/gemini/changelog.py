@@ -115,7 +115,7 @@ def prepare_optimized_prompt(files: List[Dict], full_diff: str, model_name: str)
     max_tokens = config["max_input_tokens"] - OUTPUT_TOKEN_RESERVE - SYSTEM_OVERHEAD_TOKENS
 
     instruction = (
-        "Generate a comprehensive changelog based on the following Git changes. "
+        "Generate a comprehensive but concise changelog based on the following Git changes. "
         "Structure your response with sections for:\n"
         "- **New Features**\n"
         "- **Bug Fixes**\n"
