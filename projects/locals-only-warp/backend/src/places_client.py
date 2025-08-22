@@ -9,11 +9,7 @@ from fastapi import HTTPException
 
 from .config import get_settings
 from models import (
-    NearbySearchRequest,
-    TextSearchRequest,
-    PlacesNearbySearchResponse,
-    PlacesTextSearchResponse,
-    PlacesSearchStatus,
+    # Geocoding models (needed for zip code lookup)
     GeocodeRequest,
     GeocodingResponse,
     GeocodingStatus,
@@ -21,6 +17,23 @@ from models import (
     ZipCodeInfo,
     ZipCodeResponse,
     LocationType,
+    Place,
+    # New Places API models
+    NearbySearchNewRequest,
+    TextSearchNewRequest,
+    LocationRestriction,
+    Circle,
+    NearbySearchNewResponse,
+    TextSearchNewResponse,
+    PlaceDetailsNewResponse,
+)
+# Import additional New Places API models
+from models.requests_new import (
+    PlaceDetailsNewRequest,
+    PlacePhotoNewRequest,
+)
+from models.responses_new import (
+    PlacePhotoNewResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,138 +95,7 @@ class GooglePlacesClient:
 
         return params
 
-    def _handle_api_response(self, response_data: Dict[str, Any]) -> None:
-        """Handle API response and raise appropriate exceptions for errors."""
-        status = response_data.get("status", "UNKNOWN_ERROR")
-
-        if status == PlacesSearchStatus.OK:
-            return
-
-        error_message = response_data.get("error_message", f"API returned status: {status}")
-
-        # Map Places API status codes to HTTP status codes
-        status_code_map = {
-            PlacesSearchStatus.ZERO_RESULTS: 200,  # Not an error, just no results
-            PlacesSearchStatus.INVALID_REQUEST: 400,
-            PlacesSearchStatus.OVER_QUERY_LIMIT: 429,
-            PlacesSearchStatus.REQUEST_DENIED: 403,
-            PlacesSearchStatus.UNKNOWN_ERROR: 500,
-        }
-
-        http_status = status_code_map.get(status, 500)
-
-        if status == PlacesSearchStatus.ZERO_RESULTS:
-            # ZERO_RESULTS is not an error, just return without raising
-            return
-
-        logger.error(f"Google Places API error: {status} - {error_message}")
-        raise GooglePlacesAPIError(
-            status_code=http_status,
-            message=error_message,
-            places_status=status
-        )
-
-    async def nearby_search(self, request: NearbySearchRequest) -> PlacesNearbySearchResponse:
-        """
-        Perform a nearby search using the Google Places API.
-
-        Args:
-            request: The nearby search request parameters
-
-        Returns:
-            PlacesNearbySearchResponse: The API response with places data
-
-        Raises:
-            GooglePlacesAPIError: If the API request fails
-        """
-        url = f"{self.base_url}/nearbysearch/json"
-        params = self._build_params(request.dict(exclude_none=True))
-
-        logger.info(f"Making nearby search request to {url}")
-        logger.debug(f"Request parameters: {params}")
-
-        try:
-            response = await self.client.get(url, params=params)
-            response.raise_for_status()
-
-            response_data = response.json()
-            logger.debug(f"API response status: {response_data.get('status')}")
-
-            # Handle API-level errors
-            self._handle_api_response(response_data)
-
-            # Parse and return the response
-            return PlacesNearbySearchResponse(**response_data)
-
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error during nearby search: {e}")
-            raise GooglePlacesAPIError(
-                status_code=e.response.status_code,
-                message=f"HTTP error: {e.response.status_code} - {e.response.text}"
-            )
-        except httpx.RequestError as e:
-            logger.error(f"Request error during nearby search: {e}")
-            raise GooglePlacesAPIError(
-                status_code=503,
-                message=f"Request error: {str(e)}"
-            )
-        except Exception as e:
-            logger.error(f"Unexpected error during nearby search: {e}")
-            raise GooglePlacesAPIError(
-                status_code=500,
-                message=f"Unexpected error: {str(e)}"
-            )
-
-    async def text_search(self, request: TextSearchRequest) -> PlacesTextSearchResponse:
-        """
-        Perform a text search using the Google Places API.
-
-        Args:
-            request: The text search request parameters
-
-        Returns:
-            PlacesTextSearchResponse: The API response with places data
-
-        Raises:
-            GooglePlacesAPIError: If the API request fails
-        """
-        url = f"{self.base_url}/textsearch/json"
-        params = self._build_params(request.dict(exclude_none=True))
-
-        logger.info(f"Making text search request to {url}")
-        logger.debug(f"Request parameters: {params}")
-
-        try:
-            response = await self.client.get(url, params=params)
-            response.raise_for_status()
-
-            response_data = response.json()
-            logger.debug(f"API response status: {response_data.get('status')}")
-
-            # Handle API-level errors
-            self._handle_api_response(response_data)
-
-            # Parse and return the response
-            return PlacesTextSearchResponse(**response_data)
-
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error during text search: {e}")
-            raise GooglePlacesAPIError(
-                status_code=e.response.status_code,
-                message=f"HTTP error: {e.response.status_code} - {e.response.text}"
-            )
-        except httpx.RequestError as e:
-            logger.error(f"Request error during text search: {e}")
-            raise GooglePlacesAPIError(
-                status_code=503,
-                message=f"Request error: {str(e)}"
-            )
-        except Exception as e:
-            logger.error(f"Unexpected error during text search: {e}")
-            raise GooglePlacesAPIError(
-                status_code=500,
-                message=f"Unexpected error: {str(e)}"
-            )
+    # Legacy methods removed - using only New Places API
 
     async def geocode(self, request: GeocodeRequest) -> GeocodingResponse:
         """
@@ -229,7 +111,7 @@ class GooglePlacesClient:
             GooglePlacesAPIError: If the API request fails
         """
         url = "https://maps.googleapis.com/maps/api/geocode/json"
-        params = self._build_params(request.dict(exclude_none=True))
+        params = self._build_params(request.model_dump(exclude_none=True))
 
         logger.info(f"Making geocoding request to {url}")
         logger.debug(f"Request parameters: {params}")
@@ -383,29 +265,261 @@ class GooglePlacesClient:
                 message=f"Unexpected error: {str(e)}"
             )
 
+    # New Places API Methods
+
+    async def place_details_new(self, place_id: str, request: PlaceDetailsNewRequest) -> Place:
+        """
+        Get place details using the New Places API.
+
+        Args:
+            place_id: The place ID to get details for
+            request: Request parameters including fields to return
+
+        Returns:
+            Place: The place details
+
+        Raises:
+            GooglePlacesAPIError: If the API request fails
+        """
+        url = f"https://places.googleapis.com/v1/places/{place_id}"
+        
+        # Build field mask
+        fields_param = ",".join(request.fields)
+        params = {"fields": fields_param, "key": self.api_key}
+        
+        if request.language_code:
+            params["languageCode"] = request.language_code
+        if request.region_code:
+            params["regionCode"] = request.region_code
+        if request.session_token:
+            params["sessionToken"] = request.session_token
+
+        logger.info(f"Making Place Details (New) request to {url}")
+        logger.debug(f"Request parameters: {params}")
+
+        try:
+            response = await self.client.get(url, params=params)
+            response.raise_for_status()
+
+            response_data = response.json()
+            logger.debug(f"Place Details (New) response received")
+
+            # Parse and return the place
+            return Place(**response_data)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error during place details (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=e.response.status_code,
+                message=f"HTTP error: {e.response.status_code} - {e.response.text}"
+            )
+        except httpx.RequestError as e:
+            logger.error(f"Request error during place details (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=503,
+                message=f"Request error: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error during place details (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=500,
+                message=f"Unexpected error: {str(e)}"
+            )
+
+    async def nearby_search_new(self, request: NearbySearchNewRequest) -> NearbySearchNewResponse:
+        """
+        Perform a nearby search using the New Places API.
+
+        Args:
+            request: The nearby search request parameters
+
+        Returns:
+            NearbySearchNewResponse: The API response with places data
+
+        Raises:
+            GooglePlacesAPIError: If the API request fails
+        """
+        url = "https://places.googleapis.com/v1/places:searchNearby"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": self.api_key,
+            "X-Goog-FieldMask": ",".join(request.fields)
+        }
+        
+        # Build request body
+        body = request.model_dump(exclude_none=True, exclude={"fields"})
+
+        logger.info(f"Making Nearby Search (New) request to {url}")
+        logger.debug(f"Request body: {body}")
+
+        try:
+            response = await self.client.post(url, json=body, headers=headers)
+            response.raise_for_status()
+
+            response_data = response.json()
+            logger.debug(f"Nearby Search (New) response received with {len(response_data.get('places', []))} places")
+
+            # Parse and return the response
+            return NearbySearchNewResponse(**response_data)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error during nearby search (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=e.response.status_code,
+                message=f"HTTP error: {e.response.status_code} - {e.response.text}"
+            )
+        except httpx.RequestError as e:
+            logger.error(f"Request error during nearby search (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=503,
+                message=f"Request error: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error during nearby search (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=500,
+                message=f"Unexpected error: {str(e)}"
+            )
+
+    async def text_search_new(self, request: TextSearchNewRequest) -> TextSearchNewResponse:
+        """
+        Perform a text search using the New Places API.
+
+        Args:
+            request: The text search request parameters
+
+        Returns:
+            TextSearchNewResponse: The API response with places data
+
+        Raises:
+            GooglePlacesAPIError: If the API request fails
+        """
+        url = "https://places.googleapis.com/v1/places:searchText"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": self.api_key,
+            "X-Goog-FieldMask": ",".join(request.fields)
+        }
+        
+        # Build request body
+        body = request.model_dump(exclude_none=True, exclude={"fields"})
+
+        logger.info(f"Making Text Search (New) request to {url}")
+        logger.debug(f"Request body: {body}")
+
+        try:
+            response = await self.client.post(url, json=body, headers=headers)
+            response.raise_for_status()
+
+            response_data = response.json()
+            logger.debug(f"Text Search (New) response received with {len(response_data.get('places', []))} places")
+
+            # Parse and return the response
+            return TextSearchNewResponse(**response_data)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error during text search (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=e.response.status_code,
+                message=f"HTTP error: {e.response.status_code} - {e.response.text}"
+            )
+        except httpx.RequestError as e:
+            logger.error(f"Request error during text search (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=503,
+                message=f"Request error: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error during text search (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=500,
+                message=f"Unexpected error: {str(e)}"
+            )
+
+    async def place_photo_new(self, photo_name: str, request: PlacePhotoNewRequest) -> bytes:
+        """
+        Get a place photo using the New Places API.
+
+        Args:
+            photo_name: The photo resource name
+            request: Photo request parameters
+
+        Returns:
+            bytes: The photo image data
+
+        Raises:
+            GooglePlacesAPIError: If the API request fails
+        """
+        url = f"https://places.googleapis.com/v1/{photo_name}/media"
+        
+        params = {"key": self.api_key}
+        if request.max_width_px:
+            params["maxWidthPx"] = str(request.max_width_px)
+        if request.max_height_px:
+            params["maxHeightPx"] = str(request.max_height_px)
+        if request.skip_http_redirect:
+            params["skipHttpRedirect"] = str(request.skip_http_redirect).lower()
+
+        logger.info(f"Making Place Photo (New) request to {url}")
+        logger.debug(f"Request parameters: {params}")
+
+        try:
+            response = await self.client.get(url, params=params)
+            response.raise_for_status()
+
+            logger.debug(f"Place Photo (New) response received, content-type: {response.headers.get('content-type')}")
+
+            # Return the image data
+            return response.content
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error during place photo (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=e.response.status_code,
+                message=f"HTTP error: {e.response.status_code} - {e.response.text}"
+            )
+        except httpx.RequestError as e:
+            logger.error(f"Request error during place photo (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=503,
+                message=f"Request error: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error during place photo (new): {e}")
+            raise GooglePlacesAPIError(
+                status_code=500,
+                message=f"Unexpected error: {str(e)}"
+            )
+
     async def health_check(self) -> bool:
         """
-        Perform a health check by making a simple API request.
+        Perform a health check by making a simple geocoding request.
 
         Returns:
             bool: True if the API is accessible, False otherwise
         """
         try:
-            # Make a simple nearby search request to check API connectivity
-            test_request = NearbySearchRequest(
-                location="0,0",  # Equator, should be valid
-                radius=1000
+            # Make a simple geocoding request to check API connectivity
+            # Use a well-known address that should always work
+            test_request = GeocodeRequest(
+                address="New York, NY, USA"
             )
+            
+            # Just check if we can reach the geocoding service
+            response = await self.geocode(test_request)
+            
+            # If we get here without exception, the service is accessible
+            return True
 
-            # Don't need to process the response, just check if we can reach the API
-            url = f"{self.base_url}/nearbysearch/json"
-            params = self._build_params(test_request.dict(exclude_none=True))
-
-            response = await self.client.get(url, params=params)
-
-            # Check if we got a response (even if it's an API error, it means we reached the service)
-            return response.status_code in [200, 400, 403, 429]  # Valid HTTP responses from the API
-
+        except GooglePlacesAPIError as e:
+            # API errors (403, 429) mean the service is reachable but may have auth/quota issues
+            # These still indicate the service is "healthy" from a connectivity standpoint
+            if e.status_code in [403, 429]:
+                return True
+            logger.error(f"Health check failed with API error: {e.detail}")
+            return False
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return False

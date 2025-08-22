@@ -1,44 +1,54 @@
 """
-Models package for Google Places API integration.
+Models package for cleaned up Places API integration.
 """
 
-# Base types and shared models
+# Base types
 from .base import (
-    BusinessStatus,
     PlacesSearchStatus,
-    LatLngLiteral,
-    Bounds,
-    Geometry,
-    PlusCode,
-    PlacePhoto,
-    PlaceOpeningHours,
-    AddressComponent,
-    PlaceEditorialSummary,
-    PlaceReview,
-)
-
-# Place model
-from .place import Place
-
-# Request models
-from .requests import (
     RankBy,
     PriceLevel,
-    PlaceType,
-    NearbySearchRequest,
-    TextSearchRequest,
+    LatLngLiteral,
+    Geometry,
+    AddressComponent,
+    # New Places API types
+    PaymentOptions,
+    ParkingOptions,
+    FuelOptions,
+    EVChargeOptions,
+    AccessibilityOptions,
+    PlaceAttributes,
+    DisplayName,
+    PlacePhotoNew,
+    RegularSecondaryOpeningHours,
+    PlaceSummary,
+    ReviewSummary,
+)
+
+# Place model (keep for internal use)
+from .place import Place
+
+# New Places API Request models
+from .requests_new import (
+    NearbySearchNewRequest,
+    TextSearchNewRequest,
+    LocationRestriction,
+    Circle,
 )
 
 # Response models
 from .responses import (
-    PlacesNearbySearchResponse,
-    PlacesTextSearchResponse,
-    PlacesFindPlaceFromTextResponse,
     ErrorResponse,
     HealthResponse,
 )
 
-# Geocoding models
+# New Places API Response models
+from .responses_new import (
+    NearbySearchNewResponse,
+    TextSearchNewResponse,
+    PlaceDetailsNewResponse,
+)
+
+# Geocoding models (keep for zip code conversion)
 from .geocoding import (
     GeocodingStatus,
     LocationType,
@@ -51,36 +61,60 @@ from .geocoding import (
     ZipCodeResponse,
 )
 
+# Recommendation models (new simplified API)
+from .recommendation import (
+    Recommendation,
+    ZipRecommendationsRequest,
+    TextRecommendationsRequest,
+    RecommendationsResponse,
+)
+
+# User models
+from .user import (
+    User,
+    UserCreate,
+    UserUpdate,
+    UserResponse,
+    UserListResponse,
+)
+
 __all__ = [
     # Base types
-    "BusinessStatus",
     "PlacesSearchStatus", 
-    "LatLngLiteral",
-    "Bounds",
-    "Geometry",
-    "PlusCode",
-    "PlacePhoto",
-    "PlaceOpeningHours",
-    "AddressComponent",
-    "PlaceEditorialSummary",
-    "PlaceReview",
-    
-    # Place model
-    "Place",
-    
-    # Request models
     "RankBy",
     "PriceLevel",
-    "PlaceType",
-    "NearbySearchRequest",
-    "TextSearchRequest",
+    "LatLngLiteral",
+    "Geometry",
+    "AddressComponent",
+    # New Places API types
+    "PaymentOptions",
+    "ParkingOptions",
+    "FuelOptions",
+    "EVChargeOptions",
+    "AccessibilityOptions",
+    "PlaceAttributes",
+    "DisplayName",
+    "PlacePhotoNew",
+    "RegularSecondaryOpeningHours",
+    "PlaceSummary",
+    "ReviewSummary",
+    
+    # Place model (internal use)
+    "Place",
+    
+    # New Places API Request models
+    "NearbySearchNewRequest",
+    "TextSearchNewRequest",
+    "LocationRestriction",
+    "Circle",
     
     # Response models
-    "PlacesNearbySearchResponse",
-    "PlacesTextSearchResponse", 
-    "PlacesFindPlaceFromTextResponse",
     "ErrorResponse",
     "HealthResponse",
+    # New Places API Response models
+    "NearbySearchNewResponse",
+    "TextSearchNewResponse",
+    "PlaceDetailsNewResponse",
     
     # Geocoding models
     "GeocodingStatus",
@@ -92,4 +126,17 @@ __all__ = [
     "ZipCodeRequest",
     "ZipCodeInfo",
     "ZipCodeResponse",
+    
+    # Recommendation models (new simplified API)
+    "Recommendation",
+    "ZipRecommendationsRequest",
+    "TextRecommendationsRequest",
+    "RecommendationsResponse",
+    
+    # User models
+    "User",
+    "UserCreate",
+    "UserUpdate",
+    "UserResponse",
+    "UserListResponse",
 ]

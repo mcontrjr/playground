@@ -2,13 +2,16 @@
 Configuration management for the FastAPI backend.
 """
 import os
+from pathlib import Path
 from typing import Optional
 from functools import lru_cache
-try:
-    from pydantic_settings import BaseSettings
-except ImportError:
-    from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from pydantic import Field
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 class Settings(BaseSettings):
@@ -38,9 +41,14 @@ class Settings(BaseSettings):
     request_timeout: int = Field(30, env="REQUEST_TIMEOUT")
     max_retries: int = Field(3, env="MAX_RETRIES")
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    # Database configuration
+    database_path: str = Field("data/app.duckdb", env="DATABASE_PATH")
+    database_debug: bool = Field(True, env="DATABASE_DEBUG")
+    
+    model_config = {
+        "env_file": ".env",
+        "case_sensitive": False
+    }
 
 
 @lru_cache()

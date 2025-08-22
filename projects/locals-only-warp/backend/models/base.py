@@ -24,6 +24,21 @@ class PlacesSearchStatus(str, Enum):
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
 
 
+class RankBy(str, Enum):
+    """Ranking preference for nearby search."""
+    PROMINENCE = "prominence"
+    DISTANCE = "distance"
+
+
+class PriceLevel(str, Enum):
+    """Price level values."""
+    FREE = "0"
+    INEXPENSIVE = "1" 
+    MODERATE = "2"
+    EXPENSIVE = "3"
+    VERY_EXPENSIVE = "4"
+
+
 class LatLngLiteral(BaseModel):
     """A latitude/longitude pair."""
     lat: float = Field(..., description="Latitude in degrees")
@@ -86,3 +101,147 @@ class PlaceReview(BaseModel):
     relative_time_description: str = Field(..., description="A string of formatted recent time")
     text: str = Field(..., description="The user's review")
     time: int = Field(..., description="The time that the review was submitted, measured in the number of seconds since January 1, 1970 UTC")
+
+
+# New Places API Enums and Types
+
+class PaymentOption(str, Enum):
+    """Payment options accepted by a place."""
+    CREDIT_CARD = "ACCEPTS_CREDIT_CARDS"
+    DEBIT_CARD = "ACCEPTS_DEBIT_CARDS"
+    CASH_ONLY = "ACCEPTS_CASH_ONLY"
+    NFC = "ACCEPTS_NFC"
+
+
+class ParkingOption(str, Enum):
+    """Parking options provided by a place."""
+    FREE_PARKING_LOT = "FREE_PARKING_LOT"
+    PAID_PARKING_LOT = "PAID_PARKING_LOT"
+    FREE_STREET_PARKING = "FREE_STREET_PARKING"
+    VALET_PARKING = "VALET_PARKING"
+    FREE_GARAGE_PARKING = "FREE_GARAGE_PARKING"
+    PAID_GARAGE_PARKING = "PAID_GARAGE_PARKING"
+
+
+class FuelOption(str, Enum):
+    """Fuel options available at a gas station."""
+    DIESEL = "DIESEL"
+    REGULAR_UNLEADED = "REGULAR_UNLEADED"
+    MIDGRADE = "MIDGRADE"
+    PREMIUM = "PREMIUM"
+    SP91 = "SP91"
+    SP91_E10 = "SP91_E10"
+    SP92 = "SP92"
+    SP95_E10 = "SP95_E10"
+    SP98 = "SP98"
+    SP99 = "SP99"
+    SP100 = "SP100"
+    LPG = "LPG"
+    E80 = "E80"
+    E85 = "E85"
+    METHANE = "METHANE"
+    BIODIESEL = "BIODIESEL"
+    TRUCK_DIESEL = "TRUCK_DIESEL"
+
+
+class PaymentOptions(BaseModel):
+    """Payment options accepted by a place."""
+    accepts_credit_cards: Optional[bool] = Field(None, description="Place accepts credit cards")
+    accepts_debit_cards: Optional[bool] = Field(None, description="Place accepts debit cards")
+    accepts_cash_only: Optional[bool] = Field(None, description="Place accepts cash only")
+    accepts_nfc: Optional[bool] = Field(None, description="Place accepts NFC payments")
+
+
+class ParkingOptions(BaseModel):
+    """Parking options provided by a place."""
+    free_parking_lot: Optional[bool] = Field(None, description="Place provides free parking lot")
+    paid_parking_lot: Optional[bool] = Field(None, description="Place provides paid parking lot")
+    free_street_parking: Optional[bool] = Field(None, description="Place provides free street parking")
+    valet_parking: Optional[bool] = Field(None, description="Place provides valet parking")
+    free_garage_parking: Optional[bool] = Field(None, description="Place provides free garage parking")
+    paid_garage_parking: Optional[bool] = Field(None, description="Place provides paid garage parking")
+
+
+class FuelOptions(BaseModel):
+    """Fuel options available at a gas station."""
+    diesel: Optional[bool] = Field(None, description="Station provides diesel")
+    regular_unleaded: Optional[bool] = Field(None, description="Station provides regular unleaded")
+    midgrade: Optional[bool] = Field(None, description="Station provides midgrade")
+    premium: Optional[bool] = Field(None, description="Station provides premium")
+    sp91: Optional[bool] = Field(None, description="Station provides SP91")
+    sp91_e10: Optional[bool] = Field(None, description="Station provides SP91 E10")
+    sp92: Optional[bool] = Field(None, description="Station provides SP92")
+    sp95_e10: Optional[bool] = Field(None, description="Station provides SP95 E10")
+    sp98: Optional[bool] = Field(None, description="Station provides SP98")
+    sp99: Optional[bool] = Field(None, description="Station provides SP99")
+    sp100: Optional[bool] = Field(None, description="Station provides SP100")
+    lpg: Optional[bool] = Field(None, description="Station provides LPG")
+    e80: Optional[bool] = Field(None, description="Station provides E80")
+    e85: Optional[bool] = Field(None, description="Station provides E85")
+    methane: Optional[bool] = Field(None, description="Station provides methane")
+    biodiesel: Optional[bool] = Field(None, description="Station provides biodiesel")
+    truck_diesel: Optional[bool] = Field(None, description="Station provides truck diesel")
+
+
+class EVChargeOptions(BaseModel):
+    """Electric vehicle charging options."""
+    connector_count: Optional[int] = Field(None, description="Number of EV chargers available")
+    connector_aggregation: Optional[List[dict]] = Field(None, description="EV charging connector details")
+
+
+
+class AccessibilityOptions(BaseModel):
+    """Accessibility options for a place."""
+    wheelchair_accessible_parking: Optional[bool] = Field(None, description="Place offers wheelchair-accessible parking")
+    wheelchair_accessible_entrance: Optional[bool] = Field(None, description="Place has wheelchair-accessible entrance")
+    wheelchair_accessible_restroom: Optional[bool] = Field(None, description="Place has wheelchair-accessible restroom")
+    wheelchair_accessible_seating: Optional[bool] = Field(None, description="Place has wheelchair-accessible seating")
+
+
+class PlaceAttributes(BaseModel):
+    """Additional attributes for a place."""
+    outdoor_seating: Optional[bool] = Field(None, description="Place provides outdoor seating")
+    live_music: Optional[bool] = Field(None, description="Place provides live music")
+    menu_for_children: Optional[bool] = Field(None, description="Place has a children's menu")
+    serves_cocktails: Optional[bool] = Field(None, description="Place serves cocktails")
+    serves_dessert: Optional[bool] = Field(None, description="Place serves dessert")
+    serves_coffee: Optional[bool] = Field(None, description="Place serves coffee")
+    good_for_children: Optional[bool] = Field(None, description="Place is good for children")
+    allows_dogs: Optional[bool] = Field(None, description="Place allows dogs")
+    restroom: Optional[bool] = Field(None, description="Place has a restroom")
+    good_for_groups: Optional[bool] = Field(None, description="Place accommodates groups")
+    good_for_watching_sports: Optional[bool] = Field(None, description="Place is suitable for watching sports")
+
+
+class DisplayName(BaseModel):
+    """Display name with language code."""
+    text: str = Field(..., description="The display name text")
+    language_code: Optional[str] = Field(None, description="The language code")
+
+
+class PlacePhotoNew(BaseModel):
+    """New Places API photo model."""
+    name: str = Field(..., description="Photo resource name for fetching the photo")
+    width_px: int = Field(..., description="The maximum available width in pixels")
+    height_px: int = Field(..., description="The maximum available height in pixels")
+    author_attributions: Optional[List[dict]] = Field(None, description="Author attribution information")
+
+
+class RegularSecondaryOpeningHours(BaseModel):
+    """Secondary opening hours for specific operations."""
+    open_now: Optional[bool] = Field(None, description="Whether the place is currently open for secondary operations")
+    periods: Optional[List[dict]] = Field(None, description="Opening periods for secondary operations")
+    weekday_text: Optional[List[str]] = Field(None, description="Formatted secondary opening hours")
+    secondary_hours_type: Optional[str] = Field(None, description="Type of secondary hours (e.g., DRIVE_THROUGH, DELIVERY)")
+
+
+class PlaceSummary(BaseModel):
+    """AI-powered place summary."""
+    overview: Optional[str] = Field(None, description="Overview summary of the place")
+    language_code: Optional[str] = Field(None, description="Language code of the summary")
+
+
+class ReviewSummary(BaseModel):
+    """AI-powered review summary."""
+    overview: Optional[str] = Field(None, description="Summary of reviews")
+    language_code: Optional[str] = Field(None, description="Language code of the summary")

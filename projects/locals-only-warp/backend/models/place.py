@@ -13,6 +13,18 @@ from .base import (
     PlaceEditorialSummary,
     PlaceReview,
     PlusCode,
+    # New Places API types
+    PaymentOptions,
+    ParkingOptions,
+    FuelOptions,
+    EVChargeOptions,
+    AccessibilityOptions,
+    PlaceAttributes,
+    DisplayName,
+    PlacePhotoNew,
+    RegularSecondaryOpeningHours,
+    PlaceSummary,
+    ReviewSummary,
 )
 
 
@@ -37,6 +49,7 @@ class Place(BaseModel):
     geometry: Optional[Geometry] = Field(None, description="Contains the location and viewport for the location")
     formatted_address: Optional[str] = Field(
         None,
+        alias="formattedAddress",
         description="A string containing the human-readable address of this place",
         example="48 Pirrama Rd, Pyrmont NSW 2009, Australia"
     )
@@ -181,6 +194,94 @@ class Place(BaseModel):
     wheelchair_accessible_entrance: Optional[bool] = Field(
         None,
         description="Specifies if the place has an entrance that is wheelchair-accessible"
+    )
+    
+    # New Places API fields
+    
+    # New identification and naming
+    id: Optional[str] = Field(None, description="New Places API place ID")
+    display_name: Optional[DisplayName] = Field(None, alias="displayName", description="Display name with language")
+    short_formatted_address: Optional[str] = Field(
+        None,
+        alias="shortFormattedAddress",
+        description="Short, human-readable address"
+    )
+    primary_type: Optional[str] = Field(
+        None,
+        description="Primary type of the place",
+        example="restaurant"
+    )
+    primary_type_display_name: Optional[DisplayName] = Field(
+        None,
+        description="Display name of the primary type"
+    )
+    
+    # New operational details
+    regular_secondary_opening_hours: Optional[List[RegularSecondaryOpeningHours]] = Field(
+        None,
+        description="Secondary opening hours for specific operations"
+    )
+    
+    # New options and amenities
+    payment_options: Optional[PaymentOptions] = Field(
+        None,
+        description="Payment options accepted by the place"
+    )
+    parking_options: Optional[ParkingOptions] = Field(
+        None,
+        description="Parking options provided by the place"
+    )
+    fuel_options: Optional[FuelOptions] = Field(
+        None,
+        description="Fuel options available (for gas stations)"
+    )
+    ev_charge_options: Optional[EVChargeOptions] = Field(
+        None,
+        description="EV charging options available"
+    )
+    
+    # New accessibility options
+    accessibility_options: Optional[AccessibilityOptions] = Field(
+        None,
+        description="Accessibility options for the place"
+    )
+    
+    # New attributes
+    place_attributes: Optional[PlaceAttributes] = Field(
+        None,
+        description="Additional place attributes"
+    )
+    
+    # New photos format
+    photos_new: Optional[List[PlacePhotoNew]] = Field(
+        None,
+        description="Photos in New Places API format"
+    )
+    
+    # AI-powered summaries
+    place_summary: Optional[PlaceSummary] = Field(
+        None,
+        description="AI-powered place summary"
+    )
+    review_summary: Optional[ReviewSummary] = Field(
+        None,
+        description="AI-powered review summary"
+    )
+    
+    # Sub-destinations (for complex places like airports)
+    sub_destinations: Optional[List[dict]] = Field(
+        None,
+        description="Related sub-destinations"
+    )
+    
+    # Location information
+    location: Optional[dict] = Field(
+        None,
+        description="Location coordinates in New Places API format"
+    )
+    viewport: Optional[dict] = Field(
+        None,
+        description="Viewport for displaying the place"
     )
     
     # Deprecated fields (kept for compatibility)

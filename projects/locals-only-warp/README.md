@@ -1,6 +1,6 @@
-# Locals Only - Enhanced with Google Maps
+# Locals Only Backend - Google Places API Service
 
-A modern web application for discovering local businesses and hidden gems in your neighborhood, featuring Google Maps integration and a complete app-like experience.
+A clean, modern FastAPI backend service that provides local business recommendations using Google's new Places API. Designed to be maintainable, scalable, and production-ready.
 
 ## ✨ Features
 
@@ -50,12 +50,14 @@ A modern web application for discovering local businesses and hidden gems in you
 1. **Clone the repository**
 ```bash
 git clone <repository-url>
-cd locals-only-warp
+cd locals-only-warp/backend
 ```
 
 2. **Install dependencies**
 ```bash
 pip install -r requirements.txt
+# Optional: install development dependencies
+pip install -r requirements-dev.txt
 ```
 
 3. **Set up environment variables**
@@ -66,54 +68,77 @@ cp .env.example .env
 Edit `.env` and add your API keys:
 ```env
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here  # Optional
-SECRET_KEY=your_secret_key_here
+DEBUG=true
+HOST=0.0.0.0
+PORT=8000
 ```
 
 4. **Run the application**
 ```bash
-python app.py
+./run.sh --dev              # Development mode with auto-reload
+# OR
+python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-5. **Open your browser**
-Navigate to `http://localhost:5005`
+5. **Access the API**
+- API Documentation: `http://localhost:8000/docs`
+- Health Check: `http://localhost:8000/api/v1/health`
+- ReDoc Documentation: `http://localhost:8000/redoc`
 
 ## 🏗️ Architecture
 
-### Frontend
-- **Vanilla JavaScript**: Modern ES6+ with classes and async/await
-- **Responsive CSS**: Mobile-first design with CSS Grid and Flexbox
-- **Google Maps JavaScript API**: Interactive maps and location services
-- **Font Awesome**: Icons and UI elements
+### Backend (FastAPI Service)
+- **FastAPI**: Modern, fast Python web framework with automatic OpenAPI docs
+- **Google Places API (New)**: Latest Places API with enhanced features
+- **Google Geocoding API**: For zip code to coordinate conversion
+- **DuckDB**: Lightweight, embedded database for user data
+- **Pydantic**: Data validation and serialization
+- **Clean Architecture**: Separated concerns with models, routes, and services
 
-### Backend
-- **Flask**: Python web framework
-- **Google Places API**: Real business data and reviews
-- **LangChain + Anthropic**: AI-enhanced local insights
-- **Session Management**: User preferences and location storage
+### Key Components
+- `src/main.py`: FastAPI application factory and configuration
+- `src/routes.py`: API endpoint definitions with full OpenAPI documentation
+- `src/places_client.py`: Google Places API client with comprehensive error handling
+- `src/config.py`: Centralized configuration management using Pydantic Settings
+- `src/database.py`: DuckDB database manager for user data storage
+- `models/`: Comprehensive Pydantic models mirroring Google Places API schema
 
-### User Flow
-1. **Landing Page**: Introduction and call-to-action
-2. **Onboarding**: 3-step setup (welcome → location → preferences)
-3. **Dashboard**: Main app with category bubbles, map, and recommendations
+### Database
+- **DuckDB**: Lightweight, embedded SQL database
+- **User Management**: Phone numbers, starred categories, bookmarks, cached recommendations
+- **Development**: Persistent storage in `data/app.duckdb`
+- **Production**: In-memory for scalability
+- **CLI Tools**: Complete database management via `db.py`
 
 ## 📁 Project Structure
 ```
-locals-only-warp/
-├── app.py                      # Main Flask application
-├── templates/pages/
-│   ├── landing.html           # Landing page
-│   ├── onboarding.html        # Setup flow
-│   └── dashboard.html         # Main app
-├── static/
-│   ├── css/app.css           # All styles
-│   ├── js/
-│   │   ├── onboarding.js     # Setup logic
-│   │   └── dashboard.js      # Main app logic
-│   └── localsonly.jpg        # Logo
-├── requirements.txt           # Dependencies
-├── .env.example              # Environment template
-└── start.sh                  # Easy startup script
+locals-only-warp/backend/
+├── src/
+│   ├── main.py               # FastAPI application factory
+│   ├── routes.py             # API endpoint definitions
+│   ├── places_client.py      # Google Places API client
+│   ├── config.py             # Configuration management
+│   └── database.py           # DuckDB database manager
+├── models/
+│   ├── __init__.py           # Model exports
+│   ├── base.py               # Base types and enums
+│   ├── place.py              # Place model
+│   ├── requests_new.py       # New Places API requests
+│   ├── responses_new.py      # New Places API responses
+│   ├── responses.py          # Core response models
+│   ├── geocoding.py          # Geocoding models
+│   ├── recommendation.py     # Recommendation models
+│   └── user.py               # User CRUD models
+├── data/
+│   └── app.duckdb           # Development database
+├── logs/                    # Application logs
+├── db.py                   # Database CLI utility
+├── places.py              # Places API testing utility
+├── run.sh                # Development server script
+├── requirements.txt      # Python dependencies
+├── requirements-dev.txt  # Development dependencies
+├── pyproject.toml       # Modern Python packaging
+└── .env.example        # Environment variables template
 ```
 
 ## 🎨 Design System
@@ -134,26 +159,49 @@ locals-only-warp/
 ## 🔧 Development
 
 ### API Endpoints
-- `GET /` - Landing page or redirect to dashboard
-- `GET /onboarding` - Setup flow
-- `GET /dashboard` - Main application (requires location)
-- `POST /api/set-location` - Save user location
-- `POST /api/recommendations` - Get recommendations
-- `GET /api/photo` - Proxy for Google Places photos
-- `GET /api/health` - Health check
+**Core API Routes (`/api/v1/`)**
+- `GET /health` - Health check endpoint
+- `POST /rec_from_zip` - Get recommendations from zip code (New Places API)
+- `POST /rec_from_text` - Get recommendations from text search (New Places API)
+
+**User Management**
+- `POST /users` - Create a new user
+- `GET /users` - List users with pagination
+- `GET /users/{user_id}` - Get user by ID
+- `PUT /users/{user_id}` - Update user information
+- `DELETE /users/{user_id}` - Delete user by ID
+- `GET /users/phone/{phone_number}` - Get user by phone number
+
+**Documentation**
+- `GET /docs` - Interactive Swagger UI documentation
+- `GET /redoc` - ReDoc API documentation
+- `GET /openapi.json` - OpenAPI schema
 
 ### Development Commands
 ```bash
-# Using Make
-make install        # Install dependencies
-make run           # Start dev server
-make lint          # Check code quality
-make format        # Format code
-make clean         # Clean up
+# Start the development server
+./run.sh --dev              # Development mode with auto-reload
+./run.sh --port 8080        # Use custom port
+./run.sh --venv             # Use virtual environment
 
-# Direct commands
-python app.py      # Start server
-pip install -r requirements.txt
+# Database management
+python db.py --init                        # Initialize database
+python db.py --create-user +1234567890     # Create a user
+python db.py --list                        # List all users
+python db.py --count                       # Count users
+
+# Test the API
+python places.py --test all                # Run full test suite
+python places.py --health                  # Health check
+python places.py --nearby --location "-33.8688,151.2093" --radius 1500
+
+# Development tools
+black .                     # Code formatting
+isort .                     # Import sorting
+flake8 .                    # Linting
+mypy .                      # Type checking
+bandit -r src/              # Security scanning
+pytest                      # Run tests
 ```
 
 ## 🚀 Production Deployment
