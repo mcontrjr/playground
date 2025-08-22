@@ -61,7 +61,8 @@ class GooglePlacesClient:
 
         self.client = httpx.AsyncClient(
             timeout=self.settings.request_timeout,
-            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+            follow_redirects=True
         )
 
         if not self.api_key:

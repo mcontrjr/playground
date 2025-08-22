@@ -136,10 +136,10 @@ class Place(BaseModel):
         description="Contains an array of entries for the next seven days including information about secondary hours"
     )
     
-    # Photos
-    photos: Optional[List[PlacePhoto]] = Field(
+    # Photos (New Places API format)
+    photos: Optional[List[PlacePhotoNew]] = Field(
         None,
-        description="An array of photo objects, each containing a reference to an image"
+        description="An array of photo objects in New Places API format"
     )
     
     # Additional information
@@ -252,11 +252,6 @@ class Place(BaseModel):
         description="Additional place attributes"
     )
     
-    # New photos format
-    photos_new: Optional[List[PlacePhotoNew]] = Field(
-        None,
-        description="Photos in New Places API format"
-    )
     
     # AI-powered summaries
     place_summary: Optional[PlaceSummary] = Field(

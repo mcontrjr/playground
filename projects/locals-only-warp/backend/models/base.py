@@ -222,8 +222,8 @@ class DisplayName(BaseModel):
 class PlacePhotoNew(BaseModel):
     """New Places API photo model."""
     name: str = Field(..., description="Photo resource name for fetching the photo")
-    width_px: int = Field(..., description="The maximum available width in pixels")
-    height_px: int = Field(..., description="The maximum available height in pixels")
+    width_px: Optional[int] = Field(None, description="The maximum available width in pixels")
+    height_px: Optional[int] = Field(None, description="The maximum available height in pixels")
     author_attributions: Optional[List[dict]] = Field(None, description="Author attribution information")
 
 
