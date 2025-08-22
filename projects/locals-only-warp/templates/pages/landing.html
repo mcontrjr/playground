@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Locals Only - Discover Authentic Local Gems</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="landing-page-light">
+    <!-- Navigation Header -->
+    <nav class="landing-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="nav-logo">
+            </div>
+
+            <div class="nav-actions">
+                <a href="{{ url_for('onboarding') }}" class="btn btn-ghost btn-sm">
+                    <span>Get Started</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section-light">
+        <div class="hero-content-light">
+            <div class="hero-logo-light">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="hero-logo-img">
+            </div>
+
+            <h1 class="hero-title-light">Discover Your City Like a Local</h1>
+            <p class="hero-subtitle-light">Find authentic gems, hidden spots, and local favorites recommended by people who know their neighborhoods best. Powered by AI and real community insights.</p>
+
+            <div class="hero-cta-light">
+                <a href="{{ url_for('onboarding') }}" class="btn btn-primary btn-lg hero-cta-button">
+                    <span>Start Exploring</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+                <p class="hero-cta-subtitle">
+                    Quick setup • No account required • Always free
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section-light">
+        <div class="container">
+            <h2 class="features-title">Why Choose Locals Only?</h2>
+            <div class="features-grid-light">
+                <div class="feature-card-light">
+                    <div class="feature-icon-card">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Community Powered</h3>
+                    <p>Real recommendations from locals who know their neighborhoods inside and out. No corporate chains, just authentic community gems.</p>
+                </div>
+
+                <div class="feature-card-light">
+                    <div class="feature-icon-card">
+                        <i class="fas fa-sparkles"></i>
+                    </div>
+                    <h3>AI Enhanced</h3>
+                    <p>Smart recommendations that understand your preferences and discover perfect matches while filtering out mainstream options.</p>
+                </div>
+
+                <div class="feature-card-light">
+                    <div class="feature-icon-card">
+                        <i class="fas fa-eye-slash"></i>
+                    </div>
+                    <h3>Privacy Focused</h3>
+                    <p>Your location stays private. No tracking, no accounts, no personal data stored. Just pure local discovery.</p>
+                </div>
+
+                <div class="feature-card-light">
+                    <div class="feature-icon-card">
+                        <i class="fas fa-filter"></i>
+                    </div>
+                    <h3>Chain-Free Zone</h3>
+                    <p>We actively filter out mainstream chains to showcase independent, family-owned, and locally-rooted businesses only.</p>
+                </div>
+
+                <div class="feature-card-light">
+                    <div class="feature-icon-card">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3>Neighborhood Stories</h3>
+                    <p>Discover the stories behind each place - the families who run them, their history, and what makes them special to locals.</p>
+                </div>
+
+                <div class="feature-card-light">
+                    <div class="feature-icon-card">
+                        <i class="fas fa-compass"></i>
+                    </div>
+                    <h3>Curated Categories</h3>
+                    <p>From hole-in-the-wall diners to hidden hiking trails, we focus on categories that showcase authentic local character.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action Section -->
+    <section class="cta-section-light">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Explore Like a Local?</h2>
+                <p>Join thousands discovering authentic neighborhood gems in their cities.</p>
+                <a href="{{ url_for('onboarding') }}" class="btn btn-primary btn-lg">
+                    <span>Get Started Now</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="footer-logo">
+                </div>
+                <div class="footer-text">
+                    <p>&copy; 2025 Locals Only. Discover authentic local gems in your neighborhood.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

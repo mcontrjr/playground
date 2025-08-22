@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Started - Locals Only</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="onboarding-page">
+    <!-- Header -->
+    <header class="onboarding-header">
+        <div class="logo">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="onboarding-logo">
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span class="progress-text" id="progressText">Step 1 of 3</span>
+        </div>
+    </header>
+
+    <main class="onboarding-content">
+        <!-- Step 1: Welcome -->
+        <section class="onboarding-step active" id="step1">
+            <div >
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Locals Only" class="onboarding-logo">
+            </div>
+            <h1 class="step-title">Welcome to Locals Only!</h1>
+
+            <div class="step-features">
+                <div class="step-feature">
+                    <i class="fas fa-shield-halved step-feature-icon"></i>
+                    <span>Your privacy is protected - we only use your location to find nearby spots</span>
+                </div>
+                <div class="step-feature">
+                    <i class="fas fa-clock step-feature-icon"></i>
+                    <span>Quick 3-step setup takes less than a minute</span>
+                </div>
+                <div class="step-feature">
+                    <i class="fas fa-brain step-feature-icon"></i>
+                    <span>AI-enhanced recommendations from real local insights</span>
+                </div>
+            </div>
+
+            <div class="step-navigation">
+                <div></div>
+                <button class="btn btn-primary btn-lg nav-forward" onclick="nextStep()">
+                    <span>Let's Get Started</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Location Setup -->
+        <section class="onboarding-step" id="step2">
+            <div class="step-icon">
+                <i class="fas fa-location-dot"></i>
+            </div>
+            <h1 class="step-title">What's Your Location?</h1>
+            <p class="step-description">Enter your zip code so we can find the best local spots in your area.</p>
+
+            <div class="location-section">
+                <div class="input-group">
+                    <i class="fas fa-map-pin input-icon"></i>
+                    <input
+                        type="text"
+                        id="zipCodeInput"
+                        class="input-field"
+                        placeholder="Enter your zip code (e.g., 90210)"
+                        maxlength="10"
+                        autocomplete="postal-code">
+                    <button id="verifyLocationBtn" class="btn btn-primary btn-sm" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 10;">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+
+
+                <div id="locationResult" class="location-result hidden">
+                    <div class="location-info">
+                        <i class="fas fa-check-circle location-info-icon"></i>
+                        <div class="location-details">
+                            <h4 id="locationCity"></h4>
+                            <p id="locationAddress"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="locationError" class="alert alert-error hidden">
+                    <i class="fas fa-exclamation-triangle alert-icon"></i>
+                    <div>
+                        <strong>Location Error</strong>
+                        <p id="locationErrorText">Please enter a valid US zip code</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-navigation">
+                <button class="btn btn-secondary nav-back" onclick="previousStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
+                </button>
+                <button class="btn btn-primary btn-lg nav-forward" id="step2NextBtn" onclick="nextStep()" disabled>
+                    <span>Continue</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Preferences -->
+        <section class="onboarding-step" id="step3">
+            <div class="step-icon">
+                <i class="fas fa-heart"></i>
+            </div>
+            <h1 class="step-title">What Interests You?</h1>
+            <p class="step-description">Select your favorite categories to personalize your local recommendations. You can change these anytime.</p>
+
+            <div class="preferences-grid">
+                <div class="preference-card" data-category="restaurants">
+                    <div class="preference-icon">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h3 class="preference-title">Restaurants</h3>
+                    <p class="preference-description">Local eateries and dining spots</p>
+                </div>
+
+                <div class="preference-card" data-category="coffee">
+                    <div class="preference-icon">
+                        <i class="fas fa-mug-saucer"></i>
+                    </div>
+                    <h3 class="preference-title">Coffee Shops</h3>
+                    <p class="preference-description">Cafes and coffee roasters</p>
+                </div>
+
+                <div class="preference-card" data-category="thrift">
+                    <div class="preference-icon">
+                        <i class="fas fa-shirt"></i>
+                    </div>
+                    <h3 class="preference-title">Thrift Stores</h3>
+                    <p class="preference-description">Second-hand and vintage finds</p>
+                </div>
+
+                <div class="preference-card" data-category="nightlife">
+                    <div class="preference-icon">
+                        <i class="fas fa-martini-glass-citrus"></i>
+                    </div>
+                    <h3 class="preference-title">Nightlife</h3>
+                    <p class="preference-description">Bars, clubs, and evening spots</p>
+                </div>
+
+                <div class="preference-card" data-category="outdoors">
+                    <div class="preference-icon">
+                        <i class="fas fa-mountain"></i>
+                    </div>
+                    <h3 class="preference-title">Outdoors</h3>
+                    <p class="preference-description">Hiking, beaches, parks, and nature</p>
+                </div>
+
+                <div class="preference-card" data-category="shopping">
+                    <div class="preference-icon">
+                        <i class="fas fa-bag-shopping"></i>
+                    </div>
+                    <h3 class="preference-title">Shopping</h3>
+                    <p class="preference-description">Retail stores and markets</p>
+                </div>
+            </div>
+
+            <div class="step-navigation">
+                <button class="btn btn-secondary nav-back" onclick="previousStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
+                </button>
+                <button class="btn btn-primary btn-lg nav-forward" onclick="completeOnboarding()">
+                    <span>Complete Setup</span>
+                    <i class="fas fa-check"></i>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p class="loading-text">Setting up your personalized dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="alertModal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeAlert()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="alertTitle">Alert</h3>
+                <button class="modal-close" onclick="closeAlert()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="alertMessage">This is an alert message.</p>
+            </div>
+            <div style="padding: 16px 24px; border-top: 1px solid var(--gray-200);">
+                <button class="btn btn-primary" onclick="closeAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
+    {% if google_maps_api_key %}
+    <script>
+        window.GOOGLE_MAPS_API_KEY = "{{ google_maps_api_key }}";
+    </script>
+    {% endif %}
+</body>
+</html>
