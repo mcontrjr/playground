@@ -6,7 +6,7 @@ import argparse
 from typing import List, Dict, Tuple
 import google.generativeai as genai
 from dotenv import load_dotenv
-from markdown_formatter import MarkdownFormatter
+from markdown.markdown_formatter import MarkdownFormatter
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
