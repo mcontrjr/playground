@@ -1,1 +1,5 @@
 photos/
+WARP*
+*.log
+logs/
+*.duckdb
