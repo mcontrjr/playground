@@ -2,4 +2,6 @@ photos/
 WARP*
 *.log
 logs/
-*.duckdb
+**/*.duckdb
+data/
+*.env
