@@ -5,3 +5,4 @@ notes.md
 **/.venv/
 **/.env
 **/*.pyc
+**/*.log
