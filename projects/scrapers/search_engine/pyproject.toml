@@ -1,0 +1,16 @@
+[project]
+name = "search-engine"
+version = "0.1.0"
+description = "Search engine client using Docker MCP Gateway with DuckDuckGo tools"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "asyncio-mqtt>=0.11.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "pip>=25.2",
+    "google-genai>=1.38.0",
+    "python-dotenv>=1.1.1",
+]

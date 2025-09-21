@@ -1,0 +1,103 @@
+{
+  "location": {
+    "city": "San Jose",
+    "state": "California",
+    "county": "Santa Clara County",
+    "zip_code": "95126"
+  },
+  "interests": [
+    "farmers market"
+  ],
+  "sources": [
+    "https://sanjosechamber.com/events",
+    "https://sanjoseca.gov/events",
+    "https://sccgov.org/events",
+    "https://sanparks.org/events",
+    "https://www.cityofsanta.com/events",
+    "https://san.gov/events",
+    "https://sjpl.org/events",
+    "https://eventbrite.com/d/ca--san-jose/farmers-markets",
+    "https://santaparks.org/events",
+    "https://patch.com/california/sanjose/calendar",
+    "https://santa.gov/events",
+    "https://sccgov.org/sites/parks/events",
+    "https://sanjoseca.gov/parks-recreation/events",
+    "https://willowglenfarmersmarket.org",
+    "https://www.santachamber.com/events",
+    "https://cafarmersmarkets.com/san-jose-farmers-markets",
+    "https://uvfm.org/markets/san-jose",
+    "https://nextdoor.com/events/san-jose",
+    "https://www.cityofsan.com/events",
+    "https://www.sanchamber.com/events",
+    "https://mercurynews.com/events",
+    "https://metrocactive.com/san-jose-events",
+    "https://sanjose.org/events"
+  ],
+  "events": [
+    {
+      "title": "Free Fresh Produce Ride at the Sunnyvale Farmer's Market",
+      "date": "2025-09-27",
+      "time": "9:30 AM",
+      "location": "Mountain View South",
+      "address": "Mountain View Caltrain",
+      "url": "https://eventbrite.com/d/ca--san-jose/farmers-markets",
+      "description": "Enjoy a free ride to collect fresh produce at the Sunnyvale Farmer's Market.",
+      "source_domain": "eventbrite.com"
+    },
+    {
+      "title": "Volunteer for Bike Parking - Sunnyvale Farmer's Market Fall 2025",
+      "date": "2025-09-27",
+      "time": "8:30 AM",
+      "location": "Downtown Sunnyvale",
+      "address": "330 S Murphy Ave",
+      "url": "https://eventbrite.com/d/ca--san-jose/farmers-markets",
+      "description": "Volunteer to help with bike parking at the Sunnyvale Farmer's Market throughout Fall 2025.",
+      "source_domain": "eventbrite.com"
+    },
+    {
+      "title": "East Palo Alto Community Farmers' Market",
+      "date": "2025-09-03",
+      "time": "8:30 AM",
+      "location": "Lindenwood",
+      "address": "Bloomhouse",
+      "url": "https://eventbrite.com/d/ca--san-jose/farmers-markets",
+      "description": "The East Palo Alto Community Farmers' Market offers fresh produce and local goods on Wednesdays.",
+      "source_domain": "eventbrite.com"
+    },
+    {
+      "title": "Cooking Demonstration: East Palo Alto Community Farmers' Market",
+      "date": "2025-09-03",
+      "time": "8:30 AM",
+      "location": "Lindenwood",
+      "address": "Bloomhouse",
+      "url": "https://eventbrite.com/d/ca--san-jose/farmers-markets",
+      "description": "Learn new recipes and techniques at a cooking demonstration held at the East Palo Alto Community Farmers' Market.",
+      "source_domain": "eventbrite.com"
+    },
+    {
+      "title": "Hands On Farming101 Workshop with Lex Orosco",
+      "date": "2025-09-25",
+      "time": "2:00 PM",
+      "location": "Downtown",
+      "address": "Water Tower Kitchen",
+      "url": "https://eventbrite.com/d/ca--san-jose/farmers-markets",
+      "description": "A hands-on workshop designed to teach the fundamentals of farming with Lex Orosco.",
+      "source_domain": "eventbrite.com"
+    },
+    {
+      "title": "WILLOW GLEN Farmers\u2019 Market",
+      "date": "2023-11-04",
+      "time": "09:00 AM",
+      "location": "Willow Glen Elementary",
+      "address": "1425 Lincoln Ave, San Jose, CA 95125",
+      "url": "https://uvfm.org/markets/san-jose",
+      "description": "This farmers market is held every Saturday, year-round, rain or shine, from 9 AM to 1 PM. It accepts EBT, Market Match, WIC, Veggie Rx, and Beet Bucks.",
+      "source_domain": "uvfm.org"
+    }
+  ],
+  "metadata": {
+    "timestamp": "2025-09-15T22:33:15.008705",
+    "total_sources": 23,
+    "total_events": 6
+  }
+}

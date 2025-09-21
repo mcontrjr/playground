@@ -1,0 +1,29 @@
+- Reading configuration...
+  - Reading registry from registry.yaml
+  - Reading catalog from [docker-mcp.yaml]
+  - Reading config from config.yaml
+  - Reading tools from tools.yaml
+  - Reading secrets [brave.api_key firecrawl.api_key]
+- Configuration read in 1.284479652s
+- Using images:
+  - mcp/brave-search@sha256:03033097b18c0c207debde587fc45217574194f5ebae23013129424839abf37d
+  - mcp/duckduckgo@sha256:68eb20db6109f5c312a695fc5ec3386ad15d93ffb765a0b4eb1baf4328dec14f
+  - mcp/firecrawl@sha256:e554df39694e3d777f26ef51d13beff5ed626e761408fb1b9c1a17f929a9de55
+  - mcp/playwright@sha256:da2b908d159d09fc9b4c59bedbefda755a3ca514a6c43222365fe1d5d7c67b5a
+> Images pulled in 38.779287ms
+- Those servers are enabled: brave, duckduckgo, firecrawl, playwright
+- Listing MCP tools...
+  - Running mcp/brave-search with [run --rm -i --init --security-opt no-new-privileges --cpus 1 --memory 2Gb --pull never -l docker-mcp=true -l docker-mcp-tool-type=mcp -l docker-mcp-name=brave -l docker-mcp-transport=stdio -e BRAVE_API_KEY -e BRAVE_MCP_TRANSPORT]
+  - Running mcp/duckduckgo with [run --rm -i --init --security-opt no-new-privileges --cpus 1 --memory 2Gb --pull never -l docker-mcp=true -l docker-mcp-tool-type=mcp -l docker-mcp-name=duckduckgo -l docker-mcp-transport=stdio]
+  - Running mcp/playwright with [run --rm -i --init --security-opt no-new-privileges --cpus 1 --memory 2Gb --pull never -l docker-mcp=true -l docker-mcp-tool-type=mcp -l docker-mcp-name=playwright -l docker-mcp-transport=stdio]
+  - Running mcp/firecrawl with [run --rm -i --init --security-opt no-new-privileges --cpus 1 --memory 2Gb --pull never -l docker-mcp=true -l docker-mcp-tool-type=mcp -l docker-mcp-name=firecrawl -l docker-mcp-transport=stdio -e FIRECRAWL_API_KEY -e FIRECRAWL_RETRY_MAX_ATTEMPTS -e FIRECRAWL_RETRY_INITIAL_DELAY -e FIRECRAWL_RETRY_MAX_DELAY -e FIRECRAWL_RETRY_BACKOFF_FACTOR -e FIRECRAWL_CREDIT_WARNING_THRESHOLD -e FIRECRAWL_CREDIT_CRITICAL_THRESHOLD]
+  > brave: (6 tools)
+  > playwright: (21 tools)
+  > firecrawl: (6 tools)
+  > duckduckgo: (2 tools)
+> 35 tools listed in 4.106023743s
+- Watching for configuration updates...
+> Initialized in 5.435355201s
+> Start stdio server
+> Sto> Stop watching for updates
+context canceled

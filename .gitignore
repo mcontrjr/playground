@@ -1,3 +1,8 @@
 .vscode/
 */node_modules
 notes.md
+
+**/.venv/
+**/.env
+**/*.pyc
+**/*.log
