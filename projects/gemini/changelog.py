@@ -236,6 +236,7 @@ def main():
     parser.add_argument("--show-prompt", action="store_true", help="Show prompt sent to AI")
     parser.add_argument("--show-stats", action="store_true", help="Show token statistics")
     parser.add_argument("-p", "--path", default=".", help="Repository path")
+    parser.add_argument("-o", "--output", default=None, help="Output file path (default: print to stdout)")
 
     args = parser.parse_args()
     GIT_DIFF_RANGE = args.range
@@ -279,12 +280,22 @@ def main():
     print(f"Generating changelog...")
     changelog = generate_changelog(prompt, model, args.show_prompt)
 
-    print("\n" + "="*50)
-    print("GENERATED CHANGELOG")
-    print("="*50)
-    formatter = MarkdownFormatter()
-    print(formatter.format_for_terminal(changelog))
-    print("="*50)
+    # Handle output - write to file if specified, otherwise print to stdout
+    if args.output:
+        try:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(changelog)
+            print(f"Changelog written to: {args.output}")
+        except Exception as e:
+            print(f"Error writing to file {args.output}: {e}")
+            return
+    else:
+        print("\n" + "="*50)
+        print("GENERATED CHANGELOG")
+        print("="*50)
+        formatter = MarkdownFormatter()
+        print(formatter.format_for_terminal(changelog))
+        print("="*50)
 
 if __name__ == "__main__":
     main()

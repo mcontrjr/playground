@@ -1,0 +1,208 @@
+name: Generate Changelog
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+    types: [ closed ]
+  workflow_dispatch:
+    inputs:
+      git_range:
+        description: 'Git range to analyze (e.g., HEAD~5..HEAD)'
+        required: false
+        default: 'HEAD~1..HEAD'
+        type: string
+      model:
+        description: 'AI model to use'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+        - auto
+        - gemini-2.5-flash
+        - gemini-2.5-pro
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+
+    # Only run on merged PRs or direct pushes to main/master
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for git diff operations
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        elif [ -f pyproject.toml ]; then
+          pip install -e .
+        else
+          # Install core dependencies if no requirements file found
+          pip install google-generativeai python-dotenv
+        fi
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Determine Git Range
+      id: git-range
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          GIT_RANGE="${{ github.event.inputs.git_range }}"
+        elif [ "${{ github.event_name }}" == "pull_request" ]; then
+          # For merged PRs, analyze the entire PR range
+          GIT_RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+        else
+          # For direct pushes, analyze the last commit
+          GIT_RANGE="HEAD~1..HEAD"
+        fi
+
+        echo "Git range: $GIT_RANGE"
+        echo "range=$GIT_RANGE" >> $GITHUB_OUTPUT
+
+    - name: Generate Changelog
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        MODEL="${{ github.event.inputs.model || 'auto' }}"
+        GIT_RANGE="${{ steps.git-range.outputs.range }}"
+
+        echo "Generating changelog with model: $MODEL"
+        echo "Git range: $GIT_RANGE"
+
+        python changelog.py \
+          --range "$GIT_RANGE" \
+          --model "$MODEL" \
+          --output CHANGELOG.md \
+          --show-stats
+
+    - name: Check if changelog was generated
+      id: check-changelog
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          echo "Changelog file exists"
+          echo "exists=true" >> $GITHUB_OUTPUT
+
+          # Check if file has meaningful content (more than just error message)
+          if [ -s CHANGELOG.md ] && ! grep -q "^Error generating changelog" CHANGELOG.md; then
+            echo "Changelog has valid content"
+            echo "has_content=true" >> $GITHUB_OUTPUT
+          else
+            echo "Changelog is empty or contains errors"
+            echo "has_content=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "Changelog file does not exist"
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "has_content=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Display changelog preview (first 20 lines)
+      if: steps.check-changelog.outputs.exists == 'true'
+      run: |
+        echo "📝 Generated Changelog Preview:"
+        echo "=====================================  "
+        head -20 CHANGELOG.md
+        echo "====================================="
+        echo "Full changelog written to CHANGELOG.md"
+
+    - name: Commit and push changelog
+      if: steps.check-changelog.outputs.has_content == 'true'
+      run: |
+        git add CHANGELOG.md
+
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No changes to commit - changelog already up to date"
+        else
+          # Create commit message based on trigger
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            COMMIT_MSG="📝 Update changelog (manual trigger: ${{ steps.git-range.outputs.range }})"
+          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+            COMMIT_MSG="📝 Update changelog for PR #${{ github.event.pull_request.number }}"
+          else
+            COMMIT_MSG="📝 Update changelog for latest changes"
+          fi
+
+          git commit -m "$COMMIT_MSG"
+          git push
+        fi
+
+    - name: Upload changelog as artifact
+      if: steps.check-changelog.outputs.exists == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: changelog-${{ github.run_id }}
+        path: CHANGELOG.md
+        retention-days: 30
+
+    - name: Comment on PR (if applicable)
+      if: |
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.merged == true &&
+        steps.check-changelog.outputs.has_content == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          let changelogContent = '';
+          try {
+            changelogContent = fs.readFileSync('CHANGELOG.md', 'utf8');
+          } catch (error) {
+            console.log('Could not read changelog file');
+            return;
+          }
+
+          // Truncate if too long for comment
+          const maxLength = 60000;
+          if (changelogContent.length > maxLength) {
+            changelogContent = changelogContent.substring(0, maxLength) + '\n\n...(truncated)';
+          }
+
+          const comment = `## 📝 Automated Changelog Generated
+
+          A changelog has been automatically generated for this merged PR:
+
+          <details>
+          <summary>View Generated Changelog</summary>
+
+          \`\`\`markdown
+          ${changelogContent}
+          \`\`\`
+
+          </details>
+
+          The changelog has been committed to the repository as \`CHANGELOG.md\`.
+
+          *Generated by AI changelog workflow*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
