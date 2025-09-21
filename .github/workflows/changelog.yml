@@ -83,17 +83,31 @@ jobs:
         echo "Git range: $GIT_RANGE"
         echo "range=$GIT_RANGE" >> $GITHUB_OUTPUT
 
+    - name: Find changelog.py path
+      id: find-changelog
+      run: |
+        set -e
+        CHANGELOG_PATH=$(find . -type f -name 'changelog.py' | head -n 1)
+        if [ -z "$CHANGELOG_PATH" ]; then
+          echo "changelog.py not found!" >&2
+          exit 1
+        fi
+        echo "Found changelog.py at: $CHANGELOG_PATH"
+        echo "path=$CHANGELOG_PATH" >> $GITHUB_OUTPUT
+
     - name: Generate Changelog
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: |
         MODEL="${{ github.event.inputs.model || 'auto' }}"
         GIT_RANGE="${{ steps.git-range.outputs.range }}"
+        CHANGELOG_PATH="${{ steps.find-changelog.outputs.path }}"
 
         echo "Generating changelog with model: $MODEL"
         echo "Git range: $GIT_RANGE"
+        echo "Using changelog.py at: $CHANGELOG_PATH"
 
-        python changelog.py \
+        python "$CHANGELOG_PATH" \
           --range "$GIT_RANGE" \
           --model "$MODEL" \
           --output CHANGELOG.md \
