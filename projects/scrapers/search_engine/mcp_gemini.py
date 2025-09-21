@@ -32,13 +32,15 @@ def track_token_usage(response: GenerateContentResponse):
 
 # Initial search with MCP Server
 location = "san jose california"
+city_interests = "city, municipal, parks and recreation websites"
+interests = "outdoor activities farmers markets, community events"
 
 search_prompt = f"""
-city, municipal, parks and recreation websites from {location}
+{interests} websites from {location}
 """
 
 logger.info(f"Starting MCP search for location: {location}")
-results = search_web_mcp(search_prompt, max_results=10)
+results = search_web_mcp(search_prompt, max_results=50)
 logger.info(f"Received {len(results)} results from MCP search.")
 
 results_str = ""
@@ -82,7 +84,7 @@ The following are results from the following refinement prompt: {refinement_prom
 {response.text}
 Search through the sources (urls) in the results and extract any event information you can find for events in the next 7 days.
 Today is {datetime.now().strftime('%Y-%m-%d')}.
-Focus on events that align
+Focus on events that align in the interests of: {interests}
 Return the results as a list of json objects with the following fields:
 - event name
 - date
@@ -94,8 +96,11 @@ Return the results as a list of json objects with the following fields:
 logger.info("Sending extract prompt to Gemini model.")
 response = client.models.generate_content(
     model="gemini-2.5-flash",
-    contents=extract_prompt
+    contents=extract_prompt,
+
 )
 logger.info("Received response from Gemini model.")
 logger.info(response.text)
 track_token_usage(response)
+
+logger.info("Process complete.")
