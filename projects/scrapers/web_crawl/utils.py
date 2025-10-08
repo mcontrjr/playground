@@ -13,19 +13,22 @@ from urllib.parse import urljoin, urlparse, parse_qs
 from urllib.robotparser import RobotFileParser
 
 
-def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None) -> logging.Logger:
+def setup_logging(log_level: str = "INFO", log_file: Optional[str] = "crawl.log") -> logging.Logger:
     """
     Set up logging configuration for the crawler.
     
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR)
-        log_file: Optional log file path
+        log_file: Log file path (defaults to crawl.log)
         
     Returns:
         Configured logger instance
     """
     logger = logging.getLogger("web_crawler")
     logger.setLevel(getattr(logging, log_level.upper()))
+    
+    # Clear any existing handlers to avoid duplicates
+    logger.handlers.clear()
     
     # Create formatter
     formatter = logging.Formatter(
@@ -37,11 +40,10 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None) -> lo
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    # File handler if specified
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+    # File handler - always log to file
+    file_handler = logging.FileHandler(log_file, mode='a')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
     
     return logger
 
@@ -288,3 +290,79 @@ def extract_domain_from_url(url: str) -> str:
         return urlparse(url).netloc
     except Exception:
         return ""
+
+
+def aggressive_content_filter(text: str) -> str:
+    """
+    Aggressively filter content to focus on event-related information.
+    
+    Removes common boilerplate, navigation text, and non-event content
+    to reduce token usage and improve AI extraction quality.
+    
+    Args:
+        text: Text content to filter
+        
+    Returns:
+        Filtered text content
+    """
+    if not text:
+        return ""
+    
+    # Convert to lowercase for pattern matching
+    text_lower = text.lower()
+    
+    # Remove common boilerplate phrases
+    remove_patterns = [
+        r'cookie policy',
+        r'privacy policy',
+        r'terms of service',
+        r'all rights reserved',
+        r'copyright \d{4}',
+        r'follow us on',
+        r'share this',
+        r'skip to (main content|navigation)',
+        r'search this site',
+        r'back to top',
+    ]
+    
+    for pattern in remove_patterns:
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+    
+    # Remove excessive whitespace
+    text = re.sub(r'\s{3,}', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    # Remove standalone URLs
+    text = re.sub(r'http[s]?://\S+', '', text)
+    
+    return text.strip()
+
+
+def extract_event_keywords(text: str) -> List[str]:
+    """
+    Extract event-related keywords from text.
+    
+    Helps identify pages that likely contain event information.
+    
+    Args:
+        text: Text to analyze
+        
+    Returns:
+        List of event-related keywords found
+    """
+    event_keywords = [
+        'event', 'calendar', 'schedule', 'activity', 'program',
+        'class', 'workshop', 'seminar', 'conference', 'meeting',
+        'registration', 'rsvp', 'date', 'time', 'location',
+        'address', 'venue', 'upcoming', 'happening', 'when',
+        'where', 'join us', 'attend', 'participate'
+    ]
+    
+    text_lower = text.lower()
+    found_keywords = []
+    
+    for keyword in event_keywords:
+        if keyword in text_lower:
+            found_keywords.append(keyword)
+    
+    return found_keywords

@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-Professional Web Crawler with AI-Powered Content Analysis
+Event Discovery Web Crawler
 
-A sophisticated web crawling tool that combines traditional web scraping
-with Google Gemini AI for intelligent content analysis and filtering.
+A streamlined web crawling tool focused on discovering event and activity information.
+Uses a two-phase approach:
+1. Crawl and consolidate content from website
+2. Single AI extraction call to identify event information
 
 Usage Examples:
-    python crawl.py --url "https://example.com,https://another.com"
-    python crawl.py --url "https://example.com" --search "events" --exhaustive
-    python crawl.py --url "https://example.com" --search "products" --output results.json
+    python crawl.py --url "https://example.com"
+    python crawl.py --url "https://example.com" --depth 3 --output events.json
+    python crawl.py --url "https://city.gov" --max-pages 100 --verbose
 """
 
 import argparse
@@ -19,153 +21,123 @@ from typing import List
 from pathlib import Path
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.table import Table
 from rich.panel import Panel
-from rich.text import Text
 
 from utils import setup_logging, is_valid_url
-from content_analyzer import ContentAnalyzer
-from web_crawler import WebCrawler, CrawlConfig
+from simple_crawler import SimpleCrawler, SimpleCrawlConfig
+from event_extractor import EventExtractor
 
 console = Console()
 
 
-def parse_urls(url_string: str) -> List[str]:
+def parse_url(url_string: str) -> str:
     """
-    Parse comma-separated URLs from command line argument.
+    Parse and validate a single URL from command line argument.
     
     Args:
-        url_string: Comma-separated URL string
+        url_string: URL string
         
     Returns:
-        List of valid URLs
+        Valid URL or None
     """
-    urls = [url.strip() for url in url_string.split(',')]
-    valid_urls = []
+    url = url_string.strip()
     
-    for url in urls:
-        # Add protocol if missing
-        if not url.startswith(('http://', 'https://')):
-            url = f"https://{url}"
-        
-        if is_valid_url(url):
-            valid_urls.append(url)
-        else:
-            console.print(f"[red]Warning: Invalid URL skipped: {url}[/red]")
+    # Add protocol if missing
+    if not url.startswith(('http://', 'https://')):
+        url = f"https://{url}"
     
-    return valid_urls
+    if is_valid_url(url):
+        return url
+    else:
+        console.print(f"[red]Error: Invalid URL: {url}[/red]")
+        return None
 
 
-def display_crawl_summary(results: dict):
-    """Display a formatted summary of crawl results."""
+def display_results(results: dict):
+    """Display event extraction results."""
     
-    summary = results.get("crawl_summary", {})
+    # #ICONS
+    # Replace emojis with terminal-style icons
+    ICON_SUCCESS = "[+]"
+    ICON_INFO = "[i]"
+    ICON_EVENT = "[*]"
+    ICON_URL = "[>]"
     
-    # Main summary table
-    table = Table(title="🕷️ Crawl Summary", show_header=False, box=None)
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="green")
+    base_url = results.get("base_url", "Unknown")
+    purpose = results.get("purpose", "No purpose determined")
+    routes = results.get("routes", [])
+    events = results.get("events_found", [])
     
-    table.add_row("Total URLs Processed", str(summary.get("total_urls_processed", 0)))
-    table.add_row("Successful Crawls", str(summary.get("successful_crawls", 0)))
-    table.add_row("Failed Crawls", str(summary.get("failed_crawls", 0)))
-    table.add_row("Max Depth Reached", str(summary.get("max_depth_reached", 0)))
-    table.add_row("Search Query", str(summary.get("search_query", "None")))
-    table.add_row("Exhaustive Mode", str(summary.get("exhaustive_mode", False)))
+    # Summary table
+    console.print(f"\n{ICON_SUCCESS} Event Discovery Results", style="bold green")
+    console.print(f"\n{ICON_INFO} Base URL: {base_url}")
+    console.print(f"{ICON_INFO} Purpose: {purpose}")
+    console.print(f"{ICON_INFO} Event-related routes found: {len(routes)}")
+    console.print(f"{ICON_INFO} Events extracted: {len(events)}")
     
-    console.print(table)
+    # Display event routes
+    if routes:
+        console.print(f"\n{ICON_URL} Event-Related Routes:", style="bold cyan")
+        for i, route in enumerate(routes[:10], 1):
+            console.print(f"  {i}. {route}")
+        if len(routes) > 10:
+            console.print(f"  ... and {len(routes) - 10} more routes")
     
-    # Show failed crawls if any
-    failed_pages = results.get("failed_pages", [])
-    if failed_pages:
-        console.print("\n❌ Failed Crawls:")
-        for failed in failed_pages[:5]:  # Show first 5 failures
-            error_msg = failed.get('error', 'Unknown error')
-            status = failed.get('status_code', 'N/A')
-            console.print(f"  • [red]{failed['url']}[/red] - {error_msg} (HTTP {status})")
+    # Display events
+    if events:
+        console.print(f"\n{ICON_EVENT} Events Found:", style="bold yellow")
+        for i, event in enumerate(events[:5], 1):
+            console.print(f"\n  Event {i}:")
+            console.print(f"    Title: {event.get('title', 'N/A')}")
+            if event.get('date'):
+                console.print(f"    Date: {event['date']}")
+            if event.get('start_time'):
+                time_str = f"{event['start_time']}"
+                if event.get('end_time'):
+                    time_str += f" - {event['end_time']}"
+                console.print(f"    Time: {time_str}")
+            if event.get('address'):
+                console.print(f"    Address: {event['address']}")
+            if event.get('source_url'):
+                console.print(f"    Source: {event['source_url']}")
         
-        if len(failed_pages) > 5:
-            console.print(f"  ... and {len(failed_pages) - 5} more failures")
-    
-    # AI Analysis summary if available
-    ai_analysis = results.get("ai_analysis", {})
-    if ai_analysis and "error" not in ai_analysis:
-        console.print("\n🤖 AI Analysis Summary")
-        
-        insights_panel = Panel(
-            ai_analysis.get("insights", "No insights available"),
-            title="Key Insights",
-            border_style="blue"
-        )
-        console.print(insights_panel)
-        
-        # Key themes
-        themes = ai_analysis.get("key_themes", [])
-        if themes:
-            console.print(f"\n📋 Key Themes Found: {', '.join(themes)}")
-        
-        # Top URLs
-        top_urls = ai_analysis.get("top_urls", [])[:3]
-        if top_urls:
-            console.print("\n🔗 Most Relevant URLs:")
-            for i, url in enumerate(top_urls, 1):
-                console.print(f"  {i}. [link]{url}[/link]")
-
-
-def display_content_matches(results: dict):
-    """Display content matches with relevance scores."""
-    
-    matches = results.get("content_matches", [])
-    if not matches:
-        return
-    
-    console.print(f"\n📊 Content Analysis Results ({len(matches)} pages analyzed)")
-    
-    # Sort by relevance score
-    sorted_matches = sorted(matches, key=lambda x: x.get("relevance_score", 0), reverse=True)
-    
-    for match in sorted_matches[:5]:  # Show top 5
-        score = match.get("relevance_score", 0)
-        url = match.get("url", "")
-        title = match.get("title", "No title")
-        content = match.get("matched_content", "")[:200] + "..."
-        
-        # Color code by relevance
-        if score > 0.7:
-            color = "green"
-        elif score > 0.4:
-            color = "yellow"
-        else:
-            color = "red"
-        
-        console.print(f"\n[{color}]🎯 Relevance: {score:.2f}[/{color}]")
-        console.print(f"[bold]Title:[/bold] {title}")
-        console.print(f"[bold]URL:[/bold] [link]{url}[/link]")
-        console.print(f"[bold]Content:[/bold] {content}")
+        if len(events) > 5:
+            console.print(f"\n  ... and {len(events) - 5} more events")
+    else:
+        console.print(f"\n{ICON_INFO} No events found on this website.", style="yellow")
 
 
 def save_results(results: dict, output_file: str):
     """Save results to JSON file."""
     try:
+        # Format output according to spec: base_url as key
+        output = {
+            results.get("base_url", "unknown"): {
+                "routes": results.get("routes", []),
+                "purpose": results.get("purpose", ""),
+                "events_found": results.get("events_found", [])
+            }
+        }
+        
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
-        console.print(f"[green]✅ Results saved to {output_file}[/green]")
+            json.dump(output, f, indent=2, ensure_ascii=False)
+        console.print(f"[green][+] Results saved to {output_file}[/green]")
     except Exception as e:
-        console.print(f"[red]❌ Error saving results: {e}[/red]")
+        console.print(f"[red][-] Error saving results: {e}[/red]")
 
 
 def main():
     """Main CLI function."""
     parser = argparse.ArgumentParser(
-        description="Professional Web Crawler with AI-Powered Content Analysis",
+        description="Event Discovery Web Crawler",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  crawl.py --url "https://example.com,https://another.com"
-  crawl.py --url "https://example.com" --search "events" --exhaustive
-  crawl.py --url "https://example.com" --search "products" --output results.json
-  crawl.py --url "https://example.com" --depth 3 --max-pages 100
+  crawl.py --url "https://example.com"
+  crawl.py --url "https://city.gov" --depth 3 --output events.json
+  crawl.py --url "https://example.com" --max-pages 100 --verbose
         """
     )
     
@@ -173,24 +145,14 @@ Examples:
     parser.add_argument(
         "--url", "-u",
         required=True,
-        help="Comma-separated list of URLs to crawl (e.g., 'url1.com,url2.gov,url3.org')"
+        help="URL to crawl for event information"
     )
     
     # Optional arguments
     parser.add_argument(
-        "--search", "-s",
-        help="Search query to filter and prioritize content (enables AI analysis)"
-    )
-    
-    parser.add_argument(
-        "--exhaustive", "-e",
-        action="store_true",
-        help="Enable exhaustive crawling (deeper and more pages)"
-    )
-    
-    parser.add_argument(
         "--output", "-o",
-        help="Output file path for JSON results (default: prints to console)"
+        default="output.json",
+        help="Output file path for JSON results (default: output.json)"
     )
     
     parser.add_argument(
@@ -215,13 +177,6 @@ Examples:
     )
     
     parser.add_argument(
-        "--workers",
-        type=int,
-        default=5,
-        help="Maximum concurrent workers (default: 5)"
-    )
-    
-    parser.add_argument(
         "--no-robots",
         action="store_true",
         help="Ignore robots.txt restrictions"
@@ -241,103 +196,141 @@ Examples:
     
     args = parser.parse_args()
     
-    # Setup logging
+    # Setup logging to crawl.log
     log_level = "DEBUG" if args.verbose else "INFO"
     if args.quiet:
         log_level = "WARNING"
     
-    logger = setup_logging(log_level)
+    logger = setup_logging(log_level, "crawl.log")
+    logger.info("=" * 50)
+    logger.info("Starting new crawl session")
+    logger.info(f"URL: {args.url}")
+    logger.info(f"Depth: {args.depth}, Max pages: {args.max_pages}")
     
-    # Parse URLs
-    urls = parse_urls(args.url)
-    if not urls:
-        console.print("[red]❌ No valid URLs provided![/red]")
+    # #ICONS
+    ICON_START = "[>]"
+    ICON_SUCCESS = "[+]"
+    ICON_ERROR = "[-]"
+    ICON_WARNING = "[!]"
+    
+    # Parse URL
+    url = parse_url(args.url)
+    if not url:
+        console.print(f"[red]{ICON_ERROR} No valid URL provided![/red]")
         sys.exit(1)
     
     # Display startup info
     if not args.quiet:
         console.print(Panel.fit(
-            "[bold blue]🕷️ Professional Web Crawler[/bold blue]\n"
-            f"URLs to crawl: {len(urls)}\n"
-            f"Search query: {args.search or 'None'}\n"
-            f"AI Analysis: {'Enabled' if args.search else 'Disabled'}",
-            border_style="blue"
+            f"[bold cyan]{ICON_START} Event Discovery Web Crawler[/bold cyan]\n"
+            f"URL: {url}\n"
+            f"Depth: {args.depth} | Max Pages: {args.max_pages}\n"
+            f"Output: {args.output}",
+            border_style="cyan"
         ))
     
     try:
-        # Initialize components
-        config = CrawlConfig(
+        # PHASE 1: Crawl and consolidate content
+        if not args.quiet:
+            console.print(f"\n{ICON_START} Phase 1: Crawling website...", style="bold cyan")
+        
+        logger.info("Phase 1: Starting crawl")
+        
+        config = SimpleCrawlConfig(
             max_depth=args.depth,
             max_pages=args.max_pages,
             delay=args.delay,
-            max_workers=args.workers,
             respect_robots=not args.no_robots
         )
         
-        # Initialize AI analyzer if search query provided
-        analyzer = None
-        if args.search:
-            try:
-                analyzer = ContentAnalyzer()
-                if not args.quiet:
-                    console.print("[green]🤖 AI Content Analyzer initialized[/green]")
-            except Exception as e:
-                console.print(f"[yellow]⚠️ AI Analyzer failed to initialize: {e}[/yellow]")
-                console.print("[yellow]Continuing without AI analysis...[/yellow]")
+        crawler = SimpleCrawler(config=config)
         
-        # Initialize crawler
-        crawler = WebCrawler(config=config, analyzer=analyzer)
-        
-        if not args.quiet:
-            console.print("[green]✅ Web crawler initialized[/green]")
-            console.print(f"[cyan]Starting crawl of {len(urls)} URLs...[/cyan]")
-        
-        # Start crawling with progress indicator
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
             console=console,
             transient=True
         ) as progress:
+            if not args.quiet:
+                task = progress.add_task("Crawling pages...", total=None)
+            
+            crawl_results = crawler.crawl(url)
+        
+        logger.info(f"Crawl completed: {crawl_results['total_pages']} pages")
+        
+        if not args.quiet:
+            console.print(f"{ICON_SUCCESS} Crawled {crawl_results['total_pages']} pages at depth {crawl_results['depth_reached']}")
+            console.print(f"{ICON_SUCCESS} Found {len(crawl_results['routes'])} routes")
+        
+        # PHASE 2: Extract events with single AI call
+        if not args.quiet:
+            console.print(f"\n{ICON_START} Phase 2: Extracting event information...", style="bold cyan")
+        
+        logger.info("Phase 2: Starting event extraction")
+        
+        try:
+            extractor = EventExtractor()
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True
+            ) as progress:
+                if not args.quiet:
+                    task = progress.add_task("Analyzing content with AI...", total=None)
+                
+                event_results = extractor.extract_events(
+                    base_url=crawl_results['base_url'],
+                    content_by_url=crawl_results['content_by_url'],
+                    routes=crawl_results['routes']
+                )
+            
+            logger.info(f"Event extraction completed: {len(event_results.get('events_found', []))} events found")
             
             if not args.quiet:
-                task = progress.add_task("Crawling websites...", total=None)
+                console.print(f"{ICON_SUCCESS} Event extraction complete")
             
-            results = crawler.crawl_urls(
-                start_urls=urls,
-                search_query=args.search,
-                exhaustive=args.exhaustive
-            )
-        
-        # Clean up
-        crawler.close()
+        except Exception as e:
+            logger.error(f"Event extraction failed: {e}")
+            console.print(f"[yellow]{ICON_WARNING} AI extraction failed: {e}[/yellow]")
+            console.print(f"[yellow]{ICON_WARNING} Continuing with crawl results only...[/yellow]")
+            
+            # Fallback: save crawl results without AI extraction
+            event_results = {
+                "base_url": crawl_results['base_url'],
+                "routes": crawl_results['routes'],
+                "purpose": "Unable to extract with AI",
+                "events_found": []
+            }
         
         # Display results
         if not args.quiet:
-            console.print("\n[green]🎉 Crawl completed successfully![/green]")
-            display_crawl_summary(results)
-            
-            if args.search and results.get("content_matches"):
-                display_content_matches(results)
+            console.print(f"\n{ICON_SUCCESS} Processing complete!", style="bold green")
+            display_results(event_results)
         
-        # Save or print results
-        if args.output:
-            save_results(results, args.output)
-        elif args.quiet:
-            # Print JSON for piping
-            print(json.dumps(results, indent=2))
-        else:
-            console.print(f"\n📄 Full results available in memory. Use --output to save.")
+        # Save results
+        save_results(event_results, args.output)
+        logger.info(f"Results saved to {args.output}")
+        
+        if not args.quiet:
+            console.print(f"\n{ICON_SUCCESS} All done! Check {args.output} for results.", style="bold green")
     
     except KeyboardInterrupt:
-        console.print(f"\n[yellow]⚠️ Crawl interrupted by user[/yellow]")
+        logger.warning("Crawl interrupted by user")
+        console.print(f"\n[yellow]{ICON_WARNING} Crawl interrupted by user[/yellow]")
         sys.exit(1)
     except Exception as e:
-        console.print(f"[red]❌ Error during crawling: {e}[/red]")
+        logger.error(f"Error during crawling: {e}", exc_info=True)
+        console.print(f"[red]{ICON_ERROR} Error: {e}[/red]")
         if args.verbose:
             import traceback
             console.print(traceback.format_exc())
         sys.exit(1)
+    finally:
+        logger.info("Crawl session ended")
+        logger.info("=" * 50)
 
 
 if __name__ == "__main__":
