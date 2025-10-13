@@ -1,0 +1,289 @@
+{
+  "unknown": {
+    "routes": [
+      "https://www.eventbrite.com/d/ca--san-jose/events/"
+    ],
+    "purpose": "This website functions as an event listing and ticketing platform, showcasing various public events, activities, and classes occurring in the San Jose, CA area, complete with specific dates, times, and locations.",
+    "events_found": [
+      {
+        "title": "DATA SCIENCE APPLICATIONS 2025 at Stanford: Agents, RFMs and LLM Inference",
+        "description": "DATA SCIENCE APPLICATIONS 2025 at Stanford: Agents, RFMs and LLM Inference",
+        "date": "null",
+        "start_time": "08:30",
+        "end_time": "null",
+        "address": "Paul Brest Hall",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Grand Opening of the Martin Luther King, Jr. Research & Education Institute",
+        "description": "Grand Opening of the Martin Luther King, Jr. Research & Education Institute",
+        "date": "null",
+        "start_time": "16:00",
+        "end_time": "null",
+        "address": "Memorial Church",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "The Bay Area Classic: Charity Basketball Game 2025",
+        "description": "The Bay Area Classic: Charity Basketball Game 2025",
+        "date": "2025-10-18",
+        "start_time": "16:00",
+        "end_time": "null",
+        "address": "Foothill College",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Pandit Yogesh Samsi @ Stanford",
+        "description": "Pandit Yogesh Samsi @ Stanford",
+        "date": "2025-10-19",
+        "start_time": "15:00",
+        "end_time": "null",
+        "address": "CCRMA Stanford Center for Computer Research in Music and Acoustics",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "BOLLYWOOD DIWALI PARTY | MYTH - SAN JOSE | OCT 17th",
+        "description": "BOLLYWOOD DIWALI PARTY | MYTH - SAN JOSE | OCT 17th",
+        "date": "null",
+        "start_time": "22:00",
+        "end_time": "null",
+        "address": "Myth Lounge San Jose Downtown",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Grown Folks Spooky Thriller Costume Party",
+        "description": "Grown Folks Spooky Thriller Costume Party",
+        "date": "null",
+        "start_time": "21:00",
+        "end_time": "null",
+        "address": "Mxico Lindo at Silver Creek",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "HALLOWEEN: THE RETURN OF GETTER - 10/31 San Jose",
+        "description": "HALLOWEEN: THE RETURN OF GETTER - 10/31 San Jose",
+        "date": "null",
+        "start_time": "21:00",
+        "end_time": "null",
+        "address": "Guildhouse",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Sonu Nigam Live Symphony Concert in the Bay Area 2025",
+        "description": "Sonu Nigam Live Symphony Concert in the Bay Area 2025",
+        "date": "2025-11-15",
+        "start_time": "20:00",
+        "end_time": "null",
+        "address": "SAP Center",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Ducru Beaucaillou Tasting and Dinner",
+        "description": "Ducru Beaucaillou Tasting and Dinner",
+        "date": "2025-11-01",
+        "start_time": "18:30",
+        "end_time": "null",
+        "address": "Forbes Mill Steakhouse",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "CHAI RAVE SAN JOSE: THE ULTIMATE DESI DAYTIMER OCT 11 @ FITOOR!",
+        "description": "CHAI RAVE SAN JOSE: THE ULTIMATE DESI DAYTIMER OCT 11 @ FITOOR!",
+        "date": "null",
+        "start_time": "10:30",
+        "end_time": "null",
+        "address": "FITOOR",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Women's Leadership and Policy Summit 2025",
+        "description": "Women's Leadership and Policy Summit 2025",
+        "date": "2025-10-18",
+        "start_time": "09:00",
+        "end_time": "null",
+        "address": "North Parking Garage",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Yoga and Pilates on The Row",
+        "description": "Yoga and Pilates on The Row",
+        "date": "2025-10-18",
+        "start_time": "09:00",
+        "end_time": "null",
+        "address": "Santana Row",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "All Things Meetings Silicon Valley- Connection Reception",
+        "description": "All Things Meetings Silicon Valley- Connection Reception",
+        "date": "null",
+        "start_time": "17:30",
+        "end_time": "null",
+        "address": "The Tech Interactive",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "PERREO HALLOWEEN @The Glasshouse San Jose! SAT NOV 1ST! 1000+ppl | 5+ Djs",
+        "description": "PERREO HALLOWEEN @The Glasshouse San Jose! SAT NOV 1ST! 1000+ppl | 5+ Djs",
+        "date": "2025-11-01",
+        "start_time": "22:00",
+        "end_time": "null",
+        "address": "The GlassHouse SJ",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Avenida de Altares",
+        "description": "Avenida de Altares",
+        "date": "2025-11-01",
+        "start_time": "17:30",
+        "end_time": "null",
+        "address": "School of Arts and Culture at the Mexican Heritage Plaza",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Strategies to De-escalate Children in Distress [Free Webinar]",
+        "description": "Strategies to De-escalate Children in Distress [Free Webinar]",
+        "date": "null",
+        "start_time": "12:00",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "San Jose Career Fair",
+        "description": "San Jose Career Fair",
+        "date": "null",
+        "start_time": "09:30",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Healthy Place Making: Improving Public Health through Planning",
+        "description": "Healthy Place Making: Improving Public Health through Planning",
+        "date": "null",
+        "start_time": "12:00",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Keeping children safe online - webinar",
+        "description": "Keeping children safe online - webinar",
+        "date": "null",
+        "start_time": "17:30",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "CISA Active Shooter Preparedness Webinar - Region 3 - DC/DE/MD/PA/VA/WV",
+        "description": "CISA Active Shooter Preparedness Webinar - Region 3 - DC/DE/MD/PA/VA/WV",
+        "date": "null",
+        "start_time": "13:00",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Libraries and positive climate action: inform to transform",
+        "description": "Libraries and positive climate action: inform to transform",
+        "date": "null",
+        "start_time": "16:00",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Career Fair: Exclusive Tech Hiring Event-New Tickets Available",
+        "description": "Career Fair: Exclusive Tech Hiring Event-New Tickets Available",
+        "date": "null",
+        "start_time": "09:00",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "401 Games: One Piece Card Game - Online Treasure Cup",
+        "description": "401 Games: One Piece Card Game - Online Treasure Cup",
+        "date": "null",
+        "start_time": "11:00",
+        "end_time": "null",
+        "address": "null",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Sunday Coffee in San Jose",
+        "description": "Sunday Coffee in San Jose",
+        "date": "null",
+        "start_time": "10:00",
+        "end_time": "null",
+        "address": "Voltaire Coffee Roasters",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "San Jose, CA I Try Out Girl Scouts",
+        "description": "San Jose, CA I Try Out Girl Scouts",
+        "date": "null",
+        "start_time": "15:00",
+        "end_time": "null",
+        "address": "Doerr Park",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Singles' Mixer | Ages 35-55 | Oct 12, 4pm | AC Hotel San Jose Downtown",
+        "description": "Singles' Mixer | Ages 35-55 | Oct 12, 4pm | AC Hotel San Jose Downtown",
+        "date": "null",
+        "start_time": "16:00",
+        "end_time": "null",
+        "address": "AC Hotel San Jose Downtown",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "WYA DAY PARTY OCTOBER 12TH ETERNAL-MASTERMIND TXIBAL-ASTHMATC",
+        "description": "WYA DAY PARTY OCTOBER 12TH ETERNAL-MASTERMIND TXIBAL-ASTHMATC",
+        "date": "null",
+        "start_time": "17:00",
+        "end_time": "null",
+        "address": "58 S 1st St",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Rhythm & Roots: Sunday Vibes at Sushi Confidential",
+        "description": "Rhythm & Roots: Sunday Vibes at Sushi Confidential",
+        "date": "null",
+        "start_time": "16:00",
+        "end_time": "null",
+        "address": "Sushi Confidential - Downtown San Jose",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Women in Business & Tech  Silicon Valley  Collaboration Event",
+        "description": "Women in Business & Tech  Silicon Valley  Collaboration Event",
+        "date": "null",
+        "start_time": "14:30",
+        "end_time": "null",
+        "address": "1066 Saratoga Ave #100",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "Halloween Bento Cakes",
+        "description": "Halloween Bento Cakes",
+        "date": "null",
+        "start_time": "14:00",
+        "end_time": "null",
+        "address": "1173 Redmond Ave",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      },
+      {
+        "title": "HAVE A BEAUTIFUL, TERRIBLE DAY!",
+        "description": "HAVE A BEAUTIFUL, TERRIBLE DAY!",
+        "date": "null",
+        "start_time": "12:30",
+        "end_time": "null",
+        "address": "Center for Spiritual Living San Jose",
+        "source_url": "https://www.eventbrite.com/d/ca--san-jose/events/"
+      }
+    ]
+  }
+}

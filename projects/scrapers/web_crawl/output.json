@@ -1,0 +1,9 @@
+{
+  "https://www.sandiego.org/events-festivals": {
+    "routes": [
+      "https://www.sandiego.org/events-festivals"
+    ],
+    "purpose": "The website provides a calendar and listings for events, festivals, and activities happening in San Diego.",
+    "events_found": []
+  }
+}
