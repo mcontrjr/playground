@@ -7,51 +7,11 @@ Entry point: crawl.py (CLI)
 ## Flow (high level)
 
 ```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'primaryColor': '#0ea5e9',
-    'primaryTextColor': '#e2e8f0',
-    'primaryBorderColor': '#38bdf8',
-    'lineColor': '#94a3b8',
-    'secondaryColor': '#1f2937',
-    'tertiaryColor': '#334155'
-  }
-}}%%
-flowchart TD
-  accTitle: Event discovery pipeline
-  accDescr: CLI orchestrates Phase 1 crawl and Phase 2 single-call extraction to JSON
-
-  subgraph P1["Phase 1 • Crawl"]
-    direction TB
-CLI["crawl.py CLI"] --> CCFG["CrawlerConfig"]
-CCFG --> CRAWL[["Crawler.crawl(url)"]]
-    CRAWL --> RSLT{{"crawl_results"}}
-  end
-
-  subgraph P2["Phase 2 • Extract"]
-    direction TB
-    EX[["EventExtractor.extract_events"]]
-    EX --> JSON[("output.json")]
-  end
-
-  RSLT --> EX
-
-  classDef cli fill:#0b1020,stroke:#38bdf8,stroke-width:2px,color:#e2e8f0;
-  classDef config fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ecfeff;
-  classDef crawl fill:#0f172a,stroke:#60a5fa,stroke-width:2px,color:#eaf2ff;
-  classDef result fill:#111827,stroke:#94a3b8,stroke-dasharray: 5 3,stroke-width:2px,color:#f8fafc;
-  classDef extract fill:#7c2d12,stroke:#fb923c,stroke-width:2px,color:#fff7ed;
-  classDef output fill:#1f2937,stroke:#f59e0b,stroke-width:2px,color:#fffbeb;
-
-  class CLI cli
-  class CCFG config
-  class CRAWL crawl
-  class RSLT result
-  class EX extract
-  class JSON output
-
-  linkStyle default stroke:#64748b,stroke-width:1.5px;color:#94a3b8
+flowchart LR
+  URL["input: url"] --> CRAWL[Crawler.crawl]
+  CRAWL --> RESULTS["output: crawl_results dict"]
+  RESULTS --> EXTRACT[EventExtractor.extract_events]
+  EXTRACT --> JSON["output: events dict"]
 ```
 
 ## Components used by crawl.py
@@ -67,18 +27,24 @@ CCFG --> CRAWL[["Crawler.crawl(url)"]]
       - total_pages, depth_reached
 - _fetch_page(url, base_url): request + parse + clean + link extract
 - event_extractor.py
-  - EventExtractor
-    - extract_events(base_url, content_by_url, routes): single Gemini call
+  - GeminiModel: Enum of model codes with input/output token limits (see [Gemini API docs](https://ai.google.dev/gemini-api/docs/models))
+  - TokenTracker: Tracks token usage across API calls
+    - track_request(prompt_tokens, completion_tokens): Record token usage
+    - report(): Generate usage summary with totals, averages, utilization
+  - EventExtractor (inherits TokenTracker)
+    - extract_events(base_url, content_by_url, routes): single Gemini call with token tracking
     - _consolidate_content(): concatenate per-URL text with limits
     - _build_extraction_prompt(): strict JSON schema for routes/purpose/events
-    - _call_gemini(): new SDK if available, else legacy
+    - _call_gemini(): Google GenAI SDK (new) with token counting
 - utils.py (subset used)
   - is_valid_url, normalize_url, should_crawl_url
   - clean_text_content, aggressive_content_filter
 - RateLimiter
 
 Notes
-- ignore console/formatting and logging utilities in this doc
+- Uses [Google GenAI SDK](https://ai.google.dev/gemini-api/docs/models) (new, not legacy)
+- All legacy SDK code removed
+- Token usage automatically tracked and reported in output
 
 ## Data contracts
 
@@ -95,9 +61,10 @@ event_results (from EventExtractor.extract_events)
 - routes: list[str] (event-related only)
 - purpose: str
 - events_found: list[{title, description, date, start_time, end_time, address, source_url}]
+- token_usage: dict with model, total_requests, total_prompt_tokens, total_completion_tokens, total_tokens, avg_prompt_tokens, avg_completion_tokens, model_limits, utilization
 
 Output file
-- JSON keyed by base_url: { base_url: { routes, purpose, events_found } }
+- JSON keyed by base_url: { base_url: { routes, purpose, events_found, token_usage } }
 
 ## CLI (minimal)
 
@@ -131,40 +98,29 @@ out = { events.get("base_url", "unknown"): {
 }}
 ```
 
-## Mermaid (detailed interactions)
+## Detailed flow
 
 ```mermaid
-sequenceDiagram
-  autonumber
-  participant U as User
-  participant CLI as crawl.py
-participant SC as Crawler
-  participant UT as utils
-  participant EE as EventExtractor
-
-  Note over CLI,SC: Phase 1 • Crawl
-  U->>CLI: args(url, depth, max_pages, delay, no_robots)
-CLI->>SC: CrawlerConfig(...)
-  CLI->>SC: crawl(url)
-  rect rgba(33, 150, 243, .08)
-    loop BFS by depth
-      SC->>UT: should_crawl_url / normalize_url
-      SC->>UT: clean_text_content / aggressive_content_filter
-      SC-->>CLI: PageContent(content, links)
-    end
+flowchart TD
+  START(["crawl.py --url URL"]) --> CRAWL
+  
+  subgraph "Phase 1: Crawl"
+    CRAWL["Crawler.crawl(url)"]
+    CRAWL --> |"fetches pages"| FETCH["_fetch_page()"]
+    FETCH --> |"uses"| UTILS["utils: normalize_url\nclean_text_content"]
   end
-  SC-->>CLI: {base_url, routes, content_by_url}
-
-  Note over CLI,EE: Phase 2 • Extract
-  rect rgba(245, 158, 11, .10)
-    CLI->>EE: extract_events(base_url, content_by_url, routes)
-    EE->>EE: _consolidate_content()
-    EE->>EE: _build_extraction_prompt()
-    EE->>EE: _call_gemini()
-    EE-->>CLI: {routes, purpose, events_found}
+  
+  CRAWL --> OUT1["dict:\nbase_url\nroutes\ncontent_by_url"]
+  
+  subgraph "Phase 2: Extract"
+    OUT1 --> EXTRACT["EventExtractor.extract_events()"]
+    EXTRACT --> CONSOL["_consolidate_content()"]
+    CONSOL --> PROMPT["_build_extraction_prompt()"]
+    PROMPT --> GEMINI["_call_gemini()"]
   end
-
-  CLI-->>U: write output.json
+  
+  GEMINI --> OUT2["dict:\nroutes\npurpose\nevents_found"]
+  OUT2 --> SAVE(["save to output.json"])
 ```
 
 ## File map
@@ -173,6 +129,22 @@ Used by crawl.py
 - crawl.py: CLI + embedded Crawler/CrawlerConfig (crawl + save)
 - event_extractor.py: single-call event extraction
 - utils.py: URL/text helpers, rate limiting
+
+## Limitations & Improvements
+
+Current crawler uses static HTML fetching (requests + BeautifulSoup).
+
+**Cannot extract:**
+- JavaScript-loaded content
+- Dynamically generated DOM elements
+- Content in collapsed accordions
+- Sites with Cloudflare protection
+
+See [IMPROVE_CRAWL.md](IMPROVE_CRAWL.md) for detailed solutions including:
+- Playwright integration for JS support
+- API endpoint detection
+- Cloudflare bypass techniques
+- Implementation roadmap with code examples
 
 ## #ICONS
 

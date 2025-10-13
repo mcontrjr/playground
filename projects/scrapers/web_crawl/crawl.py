@@ -11,6 +11,7 @@ CLI entrypoint: crawl.py
 
 import argparse
 import json
+import os
 import sys
 from typing import Dict, List, Optional
 
@@ -147,10 +148,10 @@ class Crawler:
             session.close()
 
     def crawl(self, start_url: str) -> Dict[str, object]:
-        logger.info(f"Starting crawl from: {start_url}")
         start_url = normalize_url(start_url)
         if not start_url.startswith(("http://", "https://")):
             start_url = f"https://{start_url}"
+        logger.info(f"Starting crawl from: {start_url}")
 
         urls_to_crawl: List[str] = [start_url]
         processed = set()
@@ -258,7 +259,7 @@ def main() -> None:
         )
         crawler = Crawler(config=config)
         crawl_results = crawler.crawl(url)
-        logger.info(f"Crawled {crawl_results['total_pages']} pages @ depth {crawl_results['depth_reached']}")
+        logger.info(f"Crawled {crawl_results['total_pages']} pages @ depth {crawl_results['depth_reached']} for {crawl_results['base_url']}")
 
         # Phase 2: Extract
         logger.info("Phase 2: extract start")
@@ -270,7 +271,7 @@ def main() -> None:
                 routes=crawl_results["routes"],
             )
             logger.info(
-                f"Event extraction complete: {len(event_results.get('events_found', []))} events"
+                f"Event extraction complete: {len(event_results.get('events_found', []))} events for {event_results.get('base_url')}"
             )
         except Exception as e:
             logger.warning(f"AI extraction failed: {e}")
@@ -280,18 +281,20 @@ def main() -> None:
                 "routes": crawl_results["routes"],
                 "purpose": "Unable to extract with AI",
                 "events_found": [],
+                "extractor_report": extractor.report()
             }
 
         # Save
         try:
             output = {
-                event_results.get("base_url", "unknown"): {
+                event_results.get("base_url", url): {
                     "routes": event_results.get("routes", []),
                     "purpose": event_results.get("purpose", ""),
                     "events_found": event_results.get("events_found", []),
                 }
             }
-            with open(args.output, "w", encoding="utf-8") as f:
+            os.makedirs('output', exist_ok=True)
+            with open(os.path.join('output', args.output), "w", encoding="utf-8") as f:
                 json.dump(output, f, indent=2, ensure_ascii=False)
             logger.info(f"Results saved to {args.output}")
             if not args.quiet:

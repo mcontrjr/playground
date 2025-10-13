@@ -1,54 +1,154 @@
 """
 Event Extractor - Single AI call for event information extraction.
 
-This module uses Google Gemini AI to extract event information from
+Uses Google Gemini AI to extract event information from
 consolidated crawl content in a single efficient API call.
+Tracks token usage via TokenTracker.
 """
 
 import os
 import json
 import logging
+from enum import Enum
 from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
 from dotenv import load_dotenv
-
-try:
-    from google import genai
-    from google.genai import types
-except ImportError:
-    import google.generativeai as genai
-    types = None
+from google import genai
+from google.genai import types
 
 load_dotenv()
 
 logger = logging.getLogger("web_crawler")
 
 
-class EventExtractor:
-    """Extract event information using Google Gemini AI with a single call."""
+class GeminiModel(Enum):
+    """Gemini model codes with token limits.
     
-    def __init__(self, api_key: Optional[str] = None):
+    Source: https://ai.google.dev/gemini-api/docs/models
+    """
+    # Gemini 2.5 models
+    GEMINI_2_5_PRO = ("gemini-2.5-pro", 1048576, 65536)
+    GEMINI_2_5_PRO_TTS = ("gemini-2.5-pro-preview-tts", 8000, 16000)
+    GEMINI_2_5_FLASH = ("gemini-2.5-flash", 1048576, 65536)
+    GEMINI_2_5_FLASH_PREVIEW = ("gemini-2.5-flash-preview-09-2025", 1048576, 65536)
+    GEMINI_2_5_FLASH_IMAGE = ("gemini-2.5-flash-image", 32768, 32768)
+    GEMINI_2_5_FLASH_LITE = ("gemini-2.5-flash-lite-preview-09-2025", 1048576, 65536)
+    
+    # Gemini 2.0 models
+    GEMINI_2_0_FLASH = ("gemini-2.0-flash", 1048576, 8192)
+    
+    def __init__(self, model_code: str, input_limit: int, output_limit: int):
+        self.model_code = model_code
+        self.input_limit = input_limit
+        self.output_limit = output_limit
+    
+    @classmethod
+    def from_code(cls, code: str) -> 'GeminiModel':
+        """Get enum from model code string."""
+        for model in cls:
+            if model.model_code == code:
+                return model
+        raise ValueError(f"Unknown model code: {code}")
+
+
+@dataclass
+class TokenUsage:
+    """Token usage for a single request."""
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+class TokenTracker:
+    """Tracks token usage across Gemini API calls."""
+    
+    def __init__(self, model: GeminiModel):
+        """Initialize tracker for a specific model.
+        
+        Args:
+            model: GeminiModel enum value
         """
-        Initialize the event extractor.
+        self.model = model
+        self.requests: List[TokenUsage] = []
+    
+    def track_request(self, prompt_tokens: int, completion_tokens: int):
+        """Record token usage for a request.
+        
+        Args:
+            prompt_tokens: Input token count
+            completion_tokens: Output token count
+        """
+        usage = TokenUsage(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens
+        )
+        self.requests.append(usage)
+        logger.debug(f"Tracked: {prompt_tokens} prompt + {completion_tokens} completion = {usage.total_tokens} total")
+    
+    def report(self) -> Dict[str, Any]:
+        """Generate token usage summary.
+        
+        Returns:
+            Dict with usage statistics
+        """
+        if not self.requests:
+            return {
+                "model": self.model.model_code,
+                "total_requests": 0,
+                "total_prompt_tokens": 0,
+                "total_completion_tokens": 0,
+                "total_tokens": 0,
+                "model_limits": {
+                    "input_limit": self.model.input_limit,
+                    "output_limit": self.model.output_limit
+                }
+            }
+        
+        total_prompt = sum(r.prompt_tokens for r in self.requests)
+        total_completion = sum(r.completion_tokens for r in self.requests)
+        total = sum(r.total_tokens for r in self.requests)
+        
+        report = {
+            "model": self.model.model_code,
+            "total_requests": len(self.requests),
+            "total_prompt_tokens": total_prompt,
+            "total_completion_tokens": total_completion,
+            "total_tokens": total,
+            "avg_prompt_tokens": total_prompt // len(self.requests),
+            "avg_completion_tokens": total_completion // len(self.requests),
+            "model_limits": {
+                "input_limit": self.model.input_limit,
+                "output_limit": self.model.output_limit
+            },
+            "utilization": {
+                "max_input_used_pct": round(max(r.prompt_tokens for r in self.requests) / self.model.input_limit * 100, 2),
+                "max_output_used_pct": round(max(r.completion_tokens for r in self.requests) / self.model.output_limit * 100, 2)
+            }
+        }
+        return json.dumps(report, indent=2)
+
+
+class EventExtractor(TokenTracker):
+    """Extract event information using Google Gemini AI with token tracking."""
+    
+    def __init__(self, api_key: Optional[str] = None, model: GeminiModel = GeminiModel.GEMINI_2_5_FLASH_LITE):
+        """Initialize event extractor.
         
         Args:
             api_key: Google Gemini API key (defaults to env var)
+            model: GeminiModel to use (default: 2.5 Flash Lite)
         """
+        # Initialize TokenTracker
+        super().__init__(model)
+        
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY not found in environment or provided")
         
-        # Configure Gemini with new SDK
-        try:
-            # Try new SDK first
-            self.client = genai.Client(api_key=self.api_key)
-            self.use_new_sdk = True
-            logger.info("EventExtractor initialized with new Gemini SDK")
-        except:
-            # Fall back to old SDK
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel("gemini-2.0-flash-exp")
-            self.use_new_sdk = False
-            logger.info("EventExtractor initialized with legacy Gemini SDK")
+        # Initialize client with new SDK
+        self.client = genai.Client(api_key=self.api_key)
+        logger.info(f"EventExtractor initialized with {model.model_code}")
     
     def extract_events(
         self,
@@ -56,10 +156,9 @@ class EventExtractor:
         content_by_url: Dict[str, str],
         routes: List[str]
     ) -> Dict[str, Any]:
-        """
-        Extract event information from all crawled content in a single AI call.
+        """Extract event information from all crawled content in a single AI call.
         
-        This method consolidates all content and makes ONE API call to extract
+        Consolidates all content and makes ONE API call to extract
         relevant event information with 0 thinking budget for speed.
         
         Args:
@@ -68,20 +167,28 @@ class EventExtractor:
             routes: List of route URLs (excluding base URL)
             
         Returns:
-            Dictionary with structured event information
+            Dictionary with structured event information including token report
         """
         logger.info(f"Extracting events from {len(content_by_url)} pages")
         
         # Consolidate all content with URL markers
         consolidated_content = self._consolidate_content(base_url, content_by_url, routes)
+        logger.info(f"Consolidated content length for {base_url}: {len(consolidated_content)} characters")
         
         # Build the extraction prompt
         prompt = self._build_extraction_prompt(base_url, consolidated_content, routes)
+        logger.info(f"Built extraction prompt for {base_url}")
         
         # Make single AI call with 0 thinking budget
         try:
             result = self._call_gemini(prompt)
             logger.info("Successfully extracted event information")
+            
+            # Add token usage report
+            result["token_usage"] = self.report()
+
+            logger.info(f"Full Result for {base_url}: \n{json.dumps(result, indent=2)}")
+            
             return result
         except Exception as e:
             logger.error(f"Error extracting events: {e}")
@@ -90,7 +197,8 @@ class EventExtractor:
                 "routes": routes,
                 "purpose": "Error during extraction",
                 "events_found": [],
-                "error": str(e)
+                "error": str(e),
+                "token_usage": self.report()
             }
     
     def _consolidate_content(
@@ -99,8 +207,7 @@ class EventExtractor:
         content_by_url: Dict[str, str],
         routes: List[str]
     ) -> str:
-        """
-        Consolidate all content into a single text block with URL markers.
+        """Consolidate all content into a single text block with URL markers.
         
         Args:
             base_url: Base URL
@@ -137,8 +244,7 @@ class EventExtractor:
         consolidated_content: str,
         routes: List[str]
     ) -> str:
-        """
-        Build the extraction prompt for Gemini.
+        """Build the extraction prompt for Gemini.
         
         Args:
             base_url: Base URL
@@ -201,8 +307,7 @@ Respond with ONLY the JSON, no additional text."""
         return prompt
     
     def _call_gemini(self, prompt: str) -> Dict[str, Any]:
-        """
-        Call Gemini API with the extraction prompt.
+        """Call Gemini API and track token usage.
         
         Uses 0 thinking budget for fast response.
         
@@ -213,33 +318,39 @@ Respond with ONLY the JSON, no additional text."""
             Parsed JSON response
         """
         try:
-            if self.use_new_sdk:
-                # New SDK approach with 0 thinking budget
-                response = self.client.models.generate_content(
-                    model='gemini-2.0-flash-thinking-exp',
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        thinking_config=types.ThinkingConfig(
-                            thinking_budget=0  # No thinking for speed
-                        ),
-                        response_modalities=["TEXT"],
-                    )
+            # Count input tokens
+            token_count = self.client.models.count_tokens(
+                model=self.model.model_code,
+                contents=prompt,
+            )
+            prompt_tokens = token_count.total_tokens
+            logger.info(f"Input tokens: {prompt_tokens}")
+            
+            # Generate content with 0 thinking budget
+            response = self.client.models.generate_content(
+                model=self.model.model_code,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    # thinking_config=types.ThinkingConfig(
+                    #     thinking_budget=0  # No thinking for speed
+                    # ),
+                    response_modalities=["TEXT"],
                 )
-                response_text = response.text
-            else:
-                # Legacy SDK approach
-                generation_config = {
-                    "temperature": 0.1,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 8192,
-                }
-                
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=generation_config
-                )
-                response_text = response.text
+            )
+            
+            # Extract response text
+            response_text = response.text
+            
+            # Count output tokens
+            completion_count = self.client.models.count_tokens(
+                model=self.model.model_code,
+                contents=response_text,
+            )
+            completion_tokens = completion_count.total_tokens
+            logger.info(f"Output tokens: {completion_tokens}")
+            
+            # Track usage
+            self.track_request(prompt_tokens, completion_tokens)
             
             # Clean response text (remove markdown code blocks if present)
             response_text = response_text.strip()
