@@ -11,6 +11,8 @@
     "bluetooth",
     "network",
     "pulseaudio",
+    "custom/separator",
+    "memory",
     "cpu",
     "battery"
   ],
@@ -45,10 +47,18 @@
     "signal": 7,
     "interval": 21600
   },
-
+  "custom/separator": {
+    "format": " | "
+  },
+  "memory": {
+    "interval": 30,
+    "format": " {used:0.1f}G",
+    "max-length": 10
+  },
   "cpu": {
-    "interval": 5,
-    "format": "󰍛",
+    "interval": 10,
+    "max-length": 10,
+    "format": "󰍛 {usage}%",
     "on-click": "omarchy-launch-or-focus-tui btop"
   },
   "clock": {
@@ -71,10 +81,8 @@
     "on-click": "omarchy-launch-wifi"
   },
   "battery": {
-    "format": "{capacity}% {icon}",
-    "format-discharging": "{icon}",
-    "format-charging": "{icon}",
-    "format-plugged": "",
+    "format": "{icon} {capacity}%",
+    "format-charging": "{icon} {capacity}%",
     "format-icons": {
       "charging": ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"],
       "default": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]

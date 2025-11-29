@@ -39,8 +39,6 @@
   opacity: 0.25;
 }
 
-#cpu,
-#battery,
 #pulseaudio,
 #custom-omarchy,
 #custom-screenrecording-indicator,
@@ -48,6 +46,33 @@
   min-width: 12px;
   margin: 0 7.5px;
 }
+
+#cpu,
+#memory,
+#battery {
+  font-size: 10px;
+  background: #363a4f;
+  margin-top: 5px;
+  min-width: 12px;
+  margin-bottom: 5px;
+}
+
+#cpu {
+  color: #F88401;
+  padding: 0px 10px 0px 8px;
+}
+
+#memory {
+  color: #84ABD1;
+  padding: 0px 10px 0px 8px;
+}
+
+#battery {
+  color: #9FB989;
+  padding: 0px 10px 0px 8px;
+}
+
+
 
 #tray {
   margin-right: 16px;
