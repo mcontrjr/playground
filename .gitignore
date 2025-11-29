@@ -1,6 +1,8 @@
 .vscode/
-*/node_modules
+**/node_modules
+**/*.git
 notes.md
+WARP.md
 
 **/.venv/
 **/.env
