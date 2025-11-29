@@ -18,10 +18,12 @@
     "on-click": "activate",
     "format": "{icon}",
     "format-icons": {
-      "default": "",
+      "default": "",
       "1": "",
 		  "2": "",
-      "3": "EXTRA",
+      "3": "𝕏",
+      "4": "⛰",
+      "5": "⛱",
     },
     "persistent-workspaces": {
       "1": [],
