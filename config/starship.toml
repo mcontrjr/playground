@@ -5,8 +5,8 @@ format = """
  $character """
 
 [character]
-success_symbol = "[■](#ed6a5a)[■](#f4f1bb)[■](#9bc1bc)"
-error_symbol   = "[■](#ed6a5a)[■](#f4f1bb)[■](#9bc1bc)"
+success_symbol = "[■](#ed6a5a)[■](#f4f1bb)[■](#58ada2)"
+error_symbol   = "[■](#ed6a5a)[■](#f4f1bb)[■](#58ada2)"
 
 
 [directory]
