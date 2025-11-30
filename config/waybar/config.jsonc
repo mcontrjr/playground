@@ -4,17 +4,15 @@
   "position": "top",
   "spacing": 0,
   "height": 26,
-  "modules-left": ["custom/omarchy", "hyprland/workspaces"],
-  "modules-center": ["clock", "custom/update", "custom/screenrecording-indicator"],
+  "modules-left": ["custom/omarchy", "custom/update", "custom/separator", "cpu", "memory", "battery"],
+  "modules-center": ["hyprland/workspaces", "custom/screenrecording-indicator"],
   "modules-right": [
-    "group/tray-expander",
     "bluetooth",
-    "network",
     "pulseaudio",
     "custom/separator",
-    "memory",
-    "cpu",
-    "battery"
+    "network",
+    "custom/separator",
+    "clock"
   ],
   "hyprland/workspaces": {
     "on-click": "activate",
@@ -62,22 +60,21 @@
     "on-click": "omarchy-launch-or-focus-tui btop"
   },
   "clock": {
-    "format": "{:L%A %H:%M}",
+    "format": "  {:L%A %H:%M}",
     "format-alt": "{:L%d %B W%V %Y}",
     "tooltip": false,
     "on-click-right": "omarchy-launch-floating-terminal-with-presentation omarchy-tz-select"
   },
   "network": {
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
-    "format": "{icon}",
-    "format-wifi": "{icon}",
+    "format": "{icon}  {essid}",
+    "format-wifi": "{icon}  {essid}",
     "format-ethernet": "󰀂",
     "format-disconnected": "󰤮",
-    "tooltip-format-wifi": "{essid} ({frequency} GHz)\n⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+    "tooltip-format-wifi": "⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
     "tooltip-format-ethernet": "⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
     "tooltip-format-disconnected": "Disconnected",
     "interval": 3,
-    "spacing": 1,
     "on-click": "omarchy-launch-wifi"
   },
   "battery": {

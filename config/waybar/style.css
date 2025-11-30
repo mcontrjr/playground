@@ -30,7 +30,7 @@
 }
 
 #workspaces button.active {
-    color: #80A0BF;           /* or var(--foreground) */
+    color: #84ABAB;           /* or var(--foreground) */
     border-radius: 4px;
     font-weight: bold;
 }
@@ -39,7 +39,6 @@
   opacity: 0.25;
 }
 
-#pulseaudio,
 #custom-omarchy,
 #custom-screenrecording-indicator,
 #custom-update {
@@ -72,19 +71,42 @@
   padding: 0px 10px 0px 8px;
 }
 
+#network {
+  color: #C1A771;
+  font-size: 10px;
+  background: #363a4f;
+  padding: 0px 10px 0px 10px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
 
+#clock {
+  color: #C1A771;
+  font-size: 10px;
+  background: #363a4f;
+  padding: 0px 10px 0px 10px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+#bluetooth {
+  color: #86ACD3;
+}
+
+#pulseaudio {
+  color: #F88401;
+}
 
 #tray {
   margin-right: 16px;
 }
 
+#pulseaudio,
 #bluetooth {
-  margin-right: 17px;
+  margin-right: 8px;
+  margin-left: 8px;
 }
 
-#network {
-  margin-right: 13px;
-}
 
 #custom-expand-icon {
   margin-right: 18px;
@@ -98,9 +120,6 @@ tooltip {
   font-size: 10px;
 }
 
-#clock {
-  margin-left: 8.75px;
-}
 
 .hidden {
   opacity: 0;
