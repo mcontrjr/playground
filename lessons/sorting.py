@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import time
 from typing import Callable
-# Array has n = 9 elemtents 
+# Array has n = 9 elements
 array =  [-5, 3, 2, 7, 1, 4, -10, 3, 6]
 positive_array =  [5, 3, 2, 7, 1, 4, 10, 3, 6]
 answer = [-10, -5, 1, 2, 3, 3, 4, 6, 7]
@@ -43,7 +43,7 @@ def selection_sort(arr):
             arr[i], arr[m] = arr[m], arr[i]
         # arr[i], arr[m] = arr[m], arr[i]
     return arr
-                
+
 # Merge Sort
 def merge_sort(arr):
     n = len(arr)
@@ -105,7 +105,7 @@ def my_quick_sort(arr):
     return less + [pivot] + greater
 
 def quick_sort(arr):
-    
+
     if len(arr) <= 1:
         return arr
 
@@ -136,7 +136,7 @@ def my_count_sort(arr):
         arr[i] = c
         count_arr[c] -= 1
     #return arr  # initial but editted out since arr was editted directly
-    
+
 def count_sort(arr):
     n = len(arr)
     k = max(arr)
