@@ -1,5 +1,5 @@
 import pytest
-from generator import generate_array, ArrayParams
+from src.generator import generate_array, ArrayParams
 
 
 @pytest.mark.parametrize("length_params", [

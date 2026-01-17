@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-
 import numpy as np
-from dataclasses import dataclass
+from pydantic import BaseModel
 
-@dataclass
-class ArrayParams:
+
+class ArrayParams(BaseModel):
     n: int
     min_num: int
     max_num: int

@@ -1,2 +1,5 @@
 numpy
 pytest
+pandas
+pydantic
+fastapi
