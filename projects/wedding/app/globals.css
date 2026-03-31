@@ -1,0 +1,254 @@
+/* ─── Tokens ─────────────────────────────────────── */
+:root {
+  --ivory:       #F5F0E8;
+  --surface:     #FDFAF5;
+  --ink:         #1C1C1C;
+  --ink-muted:   #6B6560;
+  --ink-faint:   #D4CFC8;
+  --font-display: var(--font-display);   /* Cormorant Garamond */
+  --font-body:    var(--font-body);      /* Jost */
+  --ease:         cubic-bezier(0.25, 0, 0, 1);
+  --radius:       4px;
+}
+
+/* ─── Reset ──────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 300;
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+input, button, select { font: inherit; }
+
+/* ─── Layout ─────────────────────────────────────── */
+.page-shell {
+  min-height: 100dvh;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+}
+.page-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.page-content { flex: 1; }
+
+/* ─── Typography ─────────────────────────────────── */
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 0.75rem;
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+}
+.display-italic {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-style: italic;
+  font-weight: 300;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+.body-text {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+  line-height: 1.7;
+}
+.field-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* ─── Step Dots ──────────────────────────────────── */
+.step-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.step-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background 0.3s var(--ease), transform 0.3s var(--ease);
+}
+.step-dot.active  { background: var(--ink); transform: scale(1.3); }
+.step-dot.done    { background: var(--ink-muted); }
+
+/* ─── Forms ──────────────────────────────────────── */
+.form-stack { display: flex; flex-direction: column; gap: 1.75rem; }
+.field-group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.field-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--ink-faint);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 1rem;        /* prevents iOS zoom */
+  font-weight: 300;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+  outline: none;
+  transition: border-color 0.2s var(--ease);
+  -webkit-appearance: none;
+}
+.field-input::placeholder { color: var(--ink-faint); }
+.field-input:focus { border-color: var(--ink); }
+
+/* ─── Buttons ────────────────────────────────────── */
+.btn-primary {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: var(--ink);
+  color: var(--ivory);
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 54px;
+  transition: opacity 0.2s var(--ease);
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.8; }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-secondary {
+  display: block;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink-faint);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s var(--ease);
+}
+.btn-secondary:hover { border-color: var(--ink); }
+
+/* ─── Cards ──────────────────────────────────────── */
+.card-stack { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.party-card {
+  padding: 1.25rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--ink-faint);
+  border-radius: var(--radius);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease);
+  width: 100%;
+}
+.party-card:hover { border-color: var(--ink); }
+.party-card__name { font-family: var(--font-display); font-size: 1.3rem; font-weight: 400; }
+.party-card__members { font-size: 0.8rem; color: var(--ink-muted); margin-top: 0.25rem; letter-spacing: 0.03em; }
+
+/* ─── Meal Grid ──────────────────────────────────── */
+.guest-meal-group { padding-bottom: 2rem; border-bottom: 1px solid var(--ink-faint); }
+.guest-meal-group:last-of-type { border-bottom: none; }
+.meal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+.meal-card {
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--ink-faint);
+  border-radius: var(--radius);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: border-color 0.2s var(--ease);
+  min-height: 80px;
+}
+.meal-card:hover { border-color: var(--ink-muted); }
+.meal-card--selected { border-color: var(--ink); background: var(--ivory); }
+.meal-card__label { font-family: var(--font-display); font-size: 1.1rem; font-weight: 400; }
+.meal-card__desc  { font-size: 0.72rem; color: var(--ink-muted); letter-spacing: 0.02em; }
+
+/* ─── Stepper ────────────────────────────────────── */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.stepper-btn {
+  width: 48px; height: 48px;
+  background: var(--surface);
+  border: 1px solid var(--ink-faint);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s var(--ease);
+}
+.stepper-btn:hover:not(:disabled) { border-color: var(--ink); }
+.stepper-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.stepper-value {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 300;
+  min-width: 2ch;
+  text-align: center;
+  line-height: 1;
+}
+
+/* ─── Calendar Buttons ───────────────────────────── */
+.cal-buttons { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* ─── Utilities ──────────────────────────────────── */
+.divider { width: 40px; height: 1px; background: var(--ink-faint); margin: 0 auto; }
+.status-message {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  text-align: center;
+  line-height: 1.6;
+}
