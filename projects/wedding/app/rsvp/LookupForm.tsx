@@ -65,7 +65,7 @@ export default function LookupForm({ inviteRef }: { inviteRef?: string }) {
       )}
 
       {status === "found" && (
-        <div className="mt-12">
+        <div className="mt-12" style={{ marginTop: "1rem" }}>  
           <div className="divider mb-8" />
           <p className="field-label mb-4">select your party</p>
           <div className="card-stack">

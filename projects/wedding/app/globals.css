@@ -243,7 +243,7 @@ input, button, select { font: inherit; }
 .cal-buttons { display: flex; flex-direction: column; gap: 0.75rem; }
 
 /* ─── Utilities ──────────────────────────────────── */
-.divider { width: 40px; height: 1px; background: var(--ink-faint); margin: 0 auto; }
+.divider { width: 200px; height: 1px; background: var(--ink-faint); margin: 0 auto; }
 .status-message {
   font-family: var(--font-body);
   font-size: 0.82rem;
