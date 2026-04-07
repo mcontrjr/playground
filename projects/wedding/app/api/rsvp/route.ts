@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { saveRsvp } from "@/lib/db";
+import { saveRsvp, getPartyByUuid } from "@/lib/db";
 import { WEDDING } from "@/lib/config";
 
 const Schema = z.object({
-  partyId: z.number().int().positive(),
+  partyUuid: z.string().uuid(),
   guests: z.array(
     z.object({
       guestName: z.string().min(1).max(100),
@@ -23,6 +23,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: body.error.flatten() }, { status: 400 });
   }
 
-  const rsvpId = await saveRsvp(body.data);
+  const party = await getPartyByUuid(body.data.partyUuid);
+  if (!party) {
+    return NextResponse.json({ error: "party_not_found" }, { status: 404 });
+  }
+
+  const rsvpId = await saveRsvp({ partyId: party.id, guests: body.data.guests });
   return NextResponse.json({ rsvpId });
 }

@@ -27,13 +27,8 @@ export default function LookupForm({ inviteRef }: { inviteRef?: string }) {
   }
 
   function selectParty(party: Party) {
-    const params = new URLSearchParams({
-      partyId: String(party.id),
-      partyName: party.name,
-      maxGuests: String(party.maxGuests),
-      members: party.members.join("||"),
-    });
-    router.push(`/rsvp/guests?${params}`);
+    if (!party.uuid) return; // should never happen after migration
+    router.push(`/rsvp/guests?uuid=${encodeURIComponent(party.uuid)}`);
   }
 
   return (
@@ -70,7 +65,8 @@ export default function LookupForm({ inviteRef }: { inviteRef?: string }) {
       )}
 
       {status === "found" && (
-        <div className="mt-8">
+        <div className="mt-12">
+          <div className="divider mb-8" />
           <p className="field-label mb-4">select your party</p>
           <div className="card-stack">
             {parties.map((p) => (

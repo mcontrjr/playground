@@ -252,3 +252,82 @@ input, button, select { font: inherit; }
   text-align: center;
   line-height: 1.6;
 }
+.text-center { text-align: center; }
+.mb-1  { margin-bottom: 0.25rem; }
+.mb-2  { margin-bottom: 0.5rem;  }
+.mb-3  { margin-bottom: 0.75rem; }
+.mb-6  { margin-bottom: 1.5rem;  }
+.mb-10 { margin-bottom: 2.5rem;  }
+
+/* ─── Danger Button ──────────────────────────────── */
+.btn-danger {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: #830E0D;
+  color: var(--ivory);
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 54px;
+  transition: opacity 0.2s var(--ease);
+}
+.btn-danger:hover:not(:disabled) { opacity: 0.85; }
+.btn-danger:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ─── Invite Card ────────────────────────────────── */
+.invite-card {
+  border: 1px solid var(--ink-faint);
+  border-radius: var(--radius);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  background: var(--surface);
+}
+.invite-card__couple {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 7vw, 2.2rem);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+.invite-card__honour {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 1.5rem;
+}
+.invite-card__detail {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--ink-muted);
+  line-height: 1.8;
+}
+
+/* ─── Countdown ──────────────────────────────────── */
+.countdown-wrap { text-align: center; }
+.countdown-label {
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 0.5rem;
+}
+.countdown-digits {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 10vw, 3rem);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: var(--ink);
+}

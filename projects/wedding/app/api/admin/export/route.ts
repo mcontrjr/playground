@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAllRsvps } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
-  const pass = req.headers.get("x-admin-password");
+  const pass = req.nextUrl.searchParams.get("pw") ?? req.headers.get("x-admin-password");
   if (pass !== process.env.ADMIN_PASSWORD) {
     return new NextResponse("Unauthorized", { status: 401 });
   }

@@ -5,6 +5,7 @@ export interface Party {
   name: string;
   maxGuests: number;
   inviteCode: string | null;
+  uuid: string | null;
   members: string[];
 }
 
@@ -15,6 +16,11 @@ export interface GuestMeal {
 
 export interface RsvpPayload {
   partyId: number;
+  guests: GuestMeal[];
+}
+
+export interface RsvpPayloadByUuid {
+  partyUuid: string;
   guests: GuestMeal[];
 }
 

@@ -16,7 +16,10 @@ export default function CalendarButtons({ rsvpId }: { rsvpId: string }) {
         href={`/api/calendar/${rsvpId}.ics`}
         className="btn-secondary"
         download
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/calendar-svgrepo-com.svg" width={18} height={18} alt="" aria-hidden="true" />
         Apple / Outlook Calendar
       </a>
       <a
@@ -24,7 +27,10 @@ export default function CalendarButtons({ rsvpId }: { rsvpId: string }) {
         target="_blank"
         rel="noopener noreferrer"
         className="btn-secondary"
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/google-calendar.svg" width={18} height={18} alt="" aria-hidden="true" />
         Google Calendar
       </a>
     </div>
