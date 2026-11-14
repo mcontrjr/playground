@@ -1,0 +1,38 @@
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding-top: var(--sp-3);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-small);
+  color: var(--ink);
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: default;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.itemInteractive {
+  cursor: pointer;
+}
+
+.itemInteractive:hover {
+  color: var(--ink);
+}
+
+.itemMuted {
+  opacity: 0.4;
+}
+
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}

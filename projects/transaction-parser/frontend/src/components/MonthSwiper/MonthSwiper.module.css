@@ -1,0 +1,59 @@
+.swiper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-5);
+  padding: var(--sp-2) 0;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.swiperDragging {
+  opacity: 0.85;
+}
+
+.navButton {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+
+.navButton:hover:not(:disabled) {
+  background: var(--paper-sunk);
+}
+
+.navButton:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.labelWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 14ch;
+}
+
+.label {
+  font-size: var(--fs-h1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.latestBadge {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--ink-faint);
+}

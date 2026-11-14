@@ -1,0 +1,340 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: var(--fs-display);
+  font-weight: var(--font-weight-light);
+  letter-spacing: -0.01em;
+}
+
+.addButton {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  flex-shrink: 0;
+  height: fit-content;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.sortField {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.sortLabel {
+  composes: label-caps from global;
+}
+
+.sortSelect {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.sortSelect option {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.toast {
+  position: fixed;
+  bottom: var(--sp-6);
+  right: var(--sp-6);
+  background: var(--tile-bg);
+  color: var(--tile-fg);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-5);
+  font-size: var(--fs-small);
+  box-shadow: 0 12px 32px rgba(20, 18, 24, 0.3);
+  z-index: 200;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--hairline);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--sp-5);
+  align-items: start;
+  padding: var(--sp-5) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+@media (max-width: 760px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nameCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.nameInput {
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+  padding: 2px 0;
+  min-width: 6rem;
+  flex-shrink: 1;
+}
+
+.nameInput:hover {
+  border-bottom-color: var(--hairline-strong);
+}
+
+.groupSelect {
+  align-self: flex-start;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 2px 6px;
+}
+
+.groupSelect option {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.nameInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.badge {
+  composes: label-caps from global;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink-soft);
+  font-size: 0.625rem;
+}
+
+.badgeExcluded {
+  border-color: var(--accent-negative);
+  color: var(--accent-negative);
+}
+
+.meta {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+}
+
+.keywordCol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  align-content: flex-start;
+}
+
+.keywordChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  background: transparent;
+}
+
+.keywordRemove {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  line-height: 1;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.keywordRemove:hover {
+  background: var(--accent-negative);
+  color: var(--paper);
+}
+
+.addKeywordForm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.addKeywordInput {
+  border: none;
+  border-bottom: 1px solid var(--hairline-strong);
+  background: transparent;
+  padding: 2px 0;
+  font-size: var(--fs-small);
+  color: var(--ink);
+  width: 9rem;
+}
+
+.addKeywordInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.addKeywordButton {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.addKeywordButton:hover {
+  color: var(--ink);
+}
+
+.actionsCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+}
+
+.deleteButton {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.deleteButton:hover {
+  color: var(--accent-negative);
+}
+
+.deleteButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.errorBanner {
+  border: 1px solid var(--accent-negative);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--accent-negative);
+  font-size: var(--fs-small);
+}
+
+.confirmBody {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-5);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}
+
+.cancelButton {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.dangerButton {
+  background: var(--accent-negative);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+
+.formLabel {
+  composes: label-caps from global;
+}
+
+.formInput {
+  border: none;
+  border-bottom: 1px solid var(--hairline-strong);
+  background: transparent;
+  padding: var(--sp-2) 0;
+  font-size: var(--fs-body);
+  color: var(--ink);
+}
+
+.formInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.formCheckboxRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+}

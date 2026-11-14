@@ -1,0 +1,140 @@
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.table th {
+  text-align: left;
+  padding: var(--sp-3) var(--sp-3) var(--sp-2) 0;
+  border-bottom: 1px solid var(--hairline-strong);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) 0;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: middle;
+}
+
+.table tr:hover td {
+  background: var(--paper-sunk);
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  composes: label-caps from global;
+}
+
+.sortButton:hover {
+  color: var(--ink);
+}
+
+.sortArrow {
+  font-size: 0.6rem;
+  color: var(--ink);
+}
+
+.colAmount {
+  text-align: right;
+}
+
+.amount {
+  composes: tabular-nums from global;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Per the "content text should be the theme's light color or white"
+   rule, sign is conveyed by the leading minus formatAmount() already
+   prints, not by recoloring the cell. */
+.amountNegative,
+.amountPositive {
+  color: var(--ink);
+}
+
+.description {
+  max-width: 28rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--ink-faint);
+}
+
+.recurringToggle {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.recurringToggle:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.recurringActive {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--paper-sunk);
+}
+
+.table td.empty {
+  padding: var(--sp-7) 0;
+  text-align: center;
+  color: var(--ink-faint);
+  border-bottom: none;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--sp-5);
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+
+.pageButtons {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.pageButton {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-control);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  color: var(--ink);
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.pageButton:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.pageButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

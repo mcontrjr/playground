@@ -1,0 +1,35 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.title {
+  font-size: var(--fs-display);
+  font-weight: var(--font-weight-light);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+}
+
+.chartWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.empty {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  padding: var(--sp-7) 0;
+  text-align: center;
+}

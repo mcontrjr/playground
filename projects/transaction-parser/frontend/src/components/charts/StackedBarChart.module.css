@@ -1,0 +1,9 @@
+.wrap {
+  width: 100%;
+}
+
+.axisTick {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  fill: var(--ink);
+}

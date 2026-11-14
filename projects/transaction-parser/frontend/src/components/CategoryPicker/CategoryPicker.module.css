@@ -1,0 +1,157 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.select {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 2px 18px 2px 4px;
+  margin: -2px -4px;
+  border-radius: var(--radius-control);
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-faint) 50%),
+    linear-gradient(135deg, var(--ink-faint) 50%, transparent 50%);
+  background-position: calc(100% - 9px) 55%, calc(100% - 5px) 55%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  transition: background-color var(--duration-base) var(--ease-standard);
+}
+
+.select:hover {
+  color: var(--ink);
+}
+
+.select:focus-visible {
+  outline: none;
+  border-color: var(--hairline-strong);
+}
+
+.select:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Native <select>/<optgroup>/<option> styling is limited (no control
+   over the popup's border-radius/shadow), but background+color DO
+   apply in every evergreen browser, which is enough to keep the
+   dropdown's popup on the theme's palette instead of the OS default
+   white list. */
+.select option,
+.select optgroup {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.flashSuccess {
+  animation: flash 900ms var(--ease-standard);
+}
+
+@keyframes flash {
+  0% {
+    background-color: rgba(63, 122, 92, 0.18);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.uncategorized {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.followUpDescription {
+  font-size: var(--fs-small);
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  color: var(--ink);
+  background: var(--paper-sunk);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+  word-break: break-word;
+}
+
+.followUpText {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-2);
+}
+
+.followUpText strong {
+  color: var(--ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.followUpRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.followUpInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-bottom: 1px solid var(--hairline-strong);
+  background: transparent;
+  padding: 2px 0;
+  font-size: var(--fs-small);
+  color: var(--ink);
+}
+
+.followUpInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.followUpCount {
+  flex-shrink: 0;
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.followUpError {
+  font-size: var(--fs-micro);
+  color: var(--accent-negative);
+  margin-bottom: var(--sp-2);
+}
+
+.followUpActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.followUpDismiss {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.followUpConfirm {
+  border: none;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-control);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  padding: 4px 12px;
+}
+
+.followUpConfirm:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

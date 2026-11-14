@@ -1,0 +1,194 @@
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.topRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+/* Month, Account, Category stack top-down (not a side-by-side grid)
+ * per the records-page filter layout requirement. */
+.chipGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.fieldLabel {
+  composes: label-caps from global;
+}
+
+.select,
+.search {
+  border: none;
+  border-bottom: 1px solid var(--hairline-strong);
+  background: transparent;
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  min-width: 14rem;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.select:focus-visible,
+.search:focus-visible {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.multiSelect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.categoryGroups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.categoryGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+
+.categoryGroupLabel {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  width: 6.5rem;
+}
+
+/* The chip list must fill the remaining width next to the label and
+   wrap WITHIN itself — without flex:1/min-width:0 here, the browser
+   can instead wrap the whole .multiSelect block onto its own line
+   inside .categoryGroup, which puts every wrapped chip row flush left
+   under the group label rather than indented under the first row. */
+.categoryGroup > .multiSelect {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.emptyHint {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  background: transparent;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.chipActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.toggleField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.toggleGroup {
+  display: flex;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--hairline-strong);
+  transition: background var(--duration-base) var(--ease-standard);
+  flex-shrink: 0;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+  transition: transform var(--duration-base) var(--ease-standard);
+}
+
+.switchOn {
+  background: var(--ink);
+}
+
+.switchOn::after {
+  transform: translateX(16px);
+}
+
+.toggleLabel {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.checkboxInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.resultCount {
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+}
+
+.resultCount strong {
+  color: var(--ink);
+  font-weight: var(--font-weight-semibold);
+}

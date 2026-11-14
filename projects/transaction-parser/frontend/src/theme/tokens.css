@@ -1,0 +1,209 @@
+/*
+  Design tokens — four dark themes (Gruvbox, Tokyo Night, Nord, Pennant),
+  no light mode. The app always renders dark; `data-theme` on <html>
+  selects which palette's values populate the token layer below. Every
+  token a component reads (--ink, --paper, --series-1, etc.) is
+  redefined per theme here, so swapping [data-theme] is the only thing
+  a component or page ever needs to do to retheme itself — nothing
+  hardcodes a theme's hex value outside this file.
+*/
+
+:root {
+  /* --- Typography --- */
+  --font-sans: 'Montserrat', -apple-system, 'Segoe UI', sans-serif;
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+
+  --tracking-wide: 0.08em;
+  --tracking-wider: 0.14em;
+
+  --fs-display: clamp(2.5rem, 2rem + 2vw, 3.75rem);
+  --fs-h1: 1.5rem;
+  --fs-h2: 1.125rem;
+  --fs-body: 0.9375rem;
+  --fs-small: 0.8125rem;
+  --fs-micro: 0.6875rem;
+
+  /* --- Spacing scale --- */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+
+  /* --- Radii --- */
+  --radius-tile: 14px;
+  --radius-control: 6px;
+
+  /* --- Layout --- */
+  --content-max-width: 1200px;
+  --sidebar-width: 216px;
+  --sidebar-width-collapsed: 72px;
+
+  /* --- Motion --- */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}
+
+/* ===========================================================================
+   Gruvbox (dark, medium contrast) — default theme.
+   Source hues: github.com/morhetz/gruvbox
+   =========================================================================== */
+:root,
+:root[data-theme='gruvbox'] {
+  --ink: #ebdbb2;
+  --ink-soft: #bdae93;
+  --ink-faint: #a89984;
+  --paper: #1d2021;
+  --paper-sunk: #282828;
+  --hairline: #3c3836;
+  --hairline-strong: #504945;
+
+  --tile-bg: #282828;
+  --tile-bg-raised: #3c3836;
+  --tile-fg: #fbf1c7;
+  --tile-fg-soft: #d5c4a1;
+
+  --accent-negative: #fb4934;
+  --accent-positive: #b8bb26;
+  --accent-focus: #fe8019;
+
+  --series-1: #83a598;
+  --series-2: #fe8019;
+  --series-3: #b8bb26;
+  --series-4: #fabd2f;
+  --series-5: #d3869b;
+  --series-6: #8ec07c;
+  --series-7: #d65d0e;
+  --series-8: #fb4934;
+  --series-other: #a89984;
+
+  --chart-grid: var(--hairline);
+  --chart-axis: var(--hairline-strong);
+  --chart-tooltip-bg: var(--tile-bg-raised);
+  --chart-tooltip-fg: var(--tile-fg);
+}
+
+/* ===========================================================================
+   Tokyo Night (dark) — source hues: github.com/enkia/tokyo-night-vscode-theme
+   =========================================================================== */
+:root[data-theme='tokyo-night'] {
+  --ink: #c0caf5;
+  --ink-soft: #9aa5ce;
+  --ink-faint: #737aa2;
+  --paper: #1a1b26;
+  --paper-sunk: #16161e;
+  --hairline: #292e42;
+  --hairline-strong: #3b4261;
+
+  --tile-bg: #1f2335;
+  --tile-bg-raised: #292e42;
+  --tile-fg: #c0caf5;
+  --tile-fg-soft: #9aa5ce;
+
+  --accent-negative: #f7768e;
+  --accent-positive: #9ece6a;
+  --accent-focus: #7aa2f7;
+
+  --series-1: #7aa2f7;
+  --series-2: #ff9e64;
+  --series-3: #9ece6a;
+  --series-4: #e0af68;
+  --series-5: #bb9af7;
+  --series-6: #73daca;
+  --series-7: #7dcfff;
+  --series-8: #f7768e;
+  --series-other: #565f89;
+
+  --chart-grid: var(--hairline);
+  --chart-axis: var(--hairline-strong);
+  --chart-tooltip-bg: var(--tile-bg-raised);
+  --chart-tooltip-fg: var(--tile-fg);
+}
+
+/* ===========================================================================
+   Pennant (dark) — source hues: the app logo. Navy-to-green duotone for
+   every surface, gold reserved strictly for accents, white text throughout.
+   =========================================================================== */
+:root[data-theme='pennant'] {
+  --ink: #ffffff;
+  --ink-soft: #ffffff;
+  --ink-faint: #c9d4dc;
+  --paper: #0f4d40;
+  --paper-sunk: #09302a;
+  --hairline: #1c6553;
+  --hairline-strong: #2d7a65;
+
+  --tile-bg: #0d3b66;
+  --tile-bg-raised: #134a7d;
+  --tile-fg: #ffffff;
+  --tile-fg-soft: #ffffff;
+
+  --accent-negative: #e63946;
+  --accent-positive: #4caf50;
+  --accent-focus: #f4d35e;
+
+  --series-1: #f4d35e;
+  --series-2: #134a7d;
+  --series-3: #2d7a65;
+  --series-4: #f9e79f;
+  --series-5: #5e81ac;
+  --series-6: #136350;
+  --series-7: #09302a;
+  --series-8: #e63946;
+  --series-other: #c9d4dc;
+
+  --chart-grid: var(--hairline);
+  --chart-axis: var(--hairline-strong);
+  --chart-tooltip-bg: var(--tile-bg-raised);
+  --chart-tooltip-fg: var(--tile-fg);
+}
+
+/* ===========================================================================
+   Nord (dark) — source hues: nordtheme.com
+   =========================================================================== */
+:root[data-theme='nord'] {
+  --ink: #eceff4;
+  --ink-soft: #d8dee9;
+  --ink-faint: #8b95a7;
+  --paper: #2e3440;
+  --paper-sunk: #272c36;
+  --hairline: #3b4252;
+  --hairline-strong: #4c566a;
+
+  --tile-bg: #3b4252;
+  --tile-bg-raised: #434c5e;
+  --tile-fg: #eceff4;
+  --tile-fg-soft: #d8dee9;
+
+  --accent-negative: #bf616a;
+  --accent-positive: #a3be8c;
+  --accent-focus: #88c0d0;
+
+  --series-1: #88c0d0;
+  --series-2: #d08770;
+  --series-3: #a3be8c;
+  --series-4: #ebcb8b;
+  --series-5: #b48ead;
+  --series-6: #8fbcbb;
+  --series-7: #5e81ac;
+  --series-8: #bf616a;
+  --series-other: #4c566a;
+
+  --chart-grid: var(--hairline);
+  --chart-axis: var(--hairline-strong);
+  --chart-tooltip-bg: var(--tile-bg-raised);
+  --chart-tooltip-fg: var(--tile-fg);
+}

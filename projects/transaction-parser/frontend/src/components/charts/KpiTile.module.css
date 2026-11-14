@@ -1,0 +1,39 @@
+.tile {
+  background: var(--tile-bg);
+  color: var(--tile-fg);
+  border-radius: var(--radius-tile);
+  padding: var(--sp-5) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 9.5rem;
+  justify-content: space-between;
+}
+
+.label {
+  composes: label-caps from global;
+  color: var(--tile-fg-soft);
+}
+
+.value {
+  font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.5rem);
+  font-weight: var(--font-weight-light);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+/* Per the "text in graphs/content should be the theme's light color or
+   white" rule, tone no longer recolors the value text itself — it's
+   always --tile-fg. Positive/negative is still conveyed via the sign
+   already present in the formatted amount. */
+.valuePositive,
+.valueNegative {
+  color: var(--tile-fg);
+}
+
+.sub {
+  font-size: var(--fs-small);
+  color: var(--tile-fg-soft);
+}

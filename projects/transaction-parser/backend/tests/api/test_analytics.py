@@ -1,0 +1,166 @@
+"""API tests for /analytics/summary, /distribution, /timeseries."""
+from __future__ import annotations
+
+from datetime import date
+from decimal import Decimal
+
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.models import Account, Category, Institution, IngestBatch, Transaction
+
+
+def _make_batch(db_session: Session, institution_code: str = "amex"):
+    institution = db_session.query(Institution).filter(Institution.code == institution_code).one()
+    account = Account(institution_id=institution.id, account_hint="77777", display_name="Test Account", kind="card")
+    db_session.add(account)
+    db_session.flush()
+    batch = IngestBatch(
+        filename="test.csv",
+        institution_id=institution.id,
+        account_id=account.id,
+        file_sha256="2" * 64,
+        row_count=0,
+        status="completed",
+    )
+    db_session.add(batch)
+    db_session.flush()
+    return account, batch
+
+
+def _make_txn(
+    db_session: Session,
+    account: Account,
+    batch,
+    *,
+    txn_date: date,
+    amount: str,
+    description: str,
+    category: Category | None,
+    category_source: str = "default",
+    content_hash_suffix: str = "a",
+) -> Transaction:
+    txn = Transaction(
+        account_id=account.id,
+        batch_id=batch.id,
+        txn_date=txn_date,
+        posted_date=txn_date,
+        description=description,
+        normalized_description=description.upper(),
+        amount=Decimal(amount),
+        bank_category=None,
+        category_id=category.id if category else None,
+        category_source=category_source,
+        content_hash=(content_hash_suffix * 64)[:64],
+        occurrence_index=0,
+        raw_row={"raw": description},
+    )
+    db_session.add(txn)
+    db_session.flush()
+    return txn
+
+
+def _seeded_category(db_session: Session, name: str) -> Category:
+    return db_session.query(Category).filter(Category.name == name).one()
+
+
+def _seed_standard_set(db_session: Session):
+    account, batch = _make_batch(db_session)
+    food = _seeded_category(db_session, "FOOD")
+    transfers = _seeded_category(db_session, "Payments & Transfers")
+
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 9, 10), amount="-20.00",
+        description="CHIPOTLE", category=food, category_source="keyword", content_hash_suffix="1",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 10), amount="-30.00",
+        description="TACOS", category=food, category_source="keyword", content_hash_suffix="2",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 15), amount="1000.00",
+        description="PAYROLL DEPOSIT", category=None, category_source="default", content_hash_suffix="3",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 20), amount="-500.00",
+        description="AUTOPAY PAYMENT THANK YOU", category=transfers, category_source="transfer",
+        content_hash_suffix="4",
+    )
+    db_session.commit()
+    return account, batch, food, transfers
+
+
+def test_summary_excludes_transfers_by_default(client: TestClient, db_session: Session) -> None:
+    _seed_standard_set(db_session)
+
+    resp = client.get("/api/v1/analytics/summary")
+    assert resp.status_code == 200
+    body = resp.json()
+    # Food (50) only; transfer excluded.
+    assert Decimal(body["total_spent"]) == Decimal("50.00")
+    assert Decimal(body["total_in"]) == Decimal("1000.00")
+    assert Decimal(body["net"]) == Decimal("950.00")
+    assert body["transaction_count"] == 3  # 2 food + 1 payroll, transfer excluded
+
+    included_resp = client.get("/api/v1/analytics/summary", params={"include_excluded": "true"})
+    included_body = included_resp.json()
+    assert Decimal(included_body["total_spent"]) == Decimal("550.00")
+    assert included_body["transaction_count"] == 4
+
+
+def test_distribution_no_transfers_by_default(client: TestClient, db_session: Session) -> None:
+    _seed_standard_set(db_session)
+
+    resp = client.get("/api/v1/analytics/distribution")
+    assert resp.status_code == 200
+    body = resp.json()
+    names = {e["name"] for e in body["entries"]}
+    assert "Payments & Transfers" not in names
+    assert "FOOD" in names
+    food_entry = next(e for e in body["entries"] if e["name"] == "FOOD")
+    assert Decimal(food_entry["amount"]) == Decimal("50.00")
+
+    included_resp = client.get("/api/v1/analytics/distribution", params={"include_excluded": "true"})
+    included_names = {e["name"] for e in included_resp.json()["entries"]}
+    assert "Payments & Transfers" in included_names
+
+
+def test_timeseries_shape(client: TestClient, db_session: Session) -> None:
+    _seed_standard_set(db_session)
+
+    resp = client.get("/api/v1/analytics/timeseries", params={"granularity": "month"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["granularity"] == "month"
+    assert "2026-09" in body["periods"]
+    assert "2026-10" in body["periods"]
+
+    food_series = next(s for s in body["series"] if s["name"] == "FOOD")
+    assert len(food_series["values"]) == len(body["periods"])
+    by_period = {v["period"]: Decimal(v["value"]) for v in food_series["values"]}
+    assert by_period["2026-09"] == Decimal("-20.00")
+    assert by_period["2026-10"] == Decimal("-30.00")
+
+    # Transfers excluded by default -> not present as a series at all.
+    assert not any(s["name"] == "Payments & Transfers" for s in body["series"])
+
+
+def test_timeseries_week_granularity_runs(client: TestClient, db_session: Session) -> None:
+    _seed_standard_set(db_session)
+    resp = client.get("/api/v1/analytics/timeseries", params={"granularity": "week"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["granularity"] == "week"
+    assert len(body["periods"]) > 0
+
+
+def test_analytics_date_range_filter(client: TestClient, db_session: Session) -> None:
+    _seed_standard_set(db_session)
+
+    resp = client.get(
+        "/api/v1/analytics/summary",
+        params={"date_from": "2026-10-01", "date_to": "2026-10-31"},
+    )
+    body = resp.json()
+    assert Decimal(body["total_spent"]) == Decimal("30.00")
+    assert body["transaction_count"] == 2

@@ -1,0 +1,52 @@
+.zone {
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius-control);
+  padding: var(--sp-8) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  text-align: center;
+  transition: border-color var(--duration-base) var(--ease-standard),
+    background-color var(--duration-base) var(--ease-standard);
+}
+
+.zoneActive {
+  border-color: var(--ink);
+  background: var(--paper-sunk);
+}
+
+.prompt {
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-light);
+}
+
+.hint {
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+}
+
+.browseButton {
+  margin-top: var(--sp-2);
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  padding: var(--sp-2) var(--sp-5);
+  border-radius: var(--radius-control);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.browseButton:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}

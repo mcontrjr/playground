@@ -1,0 +1,25 @@
+.wrap {
+  width: 100%;
+}
+
+.axisLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 0 var(--sp-2) var(--sp-1);
+}
+
+.axisLabelLeft {
+  color: var(--series-1);
+}
+
+.axisLabelRight {
+  color: var(--ink);
+}
+
+.wrap :global(.recharts-bar-rectangle),
+.wrap :global(.recharts-line-curve) {
+  transition: opacity var(--duration-fast) var(--ease-standard), stroke-opacity var(--duration-fast) var(--ease-standard);
+}

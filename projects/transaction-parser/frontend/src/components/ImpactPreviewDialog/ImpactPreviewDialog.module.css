@@ -1,0 +1,192 @@
+.intro {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-5);
+}
+
+.keyword {
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+}
+
+.affectedCount {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-4);
+  background: var(--paper-sunk);
+  border-radius: var(--radius-control);
+}
+
+.affectedNumber {
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-light);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.affectedLabel {
+  composes: label-caps from global;
+}
+
+.sectionLabel {
+  composes: label-caps from global;
+  display: block;
+  margin-bottom: var(--sp-3);
+}
+
+.breakdownTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--sp-5);
+  font-size: var(--fs-small);
+}
+
+.breakdownTable th {
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink-soft);
+  padding: var(--sp-2) var(--sp-2);
+  border-bottom: 1px solid var(--hairline-strong);
+}
+
+.breakdownTable td {
+  padding: var(--sp-2) var(--sp-2);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.arrow {
+  color: var(--ink-faint);
+  padding: 0 var(--sp-2);
+}
+
+.countCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.sampleList {
+  max-height: 14rem;
+  overflow-y: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  margin-bottom: var(--sp-5);
+}
+
+.sampleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--hairline);
+  font-size: var(--fs-small);
+}
+
+.sampleRow:last-child {
+  border-bottom: none;
+}
+
+.sampleDescription {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.sampleCategoryChange {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sampleMore {
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+}
+
+.applyRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+  cursor: pointer;
+}
+
+.applyCheckbox {
+  margin-top: 3px;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
+}
+
+.applyText {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+
+.applyTextStrong {
+  color: var(--ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.errorBanner {
+  border: 1px solid var(--accent-negative);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--accent-negative);
+  font-size: var(--fs-small);
+  margin-bottom: var(--sp-5);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}
+
+.cancelButton {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.confirmButton {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.confirmButton:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.loading {
+  padding: var(--sp-6) 0;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+}
+
+.noChange {
+  padding: var(--sp-5) 0;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: var(--fs-body);
+}
