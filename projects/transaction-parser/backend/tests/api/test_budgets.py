@@ -106,7 +106,6 @@ def test_summary_computes_actual_from_linked_category_transactions(
     assert resp.status_code == 200
     body = resp.json()
     assert body["month"] == "2026-11"
-    assert body["income"] == "3000.00"
     assert len(body["expenses"]) == 1
     expense = body["expenses"][0]
     assert expense["name"] == "GROCERIES"
@@ -150,3 +149,51 @@ def test_delete_expense(client: TestClient, db_session: Session) -> None:
 def test_create_expense_rejects_unknown_category(client: TestClient) -> None:
     resp = client.post("/api/v1/budget?month=2026-11", json={"name": "Bogus", "category_ids": [999999]})
     assert resp.status_code == 404
+
+
+def test_create_fixed_expense_forces_goal_amount_null(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/budget?month=2026-11",
+        json={"name": "Rent", "goal_amount": "2000.00", "is_fixed": True, "category_ids": []},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["is_fixed"] is True
+    assert body["goal_amount"] is None
+
+
+def test_patch_expense_marking_fixed_clears_existing_goal(client: TestClient) -> None:
+    create_resp = client.post(
+        "/api/v1/budget?month=2026-11",
+        json={"name": "Rent", "goal_amount": "2000.00", "category_ids": []},
+    )
+    expense_id = create_resp.json()["id"]
+
+    patch_resp = client.patch(f"/api/v1/budget/{expense_id}?month=2026-11", json={"is_fixed": True})
+    assert patch_resp.status_code == 200
+    body = patch_resp.json()
+    assert body["is_fixed"] is True
+    assert body["goal_amount"] is None
+
+
+def test_summary_total_fixed_sums_only_fixed_expenses(client: TestClient, db_session: Session) -> None:
+    account, batch = _make_batch(db_session)
+    rent_category = _seeded_category(db_session, "GROCERIES")  # reuse a seeded category as the linked one
+    _make_txn(db_session, account, batch, description="LANDLORD LLC", category=rent_category, amount="-1500.00", content_hash_suffix="9")
+    db_session.commit()
+
+    fixed_resp = client.post(
+        "/api/v1/budget?month=2026-11",
+        json={"name": "Rent", "is_fixed": True, "category_ids": [rent_category.id]},
+    )
+    assert fixed_resp.status_code == 201
+
+    goal_resp = client.post(
+        "/api/v1/budget?month=2026-11",
+        json={"name": "Groceries goal", "goal_amount": "400.00", "category_ids": []},
+    )
+    assert goal_resp.status_code == 201
+
+    summary = client.get("/api/v1/budget/summary?month=2026-11").json()
+    assert summary["total_fixed"] == "1500.00"
+    assert "income" not in summary

@@ -15,6 +15,7 @@ browse the result through an analytics dashboard — all running locally via
 - [Idempotency](#idempotency)
 - [Supported bank formats](#supported-bank-formats)
 - [Testing](#testing)
+- [Backing up and restoring the database](#backing-up-and-restoring-the-database)
 - [Troubleshooting](#troubleshooting)
 
 ## Getting started
@@ -199,6 +200,32 @@ npm run e2e:report   # opens the last HTML report
 The HTML report lands in `frontend/playwright-report/` (and raw results in
 `frontend/test-results/`). Playwright is configured to use the system Chromium
 binary rather than a managed download — see `frontend/playwright.config.ts`.
+
+## Backing up and restoring the database
+
+Snapshots are plain `pg_dump` custom-format files, taken while the stack is running.
+They contain real transaction data, so they're gitignored (`backups/`) — never commit
+one.
+
+**Create a snapshot:**
+
+```bash
+mkdir -p backups
+TS=$(date +%Y%m%d_%H%M%S)
+docker compose exec -T db pg_dump -U postgres -d transaction_parser -F c -f /tmp/snapshot.dump
+docker compose cp db:/tmp/snapshot.dump "backups/transaction_parser_${TS}.dump"
+```
+
+**Restore a snapshot** (drops and recreates the target database first):
+
+```bash
+docker compose cp backups/transaction_parser_<TS>.dump db:/tmp/restore.dump
+docker compose exec -T db dropdb -U postgres transaction_parser
+docker compose exec -T db createdb -U postgres transaction_parser
+docker compose exec -T db pg_restore -U postgres -d transaction_parser /tmp/restore.dump
+```
+
+Adjust `-U`/`-d` if you've changed `POSTGRES_USER`/`POSTGRES_DB` in `.env`.
 
 ## Troubleshooting
 

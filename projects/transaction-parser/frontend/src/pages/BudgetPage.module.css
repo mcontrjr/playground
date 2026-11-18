@@ -75,6 +75,56 @@
   color: var(--accent-negative);
 }
 
+.summaryValuePositive {
+  font-size: var(--fs-h1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--accent-positive);
+}
+
+.summaryValueButton {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-size: var(--fs-h1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--tile-fg);
+  cursor: pointer;
+}
+
+.summaryValueButton:hover {
+  text-decoration: underline;
+}
+
+.summaryValueButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.summaryInput {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--tile-fg-soft);
+  padding: 0;
+  font-size: var(--fs-h1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--tile-fg);
+  width: 100%;
+}
+
+.summaryInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--tile-fg);
+}
+
+.fixedToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  composes: label-caps from global;
+  cursor: pointer;
+}
+
 .summaryHint {
   font-size: var(--fs-small);
   opacity: 0.7;

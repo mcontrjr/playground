@@ -26,7 +26,8 @@ class AuditEvent(Base):
     event_type: Mapped[str] = mapped_column(String(40), nullable=False)
     """One of: category.created|category.renamed|category.deleted|
     category.bucket_changed|keyword.added|keyword.removed|
-    transaction.recategorized|bucket.created|bucket.renamed|bucket.deleted."""
+    transaction.recategorized|transaction.bulk_recategorized|
+    bucket.created|bucket.renamed|bucket.deleted."""
 
     entity_type: Mapped[str] = mapped_column(String(20), nullable=False)
     entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

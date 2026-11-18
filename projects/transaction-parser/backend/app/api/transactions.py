@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Account, Category, Transaction
 from app.schemas.transactions import (
+    BulkRecategorizeRequest,
+    BulkRecategorizeResponse,
     MonthOption,
     SortOrder,
     TransactionListResponse,
@@ -57,11 +59,11 @@ def _transaction_to_read(txn: Transaction) -> TransactionRead:
     response_model=TransactionListResponse,
     summary="List and filter transactions",
     description=(
-        "Filterable, sortable, paginated transaction listing. By default "
-        "(`include_excluded=false`) transactions whose category is marked "
-        "`excluded_from_analytics` (e.g. 'Payments & Transfers', 'Income') "
-        "are left out, matching the analytics endpoints' default. Pass "
-        "`include_excluded=true` to see everything."
+        "Filterable, sortable, paginated transaction listing. 'Income' "
+        "transactions are always included. By default (`include_excluded=false`) "
+        "transactions whose category is marked `excluded_from_analytics` (e.g. "
+        "'Payments & Transfers') are left out, matching the analytics endpoints' "
+        "default. Pass `include_excluded=true` to include those as well."
     ),
 )
 def list_transactions(
@@ -75,8 +77,8 @@ def list_transactions(
         False,
         description=(
             "When false (default), excludes transactions whose category has "
-            "excluded_from_analytics=true (transfers, income). When true, "
-            "includes everything."
+            "excluded_from_analytics=true (transfers). When true, includes "
+            "those too. 'Income' is always included regardless of this flag."
         ),
     ),
     sort: TransactionSortField = Query("txn_date", description="Field to sort by."),
@@ -101,7 +103,10 @@ def list_transactions(
     if recurring_only:
         stmt = stmt.where(Transaction.is_recurring.is_(True))
     if not include_excluded:
-        stmt = stmt.where(func.coalesce(Category.excluded_from_analytics, False).is_(False))
+        stmt = stmt.where(
+            func.coalesce(Category.excluded_from_analytics, False).is_(False)
+            | (Category.name == "Income")
+        )
 
     count_stmt = select(func.count()).select_from(stmt.with_only_columns(Transaction.id).subquery())
     total = db.execute(count_stmt).scalar_one()
@@ -147,6 +152,53 @@ def list_months(db: Session = Depends(get_db)) -> list[MonthOption]:
         months.append(MonthOption(key=key, label=label, **{"from": first_day}, to=last_day))
 
     return months
+
+
+@router.post(
+    "/bulk-recategorize",
+    response_model=BulkRecategorizeResponse,
+    summary="Recategorize many transactions at once",
+    description=(
+        "Sets category_id and category_source='bulk' on every given "
+        "transaction id in a single statement, and records exactly one "
+        "audit event for the whole operation (not one per row). 'bulk' "
+        "is sticky against keyword apply_to_existing operations, same "
+        "as a manual edit."
+    ),
+)
+def bulk_recategorize(
+    payload: BulkRecategorizeRequest,
+    db: Session = Depends(get_db),
+) -> BulkRecategorizeResponse:
+    category = db.get(Category, payload.category_id)
+    if category is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Category {payload.category_id} not found",
+        )
+
+    result = db.execute(
+        Transaction.__table__.update()
+        .where(Transaction.id.in_(payload.transaction_ids))
+        .values(category_id=category.id, category_source="bulk")
+    )
+    affected_count = result.rowcount
+
+    record_event(
+        db,
+        event_type="transaction.bulk_recategorized",
+        entity_type="transaction",
+        entity_id=None,
+        description=f"Bulk recategorized {affected_count} transaction(s) to {category.name!r}.",
+        payload={"to_category": category.name, "transaction_ids": payload.transaction_ids},
+        affected_count=affected_count,
+    )
+
+    db.commit()
+    bump_generation()
+    return BulkRecategorizeResponse(
+        affected_count=affected_count, category_id=category.id, category_name=category.name
+    )
 
 
 @router.patch(

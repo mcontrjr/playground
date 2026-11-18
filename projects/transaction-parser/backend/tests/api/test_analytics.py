@@ -125,6 +125,50 @@ def test_distribution_no_transfers_by_default(client: TestClient, db_session: Se
     assert "Payments & Transfers" in included_names
 
 
+def test_income_category_always_included(client: TestClient, db_session: Session) -> None:
+    """Unlike "Payments & Transfers", rows categorized as "Income" show up
+    in every aggregate by default — only transfers are gated behind
+    include_excluded."""
+    account, batch = _make_batch(db_session)
+    income = _seeded_category(db_session, "Income")
+    transfers = _seeded_category(db_session, "Payments & Transfers")
+    food = _seeded_category(db_session, "FOOD")
+
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 10), amount="-30.00",
+        description="TACOS", category=food, category_source="keyword", content_hash_suffix="1",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 15), amount="1000.00",
+        description="PAYROLL", category=income, category_source="keyword", content_hash_suffix="2",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 20), amount="-500.00",
+        description="AUTOPAY PAYMENT THANK YOU", category=transfers, category_source="transfer",
+        content_hash_suffix="3",
+    )
+    db_session.commit()
+
+    # date_from/date_to pin this call to its own cache key — plain
+    # "/analytics/summary" with no params collides with the identical
+    # no-param call in test_summary_excludes_transfers_by_default (the
+    # in-process aggregate cache keys on (generation, *args), and the
+    # per-test TRUNCATE/reseed fixture doesn't bump the generation).
+    summary_resp = client.get(
+        "/api/v1/analytics/summary", params={"date_from": "2026-10-01", "date_to": "2026-10-31"}
+    )
+    summary_body = summary_resp.json()
+    assert Decimal(summary_body["total_in"]) == Decimal("1000.00")
+    assert summary_body["transaction_count"] == 2  # food + income; transfer excluded
+
+    dist_resp = client.get(
+        "/api/v1/analytics/distribution", params={"date_from": "2026-10-01", "date_to": "2026-10-31"}
+    )
+    dist_names = {e["name"] for e in dist_resp.json()["entries"]}
+    assert "Income" not in dist_names  # distribution sums outflows only
+    assert "Payments & Transfers" not in dist_names
+
+
 def test_timeseries_shape(client: TestClient, db_session: Session) -> None:
     _seed_standard_set(db_session)
 

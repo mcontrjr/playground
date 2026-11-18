@@ -1,9 +1,10 @@
 """Aggregated analytics endpoints: summary KPIs, timeseries, distribution.
 
 All three share the same filter semantics as the transactions API:
-``include_excluded`` (default false) drops rows whose category is
-flagged ``excluded_from_analytics`` (transfers, income), and all
-aggregation happens in SQL via ``app.services.analytics_service``.
+"Income" categorized rows are always included, and ``include_excluded``
+(default false) drops rows whose category is flagged
+``excluded_from_analytics`` (transfers). All aggregation happens in
+SQL via ``app.services.analytics_service``.
 """
 from __future__ import annotations
 

@@ -120,7 +120,7 @@ export interface ImpactPreviewResponse {
 // Transactions
 // ---------------------------------------------------------------------------
 
-export type CategorySource = 'keyword' | 'manual' | 'transfer' | 'default'
+export type CategorySource = 'keyword' | 'manual' | 'transfer' | 'default' | 'bulk'
 export type Recurrence = 'monthly' | 'yearly'
 
 export interface Transaction {
@@ -185,6 +185,17 @@ export interface MonthOption {
   label: string
   from: string
   to: string
+}
+
+export interface BulkRecategorizeRequest {
+  transaction_ids: number[]
+  category_id: number
+}
+
+export interface BulkRecategorizeResponse {
+  affected_count: number
+  category_id: number
+  category_name: string
 }
 
 // ---------------------------------------------------------------------------
@@ -368,6 +379,9 @@ export interface BudgetExpense {
   id: number
   name: string
   goal_amount: string | null
+  /** A known recurring amount (e.g. Rent) rather than a goal to hit —
+   * goal_amount is always null when this is true. */
+  is_fixed: boolean
   sort_order: number
   categories: BudgetCategoryRef[]
   actual_amount: string
@@ -376,12 +390,14 @@ export interface BudgetExpense {
 export interface BudgetExpenseCreate {
   name: string
   goal_amount?: string | null
+  is_fixed?: boolean
   category_ids: number[]
 }
 
 export interface BudgetExpenseUpdate {
   name?: string
   goal_amount?: string | null
+  is_fixed?: boolean
   category_ids?: number[]
   sort_order?: number
 }
@@ -393,10 +409,19 @@ export interface BudgetExpenseDeleteResult {
 export interface BudgetSummary {
   /** "YYYY-MM" */
   month: string
-  income: string
   total_goal: string
   total_actual: string
+  /** Sum of actual_amount across expenses marked is_fixed=true. */
+  total_fixed: string
   expenses: BudgetExpense[]
+}
+
+/** Persisted under preference key "budget:monthly_total" — a single,
+ * un-month-scoped value that carries forward across months until the
+ * user changes it (pay periods differ per income source, so this is
+ * user-set rather than auto-imported from an Income category). */
+export interface MonthlyBudgetTotal {
+  amount: string
 }
 
 // ---------------------------------------------------------------------------

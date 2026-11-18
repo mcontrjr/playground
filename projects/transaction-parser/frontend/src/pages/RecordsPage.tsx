@@ -7,6 +7,7 @@ import type { MonthOption, SortOrder, TransactionSortField } from '../api/types'
 import { AddKeywordDialog } from '../components/CategoryPicker/AddKeywordDialog'
 import { NewCategoryDialog } from '../components/CategoryPicker/NewCategoryDialog'
 import type { RecategorizedInfo } from '../components/CategoryPicker/CategoryPicker'
+import { BulkSortDialog } from '../components/BulkSortDialog/BulkSortDialog'
 import { FilterBar, initialFilterState, type RecordsFilterState } from '../components/FilterBar/FilterBar'
 import { SearchInput } from '../components/FilterBar/SearchInput'
 import { TransactionsTable } from '../components/TransactionsTable/TransactionsTable'
@@ -50,6 +51,8 @@ export function RecordsPage() {
   const [page, setPage] = useState(0)
   const [pendingKeyword, setPendingKeyword] = useState<PendingKeyword | null>(null)
   const [pendingNewCategory, setPendingNewCategory] = useState<PendingNewCategory | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [showBulkSort, setShowBulkSort] = useState(false)
   const { data: months } = useMonths()
   const patchTransaction = usePatchTransaction()
 
@@ -80,10 +83,14 @@ export function RecordsPage() {
   // Changing a filter re-queries the same scroll position — only the
   // page NUMBER resets (a stale offset against a newer, smaller result
   // set would otherwise paginate past the end), the viewport does not
-  // jump anywhere on its own.
+  // jump anywhere on its own. The row selection is cleared on every
+  // filter/sort/page change too — it's scoped to "whatever's on screen
+  // right now," not meant to survive the underlying result set shifting
+  // out from under it.
   const handleFilterChange = (next: RecordsFilterState) => {
     setFilters(next)
     setPage(0)
+    setSelectedIds(new Set())
   }
 
   const handleSortChange = (field: TransactionSortField) => {
@@ -94,13 +101,45 @@ export function RecordsPage() {
       setOrder('desc')
     }
     setPage(0)
+    setSelectedIds(new Set())
+  }
+
+  const handlePageChange = (next: number) => {
+    setPage(next)
+    setSelectedIds(new Set())
+  }
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    const pageIds = (data?.items ?? []).map((t) => t.id)
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id))
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (allSelected) {
+        for (const id of pageIds) next.delete(id)
+      } else {
+        for (const id of pageIds) next.add(id)
+      }
+      return next
+    })
   }
 
   const total = data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const handleRecategorized = (transactionId: number, description: string, info: RecategorizedInfo) => {
-    if (info.isSystem) return
+    // "Uncategorized" is the only target where a keyword prompt makes
+    // no sense — every other category (including system ones like
+    // "Payments & Transfers") should still offer to learn a keyword.
+    if (info.categoryName === 'Uncategorized') return
     setPendingKeyword({
       transactionId,
       description,
@@ -143,13 +182,18 @@ export function RecordsPage() {
         onSortChange={handleSortChange}
         page={page}
         pageCount={pageCount}
-        onPageChange={setPage}
+        onPageChange={handlePageChange}
         total={total}
         pageSize={PAGE_SIZE}
         onRecategorized={handleRecategorized}
         onRequestNewCategory={(transactionId, description) =>
           setPendingNewCategory({ transactionId, description })
         }
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
+        onToggleSelectAll={toggleSelectAll}
+        onBulkSort={() => setShowBulkSort(true)}
+        onClearSelection={() => setSelectedIds(new Set())}
       />
 
       {pendingKeyword && (
@@ -158,6 +202,17 @@ export function RecordsPage() {
           categoryName={pendingKeyword.categoryName}
           description={pendingKeyword.description}
           onDone={() => setPendingKeyword(null)}
+        />
+      )}
+
+      {showBulkSort && (
+        <BulkSortDialog
+          transactionIds={[...selectedIds]}
+          onClose={() => setShowBulkSort(false)}
+          onDone={() => {
+            setShowBulkSort(false)
+            setSelectedIds(new Set())
+          }}
         />
       )}
 

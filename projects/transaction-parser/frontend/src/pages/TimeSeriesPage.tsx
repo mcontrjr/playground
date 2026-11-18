@@ -40,7 +40,7 @@ function timeseriesToPoints(data: TimeseriesResponse): DailyPoint[] {
   })
 }
 
-type ClickSource = 'bars' | 'running'
+type ClickSource = 'bars' | 'net' | 'running'
 
 export function TimeSeriesPage() {
   const [filters, setFilters] = usePreference<AnalyticsFilterState>('filters:time-series', DEFAULT_FILTERS)
@@ -68,10 +68,14 @@ export function TimeSeriesPage() {
     return monthlyDaily.data ? Number(monthlyDaily.data.month_total) : null
   }, [scope.isAll, points, monthlyDaily.data])
 
-  // Same-point click toggles the panel closed; clicking a different
-  // point swaps the panel to the new one without an extra click.
+  // Clicking the same point on the same chart toggles its panel closed;
+  // clicking any other point (same or different chart) opens that
+  // chart's panel instead, closing whichever one was open before —
+  // only one panel is ever open across all three charts.
   const handlePointClick = (source: ClickSource) => (dateKey: string) => {
-    setSelected((current) => (current?.dateKey === dateKey ? null : { dateKey, source }))
+    setSelected((current) =>
+      current?.dateKey === dateKey && current.source === source ? null : { dateKey, source },
+    )
   }
 
   const panelFilters = useMemo(() => {
@@ -127,31 +131,39 @@ export function TimeSeriesPage() {
           <>
             <CategoryBarsChart
               points={points}
-              selectedKey={selected?.dateKey ?? null}
+              selectedKey={selected?.source === 'bars' ? selected.dateKey : null}
               onPointClick={handlePointClick('bars')}
               granularity={scope.isAll ? 'month' : 'day'}
             />
+
+            {selected?.source === 'bars' && panelFilters && (
+              <RecordsPanel title={panelTitle} filters={panelFilters} onClose={() => setSelected(null)} />
+            )}
 
             <NetDayChart
               points={points}
-              selectedKey={selected?.dateKey ?? null}
-              onPointClick={handlePointClick('bars')}
+              selectedKey={selected?.source === 'net' ? selected.dateKey : null}
+              onPointClick={handlePointClick('net')}
               granularity={scope.isAll ? 'month' : 'day'}
             />
 
-            {selected && panelFilters && (
+            {selected?.source === 'net' && panelFilters && (
               <RecordsPanel title={panelTitle} filters={panelFilters} onClose={() => setSelected(null)} />
             )}
 
             <RunningTotalChart
               points={points}
-              selectedKey={selected?.dateKey ?? null}
+              selectedKey={selected?.source === 'running' ? selected.dateKey : null}
               onPointClick={handlePointClick('running')}
               granularity={scope.isAll ? 'month' : 'day'}
               monthBounds={
                 !scope.isAll && scope.month ? { from: scope.month.from, to: scope.month.to } : undefined
               }
             />
+
+            {selected?.source === 'running' && panelFilters && (
+              <RecordsPanel title={panelTitle} filters={panelFilters} onClose={() => setSelected(null)} />
+            )}
 
             {total != null && (
               <div className={styles.monthTotal}>

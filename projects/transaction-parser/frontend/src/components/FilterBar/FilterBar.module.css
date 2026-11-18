@@ -34,6 +34,45 @@
   composes: label-caps from global;
 }
 
+.fieldLabelRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+
+.groupActions {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.groupActionButton {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-micro);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.groupActionButton:hover {
+  color: var(--ink);
+}
+
+.clearAllButton {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.clearAllButton:hover {
+  color: var(--ink);
+}
+
 .select,
 .search {
   border: none;

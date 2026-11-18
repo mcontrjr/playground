@@ -40,3 +40,4 @@ blob-report/
 
 # --- Postgres / local data ---
 *.sqlite3
+backups/

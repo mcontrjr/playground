@@ -49,6 +49,15 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
   const { data: months } = useMonths()
 
   const hasCustomRange = !!filters.dateRange
+  const allMonthsSelected = (months ?? []).length > 0 && (months ?? []).every((m) => filters.monthKeys.includes(m.key))
+  const hasActiveFilters =
+    filters.accountIds.length > 0 ||
+    filters.categoryIds.length > 0 ||
+    filters.monthKeys.length > 0 ||
+    !!filters.dateRange ||
+    !!filters.search ||
+    filters.includeExcluded ||
+    filters.recurringOnly
 
   return (
     <div className={styles.bar}>
@@ -70,10 +79,45 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
         </div>
       </div>
 
+      {hasActiveFilters && (
+        <button
+          type="button"
+          className={styles.clearAllButton}
+          onClick={() => onChange(initialFilterState)}
+          data-testid="clear-all-filters"
+        >
+          Clear all filters
+        </button>
+      )}
+
       {/* Month, Account, then Category — stacked top-down. */}
       <div className={styles.chipGrid}>
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>Month</span>
+          <div className={styles.fieldLabelRow}>
+            <span className={styles.fieldLabel}>Month</span>
+            {!hasCustomRange && (months ?? []).length > 0 && (
+              <span className={styles.groupActions}>
+                {!allMonthsSelected && (
+                  <button
+                    type="button"
+                    className={styles.groupActionButton}
+                    onClick={() => onChange({ ...filters, monthKeys: (months ?? []).map((m) => m.key) })}
+                  >
+                    Select all
+                  </button>
+                )}
+                {filters.monthKeys.length > 0 && (
+                  <button
+                    type="button"
+                    className={styles.groupActionButton}
+                    onClick={() => onChange({ ...filters, monthKeys: [] })}
+                  >
+                    Clear
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
           <div className={styles.multiSelect} role="group" aria-label="Filter by month">
             {(months ?? []).map((m) => {
               const isActive = filters.monthKeys.includes(m.key)
@@ -119,6 +163,7 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
           onToggle={(key) =>
             onChange({ ...filters, accountIds: toggleInArray(filters.accountIds, Number(key)) })
           }
+          onSetSelection={(keys) => onChange({ ...filters, accountIds: keys.map(Number) })}
         />
 
         <GroupedCategoryFilter
@@ -127,6 +172,7 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
           onToggle={(categoryId) =>
             onChange({ ...filters, categoryIds: toggleInArray(filters.categoryIds, categoryId) })
           }
+          onSetSelection={(categoryIds) => onChange({ ...filters, categoryIds })}
         />
       </div>
 

@@ -30,8 +30,9 @@ def record_event(
 
     `event_type` is one of: category.created|category.renamed|
     category.deleted|category.bucket_changed|keyword.added|
-    keyword.removed|transaction.recategorized|bucket.created|
-    bucket.renamed|bucket.deleted.
+    keyword.removed|transaction.recategorized|
+    transaction.bulk_recategorized|bucket.created|bucket.renamed|
+    bucket.deleted.
     """
     event = AuditEvent(
         event_type=event_type,

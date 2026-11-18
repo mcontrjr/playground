@@ -7,6 +7,10 @@ interface GroupedCategoryFilterProps {
   categories: Category[]
   selected: number[]
   onToggle: (categoryId: number) => void
+  /** Replaces the whole category selection at once — backs the
+   * per-bucket "Select all"/"Clear" buttons and the page-level "Clear
+   * all categories" link. */
+  onSetSelection?: (categoryIds: number[]) => void
 }
 
 /** The category filter as pills grouped under their category's bucket
@@ -15,7 +19,7 @@ interface GroupedCategoryFilterProps {
  * color. Ordering comes from `useBuckets()` (name-sorted, OTHER
  * always exists as the fallback bucket) instead of a hardcoded list,
  * since buckets are now user-managed. */
-export function GroupedCategoryFilter({ categories, selected, onToggle }: GroupedCategoryFilterProps) {
+export function GroupedCategoryFilter({ categories, selected, onToggle, onSetSelection }: GroupedCategoryFilterProps) {
   const { data: buckets } = useBuckets()
 
   const grouped = useMemo(() => {
@@ -41,9 +45,31 @@ export function GroupedCategoryFilter({ categories, selected, onToggle }: Groupe
     )
   }
 
+  const allSelected = categories.length > 0 && categories.every((c) => selected.includes(c.id))
+
   return (
     <div className={styles.field}>
-      <span className={styles.fieldLabel}>Category</span>
+      <div className={styles.fieldLabelRow}>
+        <span className={styles.fieldLabel}>Category</span>
+        {onSetSelection && categories.length > 0 && (
+          <span className={styles.groupActions}>
+            {!allSelected && (
+              <button
+                type="button"
+                className={styles.groupActionButton}
+                onClick={() => onSetSelection(categories.map((c) => c.id))}
+              >
+                Select all
+              </button>
+            )}
+            {selected.length > 0 && (
+              <button type="button" className={styles.groupActionButton} onClick={() => onSetSelection([])}>
+                Clear
+              </button>
+            )}
+          </span>
+        )}
+      </div>
       <div className={styles.categoryGroups} role="group" aria-label="Filter by category">
         {grouped.map(({ group, items }) => (
           <div key={group} className={styles.categoryGroup}>

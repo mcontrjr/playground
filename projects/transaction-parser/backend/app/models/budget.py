@@ -10,7 +10,7 @@ independent of the linked categories' sum.
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Numeric, String, Table, Column, Integer
+from sqlalchemy import Boolean, ForeignKey, Numeric, String, Table, Column, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -38,6 +38,10 @@ class BudgetExpense(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     goal_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    is_fixed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    """A fixed monthly expense (e.g. Rent) has a known recurring amount
+    rather than a goal to hit — goal_amount is always null when this is
+    true (enforced in the API layer, not a DB constraint)."""
     sort_order: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
 
     categories: Mapped[list["Category"]] = relationship(

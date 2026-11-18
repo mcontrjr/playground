@@ -129,11 +129,13 @@ def preview_add_keyword(
     """Candidate transactions that would change category if `keyword`
     were added to `category_id`, under full categorizer precedence.
 
-    Only non-manual transactions are candidates (manual rows are
-    sticky and never considered). A transaction only appears in the
-    result if the hypothetical categorizer's verdict differs from its
-    *current* category_id — i.e. the new keyword actually wins against
-    whatever else would otherwise match it.
+    Only non-sticky transactions are candidates (manual and bulk rows
+    are sticky and never considered — both represent a deliberate user
+    choice of category, same as a single manual edit). A transaction
+    only appears in the result if the hypothetical categorizer's
+    verdict differs from its *current* category_id — i.e. the new
+    keyword actually wins against whatever else would otherwise match
+    it.
     """
     keyword_upper = keyword.upper().strip()
     snapshot = _load_snapshot(db)
@@ -144,7 +146,7 @@ def preview_add_keyword(
     candidates = (
         db.execute(
             select(Transaction)
-            .where(Transaction.category_source != "manual")
+            .where(Transaction.category_source.not_in(["manual", "bulk"]))
             .where(Transaction.normalized_description.like(f"%{keyword_upper}%"))
         )
         .scalars()
@@ -169,7 +171,8 @@ def preview_remove_keyword(
     """Candidate transactions currently matched BY this exact keyword
     (i.e. the keyword is a substring of their normalized_description
     and they're in the owning category) that would land elsewhere if
-    the keyword were removed. Manual rows are never candidates."""
+    the keyword were removed. Manual and bulk rows are never
+    candidates."""
     keyword_upper = keyword.upper().strip()
     snapshot = _load_snapshot(db)
     hypothetical = _build_categorizer_from_snapshot(
@@ -179,7 +182,7 @@ def preview_remove_keyword(
     candidates = (
         db.execute(
             select(Transaction)
-            .where(Transaction.category_source != "manual")
+            .where(Transaction.category_source.not_in(["manual", "bulk"]))
             .where(Transaction.normalized_description.like(f"%{keyword_upper}%"))
         )
         .scalars()

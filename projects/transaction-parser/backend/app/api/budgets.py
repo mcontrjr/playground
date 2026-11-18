@@ -21,7 +21,7 @@ from app.schemas.budgets import (
     BudgetSummary,
 )
 from app.services.audit_service import record_event
-from app.services.budget_service import ExpenseActuals, actual_for_expense, compute_actuals, compute_income
+from app.services.budget_service import ExpenseActuals, actual_for_expense, compute_actuals
 from app.services.cache import bump_generation
 
 router = APIRouter(prefix="/budget", tags=["budget"])
@@ -32,6 +32,7 @@ def _expense_to_read(expense: BudgetExpense, actuals: ExpenseActuals) -> BudgetE
         id=expense.id,
         name=expense.name,
         goal_amount=expense.goal_amount,
+        is_fixed=expense.is_fixed,
         sort_order=expense.sort_order,
         categories=[BudgetCategoryRef(id=c.id, name=c.name) for c in expense.categories],
         actual_amount=actual_for_expense(expense, actuals),
@@ -88,17 +89,17 @@ def get_summary(
         .all()
     )
     actuals = compute_actuals(db, month_date)
-    income = compute_income(db, month_date)
 
     expense_reads = [_expense_to_read(e, actuals) for e in expenses]
     total_goal = sum((e.goal_amount for e in expense_reads if e.goal_amount is not None), Decimal("0.00"))
     total_actual = sum((e.actual_amount for e in expense_reads), Decimal("0.00"))
+    total_fixed = sum((e.actual_amount for e in expense_reads if e.is_fixed), Decimal("0.00"))
 
     return BudgetSummary(
         month=month,
-        income=income,
         total_goal=total_goal,
         total_actual=total_actual,
+        total_fixed=total_fixed,
         expenses=expense_reads,
     )
 
@@ -119,7 +120,8 @@ def create_expense(
     max_sort_order = db.execute(select(BudgetExpense.sort_order).order_by(BudgetExpense.sort_order.desc())).scalars().first()
     expense = BudgetExpense(
         name=payload.name,
-        goal_amount=payload.goal_amount,
+        goal_amount=None if payload.is_fixed else payload.goal_amount,
+        is_fixed=payload.is_fixed,
         sort_order=(max_sort_order or 0) + 1,
         categories=categories,
     )
@@ -163,8 +165,12 @@ def patch_expense(
     fields_set = payload.model_fields_set
     if payload.name is not None:
         expense.name = payload.name
+    if payload.is_fixed is not None:
+        expense.is_fixed = payload.is_fixed
     if "goal_amount" in fields_set:
         expense.goal_amount = payload.goal_amount
+    if expense.is_fixed:
+        expense.goal_amount = None
     if payload.sort_order is not None:
         expense.sort_order = payload.sort_order
     if payload.category_ids is not None:

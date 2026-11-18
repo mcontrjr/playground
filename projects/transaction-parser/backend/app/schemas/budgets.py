@@ -26,6 +26,7 @@ class BudgetExpenseRead(BaseModel):
                     "id": 1,
                     "name": "Groceries",
                     "goal_amount": "600.00",
+                    "is_fixed": False,
                     "sort_order": 0,
                     "categories": [{"id": 11, "name": "Groceries"}],
                     "actual_amount": "482.19",
@@ -36,7 +37,12 @@ class BudgetExpenseRead(BaseModel):
 
     id: int
     name: str
-    goal_amount: Decimal | None = Field(description="Manually-entered monthly target; null if none set.")
+    goal_amount: Decimal | None = Field(
+        description="Manually-entered monthly target; always null for fixed expenses."
+    )
+    is_fixed: bool = Field(
+        description="A known recurring amount (e.g. Rent) rather than a goal to hit against."
+    )
     sort_order: int
     categories: list[BudgetCategoryRef] = Field(description="Transaction categories linked to this expense.")
     actual_amount: Decimal = Field(
@@ -45,7 +51,9 @@ class BudgetExpenseRead(BaseModel):
 
 
 class BudgetExpenseCreate(BaseModel):
-    """Request body to create a budget expense."""
+    """Request body to create a budget expense. When `is_fixed` is
+    true, `goal_amount` is ignored and stored as null — a fixed
+    expense (e.g. Rent) is a known recurring amount, not a goal."""
 
     model_config = ConfigDict(
         json_schema_extra={"examples": [{"name": "Groceries", "goal_amount": "600.00", "category_ids": [11]}]}
@@ -53,18 +61,21 @@ class BudgetExpenseCreate(BaseModel):
 
     name: str = Field(min_length=1, max_length=128)
     goal_amount: Decimal | None = None
+    is_fixed: bool = False
     category_ids: list[int] = Field(default_factory=list)
 
 
 class BudgetExpenseUpdate(BaseModel):
     """Request body to edit a budget expense. Only provided fields change.
     `category_ids`, when provided, REPLACES the full set of linked
-    categories (not a merge)."""
+    categories (not a merge). Setting `is_fixed=true` forces
+    `goal_amount` to null regardless of what else is passed."""
 
     model_config = ConfigDict(json_schema_extra={"examples": [{"goal_amount": "650.00"}]})
 
     name: str | None = Field(default=None, min_length=1, max_length=128)
     goal_amount: Decimal | None = None
+    is_fixed: bool | None = None
     category_ids: list[int] | None = None
     sort_order: int | None = None
 
@@ -76,22 +87,25 @@ class BudgetExpenseDeleteResult(BaseModel):
 
 
 class BudgetSummary(BaseModel):
-    """The Budget tab's month-scoped overview: auto-imported income plus
-    every expense's actual-vs-goal for that same month."""
+    """The Budget tab's month-scoped overview: every expense's
+    actual-vs-goal for that month, plus the fixed-expense total used
+    against the user-set monthly budget (stored separately as a
+    preference, not part of this response)."""
 
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
                 {
                     "month": "2026-11",
-                    "income": "6200.00",
                     "total_goal": "3200.00",
                     "total_actual": "2940.55",
+                    "total_fixed": "1800.00",
                     "expenses": [
                         {
                             "id": 1,
                             "name": "Groceries",
                             "goal_amount": "600.00",
+                            "is_fixed": False,
                             "sort_order": 0,
                             "categories": [{"id": 11, "name": "Groceries"}],
                             "actual_amount": "482.19",
@@ -103,7 +117,7 @@ class BudgetSummary(BaseModel):
     )
 
     month: str = Field(description="YYYY-MM")
-    income: Decimal = Field(description="Sum of the 'Income' category's transactions this month, as a positive number.")
-    total_goal: Decimal = Field(description="Sum of every expense's goal_amount that has one set.")
+    total_goal: Decimal = Field(description="Sum of every non-fixed expense's goal_amount that has one set.")
     total_actual: Decimal = Field(description="Sum of every expense's actual_amount.")
+    total_fixed: Decimal = Field(description="Sum of actual_amount across expenses marked is_fixed=true.")
     expenses: list[BudgetExpenseRead]

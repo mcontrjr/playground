@@ -6,10 +6,11 @@ interface ScopeToggleProps {
   label?: string
 }
 
-/** The "include transfers & income" switch, shared by Records and the
+/** The "include transfers" switch, shared by Records and the
  * analytics pages (Time Series / Distribution) since all three accept
- * the same `include_excluded` query param. */
-export function ScopeToggle({ checked, onChange, label = 'Include transfers & income' }: ScopeToggleProps) {
+ * the same `include_excluded` query param. Income is always out of
+ * scope regardless of this toggle. */
+export function ScopeToggle({ checked, onChange, label = 'Include transfers' }: ScopeToggleProps) {
   return (
     <div className={styles.toggleField}>
       <span className={styles.fieldLabel}>Scope</span>

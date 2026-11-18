@@ -96,6 +96,43 @@ def test_list_transactions_default_excludes_transfers(client: TestClient, db_ses
     assert included_body["total"] == 2
 
 
+def test_list_transactions_income_always_included(client: TestClient, db_session: Session) -> None:
+    account, batch = _make_batch(db_session)
+    income = _seeded_category(db_session, "Income")
+    transfers = _seeded_category(db_session, "Payments & Transfers")
+    food = _seeded_category(db_session, "FOOD")
+
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 1), amount="3000.00",
+        description="PAYROLL", category=income, category_source="keyword",
+        content_hash_suffix="1",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 2), amount="-50.00",
+        description="AUTOPAY PAYMENT THANK YOU", category=transfers, category_source="transfer",
+        content_hash_suffix="2",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 3), amount="-10.00",
+        description="CHIPOTLE MEXICAN GRILL", category=food, category_source="keyword",
+        content_hash_suffix="3",
+    )
+    db_session.commit()
+
+    # Income shows up even by default, unlike transfers — only transfers
+    # are gated behind include_excluded.
+    default_resp = client.get("/api/v1/transactions")
+    assert default_resp.status_code == 200
+    default_body = default_resp.json()
+    assert default_body["total"] == 2
+    assert any(item["category_name"] == "Income" for item in default_body["items"])
+    assert all(item["category_name"] != "Payments & Transfers" for item in default_body["items"])
+
+    included_resp = client.get("/api/v1/transactions", params={"include_excluded": "true"})
+    included_body = included_resp.json()
+    assert included_body["total"] == 3
+
+
 def test_list_transactions_date_and_category_filters(client: TestClient, db_session: Session) -> None:
     account, batch = _make_batch(db_session)
     food = _seeded_category(db_session, "FOOD")
@@ -201,6 +238,99 @@ def test_patch_transaction_manual_recategorize(client: TestClient, db_session: S
 def test_patch_transaction_404(client: TestClient) -> None:
     resp = client.patch("/api/v1/transactions/999999", json={"category_id": 1})
     assert resp.status_code == 404
+
+
+def test_bulk_recategorize_updates_all_rows_as_one_audit_event(
+    client: TestClient, db_session: Session
+) -> None:
+    account, batch = _make_batch(db_session)
+    food = _seeded_category(db_session, "FOOD")
+    gas = _seeded_category(db_session, "GAS")
+
+    txns = [
+        _make_txn(
+            db_session, account, batch, txn_date=date(2026, 10, 1 + i), amount="-5.00",
+            description=f"BULK MERCHANT {i}", category=food, category_source="keyword",
+            content_hash_suffix=f"bulk{i}",
+        )
+        for i in range(3)
+    ]
+    db_session.commit()
+    ids = [t.id for t in txns]
+
+    before_audit_total = client.get("/api/v1/audit").json()["total"]
+
+    resp = client.post(
+        "/api/v1/transactions/bulk-recategorize",
+        json={"transaction_ids": ids, "category_id": gas.id},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["affected_count"] == 3
+    assert body["category_id"] == gas.id
+    assert body["category_name"] == "GAS"
+
+    for t in txns:
+        db_session.refresh(t)
+        assert t.category_id == gas.id
+        assert t.category_source == "bulk"
+
+    audit = client.get("/api/v1/audit")
+    items = audit.json()["items"]
+    assert audit.json()["total"] == before_audit_total + 1
+    matches = [e for e in items if e["event_type"] == "transaction.bulk_recategorized"]
+    assert len(matches) == 1
+    assert matches[0]["affected_count"] == 3
+
+
+def test_bulk_recategorize_unknown_category_404(client: TestClient, db_session: Session) -> None:
+    account, batch = _make_batch(db_session)
+    food = _seeded_category(db_session, "FOOD")
+    txn = _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 1), amount="-5.00",
+        description="SOME PLACE", category=food, category_source="keyword",
+        content_hash_suffix="bulk404",
+    )
+    db_session.commit()
+
+    resp = client.post(
+        "/api/v1/transactions/bulk-recategorize",
+        json={"transaction_ids": [txn.id], "category_id": 999999},
+    )
+    assert resp.status_code == 404
+
+
+def test_bulk_recategorized_rows_sticky_against_apply_to_existing(
+    client: TestClient, db_session: Session
+) -> None:
+    account, batch = _make_batch(db_session)
+    uncategorized = _seeded_category(db_session, "Uncategorized")
+    food = _seeded_category(db_session, "FOOD")
+    gas = _seeded_category(db_session, "GAS")
+
+    txn = _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 1), amount="-10.00",
+        description="PEETS COFFEE SHOP BULK", category=uncategorized, category_source="default",
+        content_hash_suffix="bulksticky",
+    )
+    db_session.commit()
+
+    bulk_resp = client.post(
+        "/api/v1/transactions/bulk-recategorize",
+        json={"transaction_ids": [txn.id], "category_id": gas.id},
+    )
+    assert bulk_resp.status_code == 200
+
+    add_resp = client.post(
+        f"/api/v1/categories/{food.id}/keywords",
+        json={"keyword": "PEETS COFFEE SHOP BULK", "apply_to_existing": True},
+    )
+    assert add_resp.status_code == 201
+    assert add_resp.json()["applied_count"] == 0
+
+    db_session.refresh(txn)
+    assert txn.category_id == gas.id
+    assert txn.category_source == "bulk"
 
 
 def test_manual_recategorize_sticky_against_apply_to_existing(

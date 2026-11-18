@@ -90,6 +90,27 @@
   --series-8: #fb4934;
   --series-other: #a89984;
 
+  /* Distribution's 12-slot categorical set — one hue pool shared by
+     every theme, validated with scripts/validate_palette.js from the
+     dataviz skill (lightness band, chroma floor, CVD separation, and
+     the normal-vision floor all PASS; contrast vs surface is a WARN,
+     mitigated by Distribution's per-row swatch+label+percent+amount).
+     Order matters: it's the arrangement (of 12!) that maximizes the
+     minimum adjacent-pair color distance, not hue-wheel order — do
+     not "tidy" it back into rainbow order. */
+  --series-dist-1: #dc692e;
+  --series-dist-2: #877deb;
+  --series-dist-3: #00ac76;
+  --series-dist-4: #843fa0;
+  --series-dist-5: #357500;
+  --series-dist-6: #d162a5;
+  --series-dist-7: #965000;
+  --series-dist-8: #009699;
+  --series-dist-9: #0961bb;
+  --series-dist-10: #ab2e45;
+  --series-dist-11: #00a1d8;
+  --series-dist-12: #9f9300;
+
   --chart-grid: var(--hairline);
   --chart-axis: var(--hairline-strong);
   --chart-tooltip-bg: var(--tile-bg-raised);
@@ -126,6 +147,19 @@
   --series-7: #7dcfff;
   --series-8: #f7768e;
   --series-other: #565f89;
+
+  --series-dist-1: #dc692e;
+  --series-dist-2: #877deb;
+  --series-dist-3: #00ac76;
+  --series-dist-4: #843fa0;
+  --series-dist-5: #357500;
+  --series-dist-6: #d162a5;
+  --series-dist-7: #965000;
+  --series-dist-8: #009699;
+  --series-dist-9: #0961bb;
+  --series-dist-10: #ab2e45;
+  --series-dist-11: #00a1d8;
+  --series-dist-12: #9f9300;
 
   --chart-grid: var(--hairline);
   --chart-axis: var(--hairline-strong);
@@ -165,6 +199,19 @@
   --series-8: #e63946;
   --series-other: #c9d4dc;
 
+  --series-dist-1: #dc692e;
+  --series-dist-2: #877deb;
+  --series-dist-3: #00ac76;
+  --series-dist-4: #843fa0;
+  --series-dist-5: #357500;
+  --series-dist-6: #d162a5;
+  --series-dist-7: #965000;
+  --series-dist-8: #009699;
+  --series-dist-9: #0961bb;
+  --series-dist-10: #ab2e45;
+  --series-dist-11: #00a1d8;
+  --series-dist-12: #9f9300;
+
   --chart-grid: var(--hairline);
   --chart-axis: var(--hairline-strong);
   --chart-tooltip-bg: var(--tile-bg-raised);
@@ -201,6 +248,19 @@
   --series-7: #5e81ac;
   --series-8: #bf616a;
   --series-other: #4c566a;
+
+  --series-dist-1: #dc692e;
+  --series-dist-2: #877deb;
+  --series-dist-3: #00ac76;
+  --series-dist-4: #843fa0;
+  --series-dist-5: #357500;
+  --series-dist-6: #d162a5;
+  --series-dist-7: #965000;
+  --series-dist-8: #009699;
+  --series-dist-9: #0961bb;
+  --series-dist-10: #ab2e45;
+  --series-dist-11: #00a1d8;
+  --series-dist-12: #9f9300;
 
   --chart-grid: var(--hairline);
   --chart-axis: var(--hairline-strong);

@@ -1,0 +1,85 @@
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+
+.formLabel {
+  composes: label-caps from global;
+}
+
+.select {
+  border: none;
+  border-bottom: 1px solid var(--hairline-strong);
+  background: transparent;
+  padding: var(--sp-2) 0;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  width: 100%;
+}
+
+.select:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+/* Native <select>/<optgroup>/<option> styling is limited (no control
+   over the popup's border-radius/shadow), but background+color DO
+   apply in every evergreen browser, which is enough to keep the
+   dropdown's popup on the theme's palette instead of the OS default
+   white list — see CategoryPicker.module.css for the same pattern. */
+.select option,
+.select optgroup {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.previewText {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-5);
+}
+
+.errorBanner {
+  border: 1px solid var(--accent-negative);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--accent-negative);
+  font-size: var(--fs-small);
+  margin-bottom: var(--sp-4);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}
+
+.cancelButton {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.confirmButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.confirmButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

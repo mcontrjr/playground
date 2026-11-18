@@ -18,9 +18,10 @@ function toggleInArray<T>(list: T[], value: T): T[] {
 }
 
 /** The filter affordances shared by Time Series and Distribution: an
- * account chip group and the transfers/income scope toggle. Built on
- * the same FilterChipGroup/ScopeToggle pieces Records uses, so all
- * three pages stay visually and behaviorally consistent. */
+ * account chip group and the transfers scope toggle (Income is always
+ * included, not gated by this toggle). Built on the same
+ * FilterChipGroup/ScopeToggle pieces Records uses, so all three pages
+ * stay visually and behaviorally consistent. */
 export function AnalyticsFilterBar({ filters, onChange }: AnalyticsFilterBarProps) {
   const { data: accounts } = useAccounts()
   const hasActiveFilters = filters.accountIds.length > 0 || filters.includeExcluded
@@ -36,6 +37,7 @@ export function AnalyticsFilterBar({ filters, onChange }: AnalyticsFilterBarProp
           onToggle={(key) =>
             onChange({ ...filters, accountIds: toggleInArray(filters.accountIds, Number(key)) })
           }
+          onSetSelection={(keys) => onChange({ ...filters, accountIds: keys.map(Number) })}
         />
         {hasActiveFilters && (
           <button

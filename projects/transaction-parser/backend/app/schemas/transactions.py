@@ -141,3 +141,28 @@ class TransactionPatch(BaseModel):
     recurrence: Literal["monthly", "yearly"] | None = Field(
         default=None, description="Cadence to set when flagging is_recurring=true."
     )
+
+
+class BulkRecategorizeRequest(BaseModel):
+    """Request body to recategorize many transactions at once, recorded
+    as a single audit event rather than one per row. Sets
+    category_source='bulk' — sticky against keyword apply_to_existing
+    operations, same as 'manual', but distinguishable as having come
+    from a bulk action rather than a one-by-one edit."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"transaction_ids": [101, 102, 103], "category_id": 12}]}
+    )
+
+    transaction_ids: list[int] = Field(min_length=1, description="Ids of the transactions to recategorize.")
+    category_id: int = Field(description="The category to assign to all given transactions.")
+
+
+class BulkRecategorizeResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"affected_count": 3, "category_id": 12, "category_name": "Groceries"}]}
+    )
+
+    affected_count: int = Field(description="Number of transactions updated.")
+    category_id: int
+    category_name: str

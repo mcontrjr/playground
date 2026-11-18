@@ -7,12 +7,13 @@ import {
   usePatchBudgetExpense,
 } from '../api/hooks/useBudgetMutations'
 import { useCategories } from '../api/hooks/useCategories'
+import { usePreference } from '../api/hooks/usePreference'
 import { formatCurrency, formatCurrencyPrecise, formatMonthPeriod } from '../components/charts/format'
 import { MonthSwiper } from '../components/MonthSwiper/MonthSwiper'
 import { Modal } from '../components/Modal/Modal'
 import { RecordsPanel } from '../components/RecordsPanel/RecordsPanel'
 import { PlusIcon } from '../components/icons'
-import type { BudgetExpense, Category } from '../api/types'
+import type { BudgetExpense, Category, MonthlyBudgetTotal } from '../api/types'
 import styles from './BudgetPage.module.css'
 
 function toMonthKey(date: Date): string {
@@ -25,10 +26,10 @@ function monthKeyAdd(monthKey: string, delta: number): string {
   return toMonthKey(date)
 }
 
-function monthKeyBounds(monthKey: string): { from: string; to: string } {
+function monthKeyBounds(monthKey: string): { date_from: string; date_to: string } {
   const [year, month] = monthKey.split('-').map(Number)
   const lastDay = new Date(year!, month!, 0).getDate()
-  return { from: `${monthKey}-01`, to: `${monthKey}-${String(lastDay).padStart(2, '0')}` }
+  return { date_from: `${monthKey}-01`, date_to: `${monthKey}-${String(lastDay).padStart(2, '0')}` }
 }
 
 /** The current real-world month — Budget always allows navigating up
@@ -82,6 +83,7 @@ function ExpenseDialog({ month, expense, onClose }: ExpenseDialogProps) {
   const { data: categories } = useCategories()
   const [name, setName] = useState(expense?.name ?? '')
   const [goalAmount, setGoalAmount] = useState(expense?.goal_amount ?? '')
+  const [isFixed, setIsFixed] = useState(expense?.is_fixed ?? false)
   const [categoryIds, setCategoryIds] = useState<number[]>(expense?.categories.map((c) => c.id) ?? [])
 
   const createExpense = useCreateBudgetExpense(month)
@@ -99,16 +101,16 @@ function ExpenseDialog({ month, expense, onClose }: ExpenseDialogProps) {
     event.preventDefault()
     const trimmedName = name.trim()
     if (!trimmedName) return
-    const goal = goalAmount.trim() ? goalAmount.trim() : null
+    const goal = !isFixed && goalAmount.trim() ? goalAmount.trim() : null
 
     if (isEdit) {
       patchExpense.mutate(
-        { id: expense.id, patch: { name: trimmedName, goal_amount: goal, category_ids: categoryIds } },
+        { id: expense.id, patch: { name: trimmedName, goal_amount: goal, is_fixed: isFixed, category_ids: categoryIds } },
         { onSuccess: onClose },
       )
     } else {
       createExpense.mutate(
-        { name: trimmedName, goal_amount: goal, category_ids: categoryIds },
+        { name: trimmedName, goal_amount: goal, is_fixed: isFixed, category_ids: categoryIds },
         { onSuccess: onClose },
       )
     }
@@ -133,19 +135,37 @@ function ExpenseDialog({ month, expense, onClose }: ExpenseDialogProps) {
         </div>
 
         <div className={styles.formField}>
-          <label className={styles.formLabel} htmlFor="expense-goal">
-            Monthly goal (optional)
+          <label className={styles.fixedToggle} htmlFor="expense-is-fixed">
+            <input
+              id="expense-is-fixed"
+              type="checkbox"
+              checked={isFixed}
+              onChange={(e) => setIsFixed(e.target.checked)}
+              data-testid="expense-is-fixed-checkbox"
+            />
+            Fixed monthly expense
           </label>
-          <input
-            id="expense-goal"
-            className={styles.formInput}
-            value={goalAmount}
-            onChange={(e) => setGoalAmount(e.target.value)}
-            placeholder="e.g. 600.00"
-            inputMode="decimal"
-            data-testid="expense-goal-input"
-          />
+          <p className={styles.formHint}>
+            A known recurring amount (e.g. Rent) rather than a goal to hit — fixed expenses don't track against a goal.
+          </p>
         </div>
+
+        {!isFixed && (
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="expense-goal">
+              Monthly goal (optional)
+            </label>
+            <input
+              id="expense-goal"
+              className={styles.formInput}
+              value={goalAmount}
+              onChange={(e) => setGoalAmount(e.target.value)}
+              placeholder="e.g. 600.00"
+              inputMode="decimal"
+              data-testid="expense-goal-input"
+            />
+          </div>
+        )}
 
         <div className={styles.formField}>
           <span className={styles.formLabel}>Link categories</span>
@@ -231,17 +251,19 @@ function ExpenseRow({
         )}
       </div>
 
-      <div className={styles.progressTrack}>
-        <div
-          className={overBudget ? `${styles.progressFill} ${styles.progressFillOver}` : styles.progressFill}
-          style={{ width: `${ratio * 100}%` }}
-        />
-      </div>
+      {!expense.is_fixed && (
+        <div className={styles.progressTrack}>
+          <div
+            className={overBudget ? `${styles.progressFill} ${styles.progressFillOver}` : styles.progressFill}
+            style={{ width: `${ratio * 100}%` }}
+          />
+        </div>
+      )}
 
       <div className={styles.amountsRow}>
         <span className={overBudget ? styles.amountOver : styles.amount}>{formatCurrencyPrecise(actual)}</span>
         <span className={styles.amountGoal}>
-          {goal != null ? `of ${formatCurrencyPrecise(goal)} goal` : 'no goal set'}
+          {expense.is_fixed ? 'Fixed expense' : goal != null ? `of ${formatCurrencyPrecise(goal)} goal` : 'no goal set'}
         </span>
       </div>
 
@@ -259,6 +281,89 @@ function ExpenseRow({
   )
 }
 
+/** The monthly budget total: a single, un-month-scoped preference
+ * value that carries forward across months until the user changes it
+ * (pay periods vary per income source, so this is user-set rather
+ * than auto-imported from an Income category the way it used to be). */
+function MonthlyBudgetTile({ totalFixed }: { totalFixed: number }) {
+  const [budgetTotal, setBudgetTotal, { isReady }] = usePreference<MonthlyBudgetTotal>('budget:monthly_total', {
+    amount: '',
+  })
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(budgetTotal.amount)
+
+  const budgetAmount = Number(budgetTotal.amount || 0)
+  const remaining = budgetAmount - totalFixed
+
+  const commit = () => {
+    setBudgetTotal({ amount: draft.trim() })
+    setEditing(false)
+  }
+
+  return (
+    <>
+      <div className={styles.summaryTile}>
+        <span className={styles.summaryLabel}>Monthly budget</span>
+        {editing ? (
+          <input
+            className={styles.summaryInput}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit()
+              if (e.key === 'Escape') {
+                setDraft(budgetTotal.amount)
+                setEditing(false)
+              }
+            }}
+            inputMode="decimal"
+            placeholder="e.g. 4500.00"
+            autoFocus
+            data-testid="monthly-budget-input"
+          />
+        ) : (
+          <button
+            type="button"
+            className={styles.summaryValueButton}
+            onClick={() => {
+              setDraft(budgetTotal.amount)
+              setEditing(true)
+            }}
+            disabled={!isReady}
+            data-testid="monthly-budget-value"
+          >
+            {budgetAmount > 0 ? formatCurrency(budgetAmount) : 'Set budget'}
+          </button>
+        )}
+      </div>
+      <div className={styles.summaryTile}>
+        <span className={styles.summaryLabel}>Total fixed expenses</span>
+        <span className={styles.summaryValue}>{formatCurrency(totalFixed)}</span>
+      </div>
+      <div className={styles.summaryTile}>
+        <span className={styles.summaryLabel}>Remaining</span>
+        <span className={remaining < 0 ? styles.summaryValueNegative : styles.summaryValuePositive}>
+          {formatCurrency(remaining)}
+        </span>
+      </div>
+    </>
+  )
+}
+
+/** Fixed expenses sink to the bottom; the remaining goal-tracked
+ * expenses are ordered by goal amount, largest first, with
+ * goal-less ones last (within that group). */
+function sortExpenses(expenses: BudgetExpense[]): BudgetExpense[] {
+  return [...expenses].sort((a, b) => {
+    if (a.is_fixed !== b.is_fixed) return a.is_fixed ? 1 : -1
+    if (a.is_fixed) return 0
+    const goalA = a.goal_amount != null ? Number(a.goal_amount) : -Infinity
+    const goalB = b.goal_amount != null ? Number(b.goal_amount) : -Infinity
+    return goalB - goalA
+  })
+}
+
 export function BudgetPage() {
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY)
   const [showAdd, setShowAdd] = useState(false)
@@ -267,10 +372,11 @@ export function BudgetPage() {
 
   const { data: summary, isLoading, isError, error } = useBudgetSummary(monthKey)
 
-  const income = Number(summary?.income ?? 0)
+  const sortedExpenses = useMemo(() => (summary ? sortExpenses(summary.expenses) : []), [summary])
+
   const totalActual = Number(summary?.total_actual ?? 0)
   const totalGoal = Number(summary?.total_goal ?? 0)
-  const remaining = income - totalActual
+  const totalFixed = Number(summary?.total_fixed ?? 0)
 
   const monthLabel = useMemo(() => formatMonthPeriod(monthKey), [monthKey])
   const isCurrentMonth = monthKey === CURRENT_MONTH_KEY
@@ -280,8 +386,8 @@ export function BudgetPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Budget</h1>
         <p className={styles.subtitle}>
-          Income is imported automatically from your Income category. Add expenses, link categories to
-          auto-total them, and set a monthly goal for each.
+          Set your total monthly budget, mark fixed recurring expenses, and track the rest against
+          their goals.
         </p>
       </header>
 
@@ -305,24 +411,14 @@ export function BudgetPage() {
       ) : (
         <>
           <div className={styles.summaryTiles}>
-            <div className={styles.summaryTile}>
-              <span className={styles.summaryLabel}>Income</span>
-              <span className={styles.summaryValue}>{formatCurrency(income)}</span>
-            </div>
-            <div className={styles.summaryTile}>
-              <span className={styles.summaryLabel}>Budgeted</span>
-              <span className={styles.summaryValue}>{formatCurrency(totalActual)}</span>
-              {totalGoal > 0 && (
-                <span className={styles.summaryHint}>of {formatCurrency(totalGoal)} goal</span>
-              )}
-            </div>
-            <div className={styles.summaryTile}>
-              <span className={styles.summaryLabel}>Remaining</span>
-              <span className={remaining < 0 ? styles.summaryValueNegative : styles.summaryValue}>
-                {formatCurrency(remaining)}
-              </span>
-            </div>
+            <MonthlyBudgetTile totalFixed={totalFixed} />
           </div>
+          {totalGoal > 0 && (
+            <p className={styles.summaryHint}>
+              Non-fixed expense goals this month total {formatCurrency(totalGoal)}; actual spend against
+              them so far is {formatCurrency(totalActual - totalFixed)}.
+            </p>
+          )}
 
           <div className={styles.listHeader}>
             <h2 className={styles.listHeading}>Expenses</h2>
@@ -336,9 +432,9 @@ export function BudgetPage() {
             </button>
           </div>
 
-          {summary && summary.expenses.length > 0 ? (
+          {summary && sortedExpenses.length > 0 ? (
             <div className={styles.expenseList}>
-              {summary.expenses.map((expense) => (
+              {sortedExpenses.map((expense) => (
                 <ExpenseRow
                   key={expense.id}
                   expense={expense}

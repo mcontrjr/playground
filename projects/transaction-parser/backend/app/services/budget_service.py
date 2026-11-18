@@ -14,9 +14,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import BudgetExpense, Category, Transaction, budget_expense_categories
-
-INCOME_CATEGORY_NAME = "Income"
+from app.models import BudgetExpense, Transaction, budget_expense_categories
 
 
 def month_bounds(month: date) -> tuple[date, date]:
@@ -58,29 +56,6 @@ def compute_actuals(db: Session, month: date, expense_ids: list[int] | None = No
     return ExpenseActuals(
         by_expense_id={r.budget_expense_id: Decimal(r.actual).quantize(Decimal("0.01")) for r in rows}
     )
-
-
-def compute_income(db: Session, month: date) -> Decimal:
-    """Sum of inflows (amount > 0) on transactions in the 'Income'
-    category for the given month, as a positive number. 0 if the Income
-    category is missing or has no matching transactions that month."""
-    month_start, month_end = month_bounds(month)
-
-    income_category_id = db.execute(
-        select(Category.id).where(Category.name == INCOME_CATEGORY_NAME)
-    ).scalar_one_or_none()
-    if income_category_id is None:
-        return Decimal("0.00")
-
-    stmt = (
-        select(func.coalesce(func.sum(Transaction.amount), 0))
-        .where(Transaction.category_id == income_category_id)
-        .where(Transaction.amount > 0)
-        .where(Transaction.txn_date >= month_start)
-        .where(Transaction.txn_date <= month_end)
-    )
-    total = db.execute(stmt).scalar_one()
-    return Decimal(total).quantize(Decimal("0.01"))
 
 
 def actual_for_expense(expense: BudgetExpense, actuals: ExpenseActuals) -> Decimal:

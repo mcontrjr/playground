@@ -5,11 +5,11 @@ filtered base query and compute their aggregates in SQL (``SUM``,
 ``date_trunc``/``to_char`` for period bucketing, ``GROUP BY``) rather
 than loading rows into Python, per the plan's performance note.
 
-The exclusion semantics are shared with the transactions API: by
+The exclusion semantics are shared with the transactions API: rows
+categorized as "Income" are always included in every aggregate. By
 default (``include_excluded=False``) rows whose category has
-``excluded_from_analytics=True`` (currently "Payments & Transfers" and
-"Income") are left out of every aggregate; passing
-``include_excluded=True`` includes them.
+``excluded_from_analytics=True`` (currently "Payments & Transfers")
+are left out; passing ``include_excluded=True`` includes them.
 """
 from __future__ import annotations
 
@@ -43,6 +43,7 @@ def _apply_filters(stmt: Select, filters: AnalyticsFilters) -> Select:
     if not filters.include_excluded:
         stmt = stmt.where(
             func.coalesce(Category.excluded_from_analytics, False).is_(False)
+            | (Category.name == "Income")
         )
     return stmt
 

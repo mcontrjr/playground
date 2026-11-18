@@ -109,6 +109,54 @@
   border-bottom: none;
 }
 
+.colCheckbox {
+  width: 1.5rem;
+}
+
+.checkbox {
+  cursor: pointer;
+}
+
+.selectionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-2) 0 var(--sp-3);
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+
+.selectionCount {
+  color: var(--ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bulkSortButton {
+  display: inline-flex;
+  align-items: center;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.clearSelectionButton {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: 0;
+}
+
+.clearSelectionButton:hover {
+  color: var(--ink);
+}
+
 .pagination {
   display: flex;
   align-items: center;

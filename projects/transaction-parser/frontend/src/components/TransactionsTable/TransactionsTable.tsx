@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePatchTransaction } from '../../api/hooks/usePatchTransaction'
 import type { SortOrder, Transaction, TransactionSortField } from '../../api/types'
 import { CategoryPicker, type RecategorizedInfo } from '../CategoryPicker/CategoryPicker'
@@ -29,6 +29,50 @@ interface TransactionsTableProps {
   pageSize: number
   onRecategorized: (transactionId: number, description: string, info: RecategorizedInfo) => void
   onRequestNewCategory: (transactionId: number, description: string) => void
+  /** Bulk-sort selection UI (row checkboxes, select-all, the action
+   * bar) only renders when all of these are provided — omitted by
+   * read-only embeds like RecordsPanel's drill-down, which has no
+   * page-level selection state to back it. */
+  selectedIds?: Set<number>
+  onToggleSelect?: (id: number) => void
+  onToggleSelectAll?: () => void
+  onBulkSort?: () => void
+  onClearSelection?: () => void
+}
+
+/** Tri-state header checkbox: unchecked when nothing on this page is
+ * selected, checked when every row is, indeterminate in between —
+ * `indeterminate` is a DOM-only property with no JSX/HTML attribute
+ * equivalent, so it has to be set imperatively via a ref. */
+function SelectAllCheckbox({
+  transactions,
+  selectedIds,
+  onToggleSelectAll,
+}: {
+  transactions: Transaction[]
+  selectedIds: Set<number>
+  onToggleSelectAll: () => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  const selectedOnPage = transactions.filter((t) => selectedIds.has(t.id)).length
+  const allSelected = transactions.length > 0 && selectedOnPage === transactions.length
+  const indeterminate = selectedOnPage > 0 && !allSelected
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate
+  }, [indeterminate])
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      className={styles.checkbox}
+      checked={allSelected}
+      onChange={onToggleSelectAll}
+      aria-label="Select all on this page"
+      data-testid="select-all-checkbox"
+    />
+  )
 }
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
@@ -93,10 +137,16 @@ export function TransactionsTable({
   pageSize,
   onRecategorized,
   onRequestNewCategory,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
+  onBulkSort,
+  onClearSelection,
 }: TransactionsTableProps) {
   const rangeStart = page * pageSize + 1
   const rangeEnd = Math.min(total, (page + 1) * pageSize)
   const [detailTxn, setDetailTxn] = useState<Transaction | null>(null)
+  const selectionEnabled = selectedIds !== undefined && onToggleSelect && onToggleSelectAll
 
   // The table shell (header, pagination) stays mounted even with zero
   // rows, so switching filters to a narrower result never collapses
@@ -105,10 +155,38 @@ export function TransactionsTable({
   // change, independent of any actual scroll-position reset.
   return (
     <div>
+      {selectionEnabled && selectedIds.size > 0 && (
+        <div className={styles.selectionBar} data-testid="selection-bar">
+          <span>
+            <span className={styles.selectionCount}>{selectedIds.size}</span> selected
+          </span>
+          <button
+            type="button"
+            className={styles.bulkSortButton}
+            onClick={onBulkSort}
+            data-testid="open-bulk-sort"
+          >
+            Bulk sort
+          </button>
+          <button type="button" className={styles.clearSelectionButton} onClick={onClearSelection}>
+            Clear selection
+          </button>
+        </div>
+      )}
+
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
+              {selectionEnabled && (
+                <th className={styles.colCheckbox}>
+                  <SelectAllCheckbox
+                    transactions={transactions}
+                    selectedIds={selectedIds}
+                    onToggleSelectAll={onToggleSelectAll}
+                  />
+                </th>
+              )}
               {COLUMNS.map((column) => (
                 <th key={column.field} className={column.field === 'amount' ? styles.colAmount : undefined}>
                   <button
@@ -134,7 +212,7 @@ export function TransactionsTable({
           <tbody>
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length + 2} className={styles.empty}>
+                <td colSpan={COLUMNS.length + 2 + (selectionEnabled ? 1 : 0)} className={styles.empty}>
                   No transactions match these filters.
                 </td>
               </tr>
@@ -143,6 +221,18 @@ export function TransactionsTable({
               const value = Number.parseFloat(txn.amount)
               return (
                 <tr key={txn.id} data-testid="transaction-row" data-description={txn.description}>
+                  {selectionEnabled && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selectedIds.has(txn.id)}
+                        onChange={() => onToggleSelect(txn.id)}
+                        aria-label={`Select transaction: ${txn.description}`}
+                        data-testid="row-checkbox"
+                      />
+                    </td>
+                  )}
                   <td className={styles.clickable} onClick={() => setDetailTxn(txn)}>
                     {formatDate(txn.txn_date)}
                   </td>
