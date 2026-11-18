@@ -19,6 +19,9 @@
 }
 
 .addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
   background: var(--ink);
   color: var(--paper);
   border: none;
@@ -34,8 +37,24 @@
 .headerActions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--sp-5);
   flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+}
+
+.tabsLayout {
+  display: flex;
+  flex-direction: column;
+}
+
+.tabContent {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--hairline);
+  border-top: none;
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
+  padding: var(--sp-5);
 }
 
 .sortField {
@@ -230,6 +249,9 @@
 }
 
 .addKeywordButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: none;
   background: transparent;
   color: var(--ink-soft);

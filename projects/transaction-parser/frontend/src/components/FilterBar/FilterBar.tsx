@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
 import { useAccounts } from '../../api/hooks/useAccounts'
 import { useCategories } from '../../api/hooks/useCategories'
 import { useMonths } from '../../api/hooks/useTransactions'
+import { DateRangePicker, type DateRange } from '../DateRangePicker/DateRangePicker'
 import { FilterChipGroup } from './FilterChipGroup'
 import styles from './FilterBar.module.css'
 import { GroupedCategoryFilter } from './GroupedCategoryFilter'
 import { ScopeToggle } from './ScopeToggle'
-import { useDebouncedValue } from './useDebouncedValue'
+import { SearchInput } from './SearchInput'
 
 export interface RecordsFilterState {
   accountIds: number[]
@@ -15,6 +15,9 @@ export interface RecordsFilterState {
   search: string
   includeExcluded: boolean
   recurringOnly: boolean
+  /** Custom date range — mutually exclusive with `monthKeys`:
+   * applying a range clears month chips and vice versa. */
+  dateRange?: DateRange
 }
 
 export const initialFilterState: RecordsFilterState = {
@@ -31,43 +34,28 @@ interface FilterBarProps {
   onChange: (next: RecordsFilterState) => void
   totalCount: number | undefined
   isLoading: boolean
+  /** Hide the inline search input — RecordsPage renders its own
+   * SearchInput directly above the table instead. */
+  hideSearch?: boolean
 }
 
 function toggleInArray<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
 }
 
-export function FilterBar({ filters, onChange, totalCount, isLoading }: FilterBarProps) {
+export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch }: FilterBarProps) {
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
   const { data: months } = useMonths()
-  const [searchInput, setSearchInput] = useState(filters.search)
-  const debouncedSearch = useDebouncedValue(searchInput, 350)
 
-  // Propagate the debounced search value once it settles.
-  useEffect(() => {
-    if (debouncedSearch !== filters.search) {
-      onChange({ ...filters, search: debouncedSearch })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch])
+  const hasCustomRange = !!filters.dateRange
 
   return (
     <div className={styles.bar}>
       <div className={styles.topRow}>
-        <div className={styles.field}>
-          <label className={styles.fieldLabel} htmlFor="records-search">
-            Search
-          </label>
-          <input
-            id="records-search"
-            className={styles.search}
-            type="search"
-            placeholder="Description contains…"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-          />
-        </div>
+        {!hideSearch && (
+          <SearchInput value={filters.search} onChange={(search) => onChange({ ...filters, search })} />
+        )}
 
         <div className={styles.toggleGroup}>
           <ScopeToggle
@@ -84,15 +72,44 @@ export function FilterBar({ filters, onChange, totalCount, isLoading }: FilterBa
 
       {/* Month, Account, then Category — stacked top-down. */}
       <div className={styles.chipGrid}>
-        <FilterChipGroup
-          label="Month"
-          ariaLabel="Filter by month"
-          options={(months ?? []).map((m) => ({ key: m.key, label: m.label }))}
-          selected={filters.monthKeys}
-          onToggle={(key) =>
-            onChange({ ...filters, monthKeys: toggleInArray(filters.monthKeys, String(key)) })
-          }
-        />
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>Month</span>
+          <div className={styles.multiSelect} role="group" aria-label="Filter by month">
+            {(months ?? []).map((m) => {
+              const isActive = filters.monthKeys.includes(m.key)
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  className={isActive ? `${styles.chip} ${styles.chipActive}` : styles.chip}
+                  disabled={hasCustomRange}
+                  onClick={() =>
+                    onChange({ ...filters, monthKeys: toggleInArray(filters.monthKeys, m.key) })
+                  }
+                  aria-pressed={isActive}
+                >
+                  {m.label}
+                </button>
+              )
+            })}
+            {(months ?? []).length === 0 && <span className={styles.emptyHint}>None yet</span>}
+            <DateRangePicker
+              value={filters.dateRange}
+              onChange={(dateRange) => onChange({ ...filters, dateRange, monthKeys: [] })}
+              onClear={() => onChange({ ...filters, dateRange: undefined })}
+            />
+            {hasCustomRange && (
+              <button
+                type="button"
+                className={styles.chip}
+                onClick={() => onChange({ ...filters, dateRange: undefined })}
+                aria-label="Clear custom date range"
+              >
+                Custom range ✕
+              </button>
+            )}
+          </div>
+        </div>
 
         <FilterChipGroup
           label="Account"

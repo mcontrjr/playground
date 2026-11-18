@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
+import { useBuckets } from '../api/hooks/useBuckets'
 import { useCategories } from '../api/hooks/useCategories'
 import {
   useAddKeyword,
@@ -11,6 +12,9 @@ import {
 import type { Category } from '../api/types'
 import { ImpactPreviewDialog } from '../components/ImpactPreviewDialog/ImpactPreviewDialog'
 import { Modal } from '../components/Modal/Modal'
+import { PlusIcon } from '../components/icons'
+import { Tabs } from '../components/Tabs/Tabs'
+import { BucketsPanel } from './CategoriesPage/BucketsPanel'
 import styles from './CategoriesPage.module.css'
 
 interface PendingAddKeyword {
@@ -30,8 +34,6 @@ interface PendingDelete {
   category: Category
 }
 
-const GROUP_OPTIONS = ['Essentials', 'Lifestyle', 'Income', 'Savings', 'Transfers', 'Other']
-
 function CategoryRow({
   category,
   onToast,
@@ -49,6 +51,7 @@ function CategoryRow({
   const deleteCategory = useDeleteCategory()
   const addKeyword = useAddKeyword()
   const deleteKeyword = useDeleteKeyword()
+  const { data: buckets } = useBuckets()
 
   useEffect(() => setNameDraft(category.name), [category.name])
 
@@ -112,14 +115,16 @@ function CategoryRow({
         </span>
         <select
           className={styles.groupSelect}
-          value={category.group ?? 'Other'}
-          onChange={(e) => patchCategory.mutate({ id: category.id, patch: { group: e.target.value } })}
-          aria-label={`Group for ${category.name}`}
+          value={category.bucket_id}
+          onChange={(e) =>
+            patchCategory.mutate({ id: category.id, patch: { bucket_id: Number(e.target.value) } })
+          }
+          aria-label={`Bucket for ${category.name}`}
           data-testid="category-group-select"
         >
-          {GROUP_OPTIONS.map((group) => (
-            <option key={group} value={group}>
-              {group}
+          {(buckets ?? []).map((bucket) => (
+            <option key={bucket.id} value={bucket.id}>
+              {bucket.name}
             </option>
           ))}
         </select>
@@ -156,7 +161,7 @@ function CategoryRow({
             data-testid="add-keyword-input"
           />
           <button type="submit" className={styles.addKeywordButton} data-testid="add-keyword-submit">
-            Add
+            <PlusIcon size={11} /> Add
           </button>
         </form>
       </div>
@@ -304,14 +309,23 @@ function CategoryRow({
 function AddCategoryDialog({ onClose, onToast }: { onClose: () => void; onToast: (m: string) => void }) {
   const [name, setName] = useState('')
   const [excluded, setExcluded] = useState(false)
+  const [bucketId, setBucketId] = useState<number | null>(null)
   const createCategory = useCreateCategory()
+  const { data: buckets } = useBuckets()
+
+  useEffect(() => {
+    if (bucketId == null && buckets && buckets.length > 0) {
+      const other = buckets.find((b) => b.name === 'OTHER')
+      setBucketId(other?.id ?? buckets[0]!.id)
+    }
+  }, [buckets, bucketId])
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
     createCategory.mutate(
-      { name: trimmed, excluded_from_analytics: excluded },
+      { name: trimmed, excluded_from_analytics: excluded, bucket_id: bucketId ?? undefined },
       {
         onSuccess: (category) => {
           onToast(`Created "${category.name}".`)
@@ -337,6 +351,24 @@ function AddCategoryDialog({ onClose, onToast }: { onClose: () => void; onToast:
             placeholder="e.g. Subscriptions"
             data-testid="new-category-name-input"
           />
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.formLabel} htmlFor="new-category-bucket">
+            Bucket
+          </label>
+          <select
+            id="new-category-bucket"
+            className={styles.groupSelect}
+            value={bucketId ?? ''}
+            onChange={(e) => setBucketId(Number(e.target.value))}
+            data-testid="new-category-bucket-select"
+          >
+            {(buckets ?? []).map((bucket) => (
+              <option key={bucket.id} value={bucket.id}>
+                {bucket.name}
+              </option>
+            ))}
+          </select>
         </div>
         <label className={styles.formCheckboxRow}>
           <input type="checkbox" checked={excluded} onChange={(e) => setExcluded(e.target.checked)} />
@@ -365,31 +397,40 @@ function AddCategoryDialog({ onClose, onToast }: { onClose: () => void; onToast:
   )
 }
 
-type SortMode = 'name' | 'priority' | 'group'
+type SortMode = 'name' | 'group' | 'keywords-desc' | 'keywords-asc'
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: 'name', label: 'Name (A–Z)' },
   { value: 'group', label: 'Bucket' },
-  { value: 'priority', label: 'Match priority' },
+  { value: 'keywords-desc', label: 'Keyword count (most first)' },
+  { value: 'keywords-asc', label: 'Keyword count (fewest first)' },
 ]
 
 function sortCategories(categories: Category[], mode: SortMode): Category[] {
   const sorted = [...categories]
-  if (mode === 'priority') {
-    sorted.sort((a, b) => a.priority - b.priority)
-  } else if (mode === 'group') {
-    sorted.sort((a, b) => (a.group ?? 'Other').localeCompare(b.group ?? 'Other') || a.name.localeCompare(b.name))
+  if (mode === 'group') {
+    sorted.sort((a, b) => (a.group ?? 'OTHER').localeCompare(b.group ?? 'OTHER') || a.name.localeCompare(b.name))
+  } else if (mode === 'keywords-desc') {
+    sorted.sort((a, b) => b.keywords.length - a.keywords.length || a.name.localeCompare(b.name))
+  } else if (mode === 'keywords-asc') {
+    sorted.sort((a, b) => a.keywords.length - b.keywords.length || a.name.localeCompare(b.name))
   } else {
     sorted.sort((a, b) => a.name.localeCompare(b.name))
   }
   return sorted
 }
 
+const TAB_ITEMS = [
+  { key: 'categories', label: 'Categories' },
+  { key: 'buckets', label: 'Buckets' },
+]
+
 export function CategoriesPage() {
   const { data: categories, isLoading, isError, error } = useCategories()
   const [showAdd, setShowAdd] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<SortMode>('name')
+  const [activeTab, setActiveTab] = useState<string>('categories')
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showToast = (message: string) => {
@@ -408,53 +449,75 @@ export function CategoriesPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Categories</h1>
-        <div className={styles.headerActions}>
-          <div className={styles.sortField}>
-            <label className={styles.sortLabel} htmlFor="categories-sort">
-              Sort by
-            </label>
-            <select
-              id="categories-sort"
-              className={styles.sortSelect}
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value as SortMode)}
-              data-testid="categories-sort-select"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            type="button"
-            className={styles.addButton}
-            onClick={() => setShowAdd(true)}
-            data-testid="open-add-category"
-          >
-            Add category
-          </button>
-        </div>
       </header>
 
-      {isError && (
-        <p className={styles.errorBanner}>
-          {error instanceof ApiError ? error.message : 'Could not load categories.'}
-        </p>
-      )}
+      <div className={styles.tabsLayout}>
+        <Tabs
+          items={TAB_ITEMS}
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          orientation="horizontal"
+          variant="folder"
+          ariaLabel="Categories sections"
+        />
 
-      {isLoading ? (
-        <p className={styles.meta}>Loading…</p>
-      ) : (
-        <div className={styles.list}>
-          {sorted.map((category) => (
-            <CategoryRow key={category.id} category={category} onToast={showToast} />
-          ))}
+        <div className={styles.tabContent}>
+          {activeTab === 'categories' ? (
+            <div role="tabpanel" id="tabpanel-categories" aria-labelledby="tab-categories">
+              <div className={styles.headerActions}>
+                <div className={styles.sortField}>
+                  <label className={styles.sortLabel} htmlFor="categories-sort">
+                    Sort by
+                  </label>
+                  <select
+                    id="categories-sort"
+                    className={styles.sortSelect}
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as SortMode)}
+                    data-testid="categories-sort-select"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className={styles.addButton}
+                  onClick={() => setShowAdd(true)}
+                  data-testid="open-add-category"
+                >
+                  <PlusIcon /> Add category
+                </button>
+              </div>
+
+              {isError && (
+                <p className={styles.errorBanner}>
+                  {error instanceof ApiError ? error.message : 'Could not load categories.'}
+                </p>
+              )}
+
+              {isLoading ? (
+                <p className={styles.meta}>Loading…</p>
+              ) : (
+                <div className={styles.list}>
+                  {sorted.map((category) => (
+                    <CategoryRow key={category.id} category={category} onToast={showToast} />
+                  ))}
+                </div>
+              )}
+
+              {showAdd && <AddCategoryDialog onClose={() => setShowAdd(false)} onToast={showToast} />}
+            </div>
+          ) : (
+            <div role="tabpanel" id="tabpanel-buckets" aria-labelledby="tab-buckets">
+              <BucketsPanel />
+            </div>
+          )}
         </div>
-      )}
-
-      {showAdd && <AddCategoryDialog onClose={() => setShowAdd(false)} onToast={showToast} />}
+      </div>
 
       {toast && (
         <div className={styles.toast} data-testid="categories-toast">

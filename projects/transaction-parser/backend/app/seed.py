@@ -24,7 +24,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.db import Base, SessionLocal, engine
-from app.models import Account, Category, CategoryKeyword, Institution  # noqa: F401
+from app.models import Account, Bucket, Category, CategoryKeyword, Institution  # noqa: F401
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("seed")
@@ -99,39 +99,52 @@ TRANSFER_KEYWORDS = [
 ]
 INCOME_KEYWORDS = ["PAYROLL", "ELECTRONIC DEPOSIT", "DIRECT DEP"]
 
-# Coarse grouping for the Records category dropdown. Keyed by each
-# category's FINAL seeded name — legacy keys that stayed all-uppercase
-# (see the name.title() rule below) must be matched in that same case.
-# Anything not listed here (including future user-created categories)
-# falls back to "Other" client-side.
+# Coarse grouping for the Records category dropdown, expressed as bucket
+# names (always uppercase — bucket names are stored ALL CAPS). Keyed by
+# each category's FINAL seeded name — legacy keys that stayed
+# all-uppercase (see the name.title() rule below) must be matched in that
+# same case. Anything not listed here (including future user-created
+# categories) falls back to the OTHER bucket.
 CATEGORY_GROUPS: dict[str, str] = {
-    "GAS": "Essentials",
-    "LOANS": "Essentials",
-    "RENT": "Essentials",
-    "UTILITIES": "Essentials",
-    "PHARMACY": "Essentials",
-    "AUTO": "Essentials",
-    "INTERNET": "Essentials",
-    "PARKING": "Essentials",
-    "GROCERIES": "Essentials",
-    "TRAVEL": "Lifestyle",
-    "PAYPAL": "Lifestyle",
-    "AMAZON": "Lifestyle",
-    "TARGET": "Lifestyle",
-    "FOOD": "Lifestyle",
-    "COSTCO": "Lifestyle",
-    "STREAMING": "Lifestyle",
-    "GYM": "Lifestyle",
-    "ACTIVITIES": "Lifestyle",
-    "LAUNDRY": "Lifestyle",
-    "APPLE PAY": "Lifestyle",
-    "SHOPPING": "Lifestyle",
-    "ATM": "Other",
-    "Uncategorized": "Other",
-    "Income": "Income",
-    "Savings": "Savings",
-    "Payments & Transfers": "Transfers",
+    "GAS": "ESSENTIALS",
+    "LOANS": "ESSENTIALS",
+    "RENT": "ESSENTIALS",
+    "UTILITIES": "ESSENTIALS",
+    "PHARMACY": "ESSENTIALS",
+    "AUTO": "ESSENTIALS",
+    "INTERNET": "ESSENTIALS",
+    "PARKING": "ESSENTIALS",
+    "GROCERIES": "ESSENTIALS",
+    "TRAVEL": "LIFESTYLE",
+    "PAYPAL": "LIFESTYLE",
+    "AMAZON": "LIFESTYLE",
+    "TARGET": "LIFESTYLE",
+    "FOOD": "LIFESTYLE",
+    "COSTCO": "LIFESTYLE",
+    "STREAMING": "LIFESTYLE",
+    "GYM": "LIFESTYLE",
+    "ACTIVITIES": "LIFESTYLE",
+    "LAUNDRY": "LIFESTYLE",
+    "APPLE PAY": "LIFESTYLE",
+    "SHOPPING": "LIFESTYLE",
+    "ATM": "OTHER",
+    "Uncategorized": "OTHER",
+    "Income": "INCOME",
+    "Savings": "SAVINGS",
+    "Payments & Transfers": "TRANSFERS",
 }
+
+# The fixed set of buckets seeded at startup. OTHER is always included
+# (and is the undeletable fallback) even though every CATEGORY_GROUPS
+# value above also happens to resolve to one of these.
+BUCKET_NAMES: list[str] = [
+    "ESSENTIALS",
+    "LIFESTYLE",
+    "INCOME",
+    "TRANSFERS",
+    "SAVINGS",
+    "OTHER",
+]
 
 
 def _build_category_plan() -> list[dict]:
@@ -199,7 +212,7 @@ def _build_category_plan() -> list[dict]:
     )
 
     for entry in plan:
-        entry["group"] = CATEGORY_GROUPS.get(entry["name"], "Other")
+        entry["group"] = CATEGORY_GROUPS.get(entry["name"], "OTHER")
 
     return plan
 
@@ -214,7 +227,23 @@ def seed_institutions(db: Session) -> None:
     db.flush()
 
 
-def seed_categories_and_keywords(db: Session) -> None:
+def seed_buckets(db: Session) -> dict[str, Bucket]:
+    """Create the fixed uppercase bucket rows if missing. Idempotent
+    lookup-by-name; returns a name -> Bucket map for the category seed
+    step below."""
+    existing = {b.name: b for b in db.query(Bucket).all()}
+    for name in BUCKET_NAMES:
+        if name in existing:
+            continue
+        bucket = Bucket(name=name)
+        db.add(bucket)
+        db.flush()
+        existing[name] = bucket
+        logger.info("bucket: created %r", name)
+    return existing
+
+
+def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]) -> None:
     plan = _build_category_plan()
 
     # Globally-unique keyword guard across the whole plan, by priority order
@@ -227,6 +256,7 @@ def seed_categories_and_keywords(db: Session) -> None:
     next_priority = 0
     for entry in plan:
         name = entry["name"]
+        bucket = buckets_by_name[entry["group"]]
         category = existing_categories.get(name)
         if category is None:
             category = Category(
@@ -234,18 +264,18 @@ def seed_categories_and_keywords(db: Session) -> None:
                 is_system=entry["is_system"],
                 excluded_from_analytics=entry["excluded_from_analytics"],
                 priority=next_priority,
-                group=entry["group"],
+                bucket_id=bucket.id,
             )
             db.add(category)
             db.flush()
             existing_categories[name] = category
             logger.info("category: created %r (priority=%d)", name, next_priority)
-        elif category.group != entry["group"]:
-            # Re-sync group to the plan's value on every run. This only
+        elif category.bucket_id != bucket.id:
+            # Re-sync bucket to the plan's value on every run. This only
             # ever touches the ~20 seeded legacy categories (matched by
             # name); a user's own categories, created via POST /categories,
             # are never in CATEGORY_GROUPS and are untouched by this branch.
-            category.group = entry["group"]
+            category.bucket_id = bucket.id
         next_priority += 1
 
         for raw_kw in entry["keywords"]:
@@ -281,7 +311,8 @@ def run() -> None:
     db = SessionLocal()
     try:
         seed_institutions(db)
-        seed_categories_and_keywords(db)
+        buckets_by_name = seed_buckets(db)
+        seed_categories_and_keywords(db, buckets_by_name)
         db.commit()
         logger.info("seed: complete")
     except Exception:

@@ -55,10 +55,15 @@ export function useAnalyticsTimeseries(
 
 /** One month's per-day net totals + running cumulative total — the
  * Time Series page's primary data source. `month` is any ISO date
- * within the target month (only year/month are used server-side). */
+ * within the target month (only year/month are used server-side).
+ * Pass `enabled: false` (e.g. when the page is in "All records"
+ * mode and has no single month to ask about) to skip firing the
+ * request entirely — otherwise an empty `month` still hits the API
+ * with a blank `month` param and 422s. */
 export function useAnalyticsMonthlyDaily(
   month: string,
   filters: Pick<AnalyticsFilters, 'account_ids' | 'include_excluded'>,
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: queryKeys.analyticsMonthlyDaily({ month, ...filters }),
@@ -70,5 +75,6 @@ export function useAnalyticsMonthlyDaily(
           include_excluded: filters.include_excluded,
         })}`,
       ),
+    enabled: options?.enabled ?? true,
   })
 }

@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { usePatchTransaction } from '../../api/hooks/usePatchTransaction'
 import type { SortOrder, Transaction, TransactionSortField } from '../../api/types'
 import { CategoryPicker, type RecategorizedInfo } from '../CategoryPicker/CategoryPicker'
+import { TransactionDetailModal } from './TransactionDetailModal'
 import styles from './TransactionsTable.module.css'
 
 interface Column {
@@ -94,6 +96,7 @@ export function TransactionsTable({
 }: TransactionsTableProps) {
   const rangeStart = page * pageSize + 1
   const rangeEnd = Math.min(total, (page + 1) * pageSize)
+  const [detailTxn, setDetailTxn] = useState<Transaction | null>(null)
 
   // The table shell (header, pagination) stays mounted even with zero
   // rows, so switching filters to a narrower result never collapses
@@ -140,8 +143,14 @@ export function TransactionsTable({
               const value = Number.parseFloat(txn.amount)
               return (
                 <tr key={txn.id} data-testid="transaction-row" data-description={txn.description}>
-                  <td>{formatDate(txn.txn_date)}</td>
-                  <td className={styles.description} title={txn.description}>
+                  <td className={styles.clickable} onClick={() => setDetailTxn(txn)}>
+                    {formatDate(txn.txn_date)}
+                  </td>
+                  <td
+                    className={`${styles.description} ${styles.clickable}`}
+                    title={txn.description}
+                    onClick={() => setDetailTxn(txn)}
+                  >
                     {txn.description}
                   </td>
                   <td>
@@ -153,14 +162,17 @@ export function TransactionsTable({
                     />
                   </td>
                   <td
-                    className={`${styles.colAmount} ${styles.amount} ${
+                    className={`${styles.colAmount} ${styles.amount} ${styles.clickable} ${
                       value < 0 ? styles.amountNegative : styles.amountPositive
                     }`}
                     data-testid="transaction-amount"
+                    onClick={() => setDetailTxn(txn)}
                   >
                     {formatAmount(txn.amount)}
                   </td>
-                  <td className={styles.muted}>{txn.account_name}</td>
+                  <td className={`${styles.muted} ${styles.clickable}`} onClick={() => setDetailTxn(txn)}>
+                    {txn.account_name}
+                  </td>
                   <td>
                     <RecurringToggle txn={txn} />
                   </td>
@@ -194,6 +206,8 @@ export function TransactionsTable({
           </button>
         </div>
       </div>
+
+      {detailTxn && <TransactionDetailModal txn={detailTxn} onClose={() => setDetailTxn(null)} />}
     </div>
   )
 }

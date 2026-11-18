@@ -1,0 +1,61 @@
+/* `grid-template-rows: 0fr -> 1fr` is the one CSS trick that lets a
+   block of unknown/variable height actually transition — height:auto
+   can't be animated, and max-height needs a guessed cap. The panel
+   content lives in a single grid row that grows from 0fr to 1fr. */
+.expander {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration-base) var(--ease-standard);
+}
+
+.inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.panel {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-tile);
+  background: var(--paper-sunk);
+  padding: var(--sp-5);
+  margin: var(--sp-4) 0;
+  opacity: 1;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.title {
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+}
+
+.closeButton {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  padding: var(--sp-1) var(--sp-3);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.closeButton:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.loading {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  padding: var(--sp-5) 0;
+}

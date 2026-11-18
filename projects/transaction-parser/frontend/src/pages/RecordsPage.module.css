@@ -23,3 +23,7 @@
   color: var(--accent-negative);
   font-size: var(--fs-small);
 }
+
+.searchRow {
+  max-width: 24rem;
+}

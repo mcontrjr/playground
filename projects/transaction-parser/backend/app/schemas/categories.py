@@ -34,7 +34,8 @@ class CategoryRead(BaseModel):
                     "is_system": False,
                     "excluded_from_analytics": False,
                     "priority": 7,
-                    "group": "Lifestyle",
+                    "bucket_id": 2,
+                    "group": "LIFESTYLE",
                     "keywords": [{"id": 14, "keyword": "STARBUCKS"}, {"id": 15, "keyword": "CHIPOTLE"}],
                     "transaction_count": 63,
                 }
@@ -47,9 +48,9 @@ class CategoryRead(BaseModel):
     is_system: bool
     excluded_from_analytics: bool
     priority: int
-    group: str | None = Field(
-        default=None,
-        description="Coarse grouping for the category picker (e.g. Essentials, Lifestyle, Income, Transfers, Savings). Null displays under 'Other'.",
+    bucket_id: int
+    group: str = Field(
+        description="The bucket's name, raw uppercase (e.g. ESSENTIALS, LIFESTYLE, INCOME, TRANSFERS, SAVINGS, OTHER). Serialized from bucket_id for frontend compat.",
     )
     keywords: list[CategoryKeywordRead]
     transaction_count: int
@@ -59,7 +60,7 @@ class CategoryCreate(BaseModel):
     """Request body to create a new (non-system) category."""
 
     model_config = ConfigDict(
-        json_schema_extra={"examples": [{"name": "Subscriptions", "priority": 20, "excluded_from_analytics": False, "group": "Lifestyle"}]}
+        json_schema_extra={"examples": [{"name": "Subscriptions", "priority": 20, "excluded_from_analytics": False, "bucket_id": 2}]}
     )
 
     name: str = Field(min_length=1, max_length=128)
@@ -68,10 +69,9 @@ class CategoryCreate(BaseModel):
         description="Lower matches first. Defaults to one past the current max priority.",
     )
     excluded_from_analytics: bool = False
-    group: str | None = Field(
+    bucket_id: int | None = Field(
         default=None,
-        max_length=64,
-        description="Coarse grouping for the category picker. Defaults to 'Other' when omitted.",
+        description="Bucket this category belongs to. Defaults to the OTHER bucket when omitted.",
     )
 
 
@@ -85,7 +85,7 @@ class CategoryPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=128)
     priority: int | None = None
     excluded_from_analytics: bool | None = None
-    group: str | None = Field(default=None, max_length=64)
+    bucket_id: int | None = None
 
 
 class CategoryPatchResponse(BaseModel):

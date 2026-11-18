@@ -1,0 +1,240 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--hairline);
+}
+
+.rowGroup {
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.rowGroupDropTarget {
+  background: var(--paper-sunk);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.categoryDropZone {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  min-height: 2rem;
+  padding: var(--sp-2);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-control);
+}
+
+.categoryDropHint {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  background: var(--paper);
+  cursor: grab;
+  user-select: none;
+}
+
+.categoryChipDragging {
+  opacity: 0.4;
+}
+
+.nameCol {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.nameInput {
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 2px 0;
+  min-width: 8rem;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.nameInput:hover {
+  border-bottom-color: var(--hairline-strong);
+}
+
+.nameInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.nameInput:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.meta {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.deleteButton {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.deleteButton:hover {
+  color: var(--accent-negative);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.heading {
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+
+.formLabel {
+  composes: label-caps from global;
+}
+
+.formInput {
+  border: none;
+  border-bottom: 1px solid var(--hairline-strong);
+  background: transparent;
+  padding: var(--sp-2) 0;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.formInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.formSelect {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.formSelect option {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.confirmBody {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-5);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}
+
+.cancelButton {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.dangerButton {
+  background: var(--accent-negative);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.errorBanner {
+  border: 1px solid var(--accent-negative);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--accent-negative);
+  font-size: var(--fs-small);
+  margin-bottom: var(--sp-4);
+}
+
+.toast {
+  position: fixed;
+  bottom: var(--sp-6);
+  right: var(--sp-6);
+  background: var(--tile-bg);
+  color: var(--tile-fg);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-5);
+  font-size: var(--fs-small);
+  box-shadow: 0 12px 32px rgba(20, 18, 24, 0.3);
+  z-index: 200;
+}

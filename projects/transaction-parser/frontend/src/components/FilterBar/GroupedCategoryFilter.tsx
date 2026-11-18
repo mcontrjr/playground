@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
+import { useBuckets } from '../../api/hooks/useBuckets'
 import type { Category } from '../../api/types'
 import styles from './FilterBar.module.css'
-
-const GROUP_ORDER = ['Essentials', 'Lifestyle', 'Income', 'Savings', 'Transfers', 'Other']
 
 interface GroupedCategoryFilterProps {
   categories: Category[]
@@ -10,24 +9,28 @@ interface GroupedCategoryFilterProps {
   onToggle: (categoryId: number) => void
 }
 
-/** The category filter as pills grouped under their category's `group`
- * label (Essentials/Lifestyle/Income/Savings/Transfers/Other), themed
- * through the same tokens as every other chip — grouping only changes
- * layout, not color. Categories with no group (user-created via the
- * quick-add flow) land in "Other". */
+/** The category filter as pills grouped under their category's bucket
+ * (`group`, the uppercase bucket name), themed through the same
+ * tokens as every other chip — grouping only changes layout, not
+ * color. Ordering comes from `useBuckets()` (name-sorted, OTHER
+ * always exists as the fallback bucket) instead of a hardcoded list,
+ * since buckets are now user-managed. */
 export function GroupedCategoryFilter({ categories, selected, onToggle }: GroupedCategoryFilterProps) {
+  const { data: buckets } = useBuckets()
+
   const grouped = useMemo(() => {
     const byGroup = new Map<string, Category[]>()
     for (const category of categories) {
-      const group = category.group ?? 'Other'
+      const group = category.group ?? 'OTHER'
       const list = byGroup.get(group) ?? []
       list.push(category)
       byGroup.set(group, list)
     }
-    const known = GROUP_ORDER.filter((g) => byGroup.has(g))
-    const unknown = [...byGroup.keys()].filter((g) => !GROUP_ORDER.includes(g)).sort()
+    const bucketOrder = (buckets ?? []).map((b) => b.name)
+    const known = bucketOrder.filter((g) => byGroup.has(g))
+    const unknown = [...byGroup.keys()].filter((g) => !bucketOrder.includes(g)).sort()
     return [...known, ...unknown].map((group) => ({ group, items: byGroup.get(group)! }))
-  }, [categories])
+  }, [categories, buckets])
 
   if (categories.length === 0) {
     return (

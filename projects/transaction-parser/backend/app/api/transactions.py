@@ -17,6 +17,7 @@ from app.schemas.transactions import (
     TransactionRead,
     TransactionSortField,
 )
+from app.services.audit_service import record_event
 from app.services.cache import bump_generation
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -34,6 +35,7 @@ def _transaction_to_read(txn: Transaction) -> TransactionRead:
         id=txn.id,
         account_id=txn.account_id,
         account_name=txn.account.display_name,
+        institution_code=txn.account.institution.code,
         batch_id=txn.batch_id,
         txn_date=txn.txn_date,
         posted_date=txn.posted_date,
@@ -45,6 +47,7 @@ def _transaction_to_read(txn: Transaction) -> TransactionRead:
         category_source=txn.category_source,
         is_recurring=txn.is_recurring,
         recurrence=txn.recurrence,
+        raw_row=txn.raw_row,
         created_at=txn.created_at,
     )
 
@@ -171,6 +174,21 @@ def patch_transaction(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Category {payload.category_id} not found",
+            )
+        if category.id != txn.category_id:
+            old_category = txn.category
+            old_category_name = old_category.name if old_category is not None else None
+            record_event(
+                db,
+                event_type="transaction.recategorized",
+                entity_type="transaction",
+                entity_id=txn.id,
+                description=(
+                    f"Recategorized transaction {txn.id} from "
+                    f"{old_category_name!r} to {category.name!r}."
+                ),
+                payload={"from_category": old_category_name, "to_category": category.name},
+                affected_count=1,
             )
         txn.category_id = category.id
         txn.category_source = "manual"

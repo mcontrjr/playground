@@ -16,4 +16,9 @@ export const queryKeys = {
   analyticsMonthlyDaily: (params: unknown) => ['analytics', 'monthly-daily', params] as const,
   analyticsDistribution: (params: unknown) => ['analytics', 'distribution', params] as const,
   preference: (key: string) => ['preferences', key] as const,
+  buckets: ['buckets'] as const,
+  audit: (params: unknown) => ['audit', params] as const,
+  auditAll: ['audit'] as const,
+  budgetSummary: (month: string) => ['budget', 'summary', month] as const,
+  budgetAll: ['budget'] as const,
 }

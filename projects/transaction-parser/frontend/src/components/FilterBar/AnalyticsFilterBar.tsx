@@ -23,6 +23,7 @@ function toggleInArray<T>(list: T[], value: T): T[] {
  * three pages stay visually and behaviorally consistent. */
 export function AnalyticsFilterBar({ filters, onChange }: AnalyticsFilterBarProps) {
   const { data: accounts } = useAccounts()
+  const hasActiveFilters = filters.accountIds.length > 0 || filters.includeExcluded
 
   return (
     <div className={styles.bar}>
@@ -36,6 +37,16 @@ export function AnalyticsFilterBar({ filters, onChange }: AnalyticsFilterBarProp
             onChange({ ...filters, accountIds: toggleInArray(filters.accountIds, Number(key)) })
           }
         />
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className={styles.clearButton}
+            onClick={() => onChange({ accountIds: [], includeExcluded: false })}
+            data-testid="clear-all-filters"
+          >
+            Clear all
+          </button>
+        )}
       </div>
 
       <ScopeToggle

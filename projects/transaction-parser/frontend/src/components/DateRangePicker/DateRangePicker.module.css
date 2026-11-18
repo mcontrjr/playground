@@ -1,0 +1,157 @@
+.container {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  background: transparent;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.trigger:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.triggerActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  left: 0;
+  z-index: 50;
+  background: var(--tile-bg);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-tile);
+  padding: var(--sp-4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  width: 18rem;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+
+.navButton {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.navButton:hover {
+  background: var(--paper-sunk);
+}
+
+.monthLabel {
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+}
+
+.weekdays,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  padding-bottom: var(--sp-1);
+}
+
+.dayBlank {
+  display: block;
+}
+
+.day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.day:hover {
+  background: var(--paper-sunk);
+  color: var(--ink);
+}
+
+.dayInRange {
+  background: var(--paper-sunk);
+  border-radius: 0;
+}
+
+.daySelected {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-control);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.clearButton {
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.clearButton:hover {
+  color: var(--ink);
+}
+
+.applyButton {
+  border: none;
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--sp-2) var(--sp-4);
+  cursor: pointer;
+}
+
+.applyButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

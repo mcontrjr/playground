@@ -14,15 +14,21 @@ import type {
   ImpactPreviewResponse,
 } from '../types'
 
-/** Mutations that change categories/keywords invalidate categories,
- * transactions, and analytics everywhere — a keyword or rename can
- * reshape every page that reads category assignments. */
-function useInvalidateEverything() {
+/** Mutations that change categories/keywords/buckets invalidate
+ * categories, buckets, transactions, analytics, and audit everywhere
+ * — a keyword, rename, or bucket reassignment can reshape every page
+ * that reads category assignments, and every mutation that reaches
+ * this function also writes an audit event server-side. Exported so
+ * `useBucketMutations` shares the same invalidation breadth instead
+ * of duplicating it. */
+export function useInvalidateEverything() {
   const queryClient = useQueryClient()
   return () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.categories })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.buckets })
     void queryClient.invalidateQueries({ queryKey: queryKeys.transactionsAll })
     void queryClient.invalidateQueries({ queryKey: queryKeys.analyticsAll })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.auditAll })
   }
 }
 

@@ -1,7 +1,18 @@
 """FastAPI application factory for the transaction-parser backend."""
 from fastapi import APIRouter, FastAPI
 
-from app.api import accounts, analytics, categories, failures, preferences, transactions, uploads
+from app.api import (
+    accounts,
+    analytics,
+    audit,
+    buckets,
+    budgets,
+    categories,
+    failures,
+    preferences,
+    transactions,
+    uploads,
+)
 
 TAGS_METADATA = [
     {
@@ -35,6 +46,18 @@ TAGS_METADATA = [
     {
         "name": "preferences",
         "description": "Server-side cache of UI state: active theme and per-page filter selections.",
+    },
+    {
+        "name": "buckets",
+        "description": "Coarse category groupings; OTHER is the undeletable fallback bucket.",
+    },
+    {
+        "name": "audit",
+        "description": "Read-only audit trail of category/bucket/transaction mutations, for the History page.",
+    },
+    {
+        "name": "budget",
+        "description": "Monthly budget expenses: CRUD plus the month-scoped summary (auto-imported income, actual-vs-goal per expense).",
     },
 ]
 
@@ -80,6 +103,9 @@ def create_app() -> FastAPI:
     api_v1.include_router(analytics.router)
     api_v1.include_router(accounts.router)
     api_v1.include_router(preferences.router)
+    api_v1.include_router(buckets.router)
+    api_v1.include_router(audit.router)
+    api_v1.include_router(budgets.router)
 
     app.include_router(api_v1)
 

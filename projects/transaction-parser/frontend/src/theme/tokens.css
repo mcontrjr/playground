@@ -10,7 +10,7 @@
 
 :root {
   /* --- Typography --- */
-  --font-sans: 'Montserrat', -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Roboto Mono', 'SFMono-Regular', 'Consolas', monospace;
   --font-weight-light: 300;
   --font-weight-regular: 400;
   --font-weight-semibold: 600;

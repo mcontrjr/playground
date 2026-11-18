@@ -1,69 +1,167 @@
 import { useMemo, useState } from 'react'
 import { usePreference } from '../api/hooks/usePreference'
-import { useAnalyticsMonthlyDaily } from '../api/hooks/useAnalytics'
-import { useMonths } from '../api/hooks/useTransactions'
+import { useAnalyticsMonthlyDaily, useAnalyticsTimeseries } from '../api/hooks/useAnalytics'
+import { useMonthScope } from '../hooks/useMonthScope'
 import { AnalyticsFilterBar, type AnalyticsFilterState } from '../components/FilterBar/AnalyticsFilterBar'
-import { DailySeriesChart } from '../components/charts/DailySeriesChart'
-import { formatCurrency } from '../components/charts/format'
+import { CategoryBarsChart } from '../components/charts/CategoryBarsChart'
+import { NetDayChart } from '../components/charts/NetDayChart'
+import { RunningTotalChart } from '../components/charts/RunningTotalChart'
+import { formatCurrency, formatMonthPeriod } from '../components/charts/format'
 import { MonthSwiper } from '../components/MonthSwiper/MonthSwiper'
+import { RecordsPanel } from '../components/RecordsPanel/RecordsPanel'
+import type { DailyPoint, TimeseriesResponse } from '../api/types'
 import styles from './TimeSeriesPage.module.css'
 
 const DEFAULT_FILTERS: AnalyticsFilterState = { accountIds: [], includeExcluded: false }
 
+/** Converts the monthly `TimeseriesResponse` (one value per category
+ * per period) into the same `DailyPoint[]` shape `CategoryBarsChart`/
+ * `RunningTotalChart` already consume for the per-month daily view —
+ * so "All" mode reuses the exact same chart components and top-8
+ * capping instead of a parallel implementation, with `date` holding
+ * the period key ("YYYY-MM") rather than an ISO day. */
+function timeseriesToPoints(data: TimeseriesResponse): DailyPoint[] {
+  let running = 0
+  return data.periods.map((period) => {
+    const byCategory = data.series
+      .map((series) => {
+        const point = series.values.find((v) => v.period === period)
+        return { category_id: series.category_id, name: series.name, amount: point?.value ?? '0' }
+      })
+      .filter((entry) => Number(entry.amount) !== 0)
+    const periodTotal = byCategory.reduce((sum, e) => sum + Number(e.amount), 0)
+    running += periodTotal
+    return {
+      date: period,
+      value: String(periodTotal),
+      running_total: String(running),
+      by_category: byCategory,
+    }
+  })
+}
+
+type ClickSource = 'bars' | 'running'
+
 export function TimeSeriesPage() {
   const [filters, setFilters] = usePreference<AnalyticsFilterState>('filters:time-series', DEFAULT_FILTERS)
-  const { data: months } = useMonths()
+  const scope = useMonthScope()
+  const [selected, setSelected] = useState<{ dateKey: string; source: ClickSource } | null>(null)
 
-  // Index into `months` (descending, most-recent-first); 0 = latest.
-  // Deliberately NOT reset when `filters` changes — switching an
-  // account/scope filter should re-fetch the same month's data under
-  // the new filter, not snap the user back to the current month.
-  const [monthIndex, setMonthIndex] = useState(0)
-
-  const activeMonth = months?.[monthIndex]
-
-  const { data, isLoading } = useAnalyticsMonthlyDaily(activeMonth?.from ?? '', {
+  const analyticsFilters = {
     account_ids: filters.accountIds.length ? filters.accountIds : undefined,
     include_excluded: filters.includeExcluded,
+  }
+
+  const monthlyDaily = useAnalyticsMonthlyDaily(scope.month?.from ?? '', analyticsFilters, {
+    enabled: !scope.isAll,
   })
+  const allTime = useAnalyticsTimeseries('month', { ...analyticsFilters })
 
-  const isLatest = monthIndex === 0
-  const canGoOlder = !!months && monthIndex < months.length - 1
+  const isLoading = scope.isAll ? allTime.isLoading : monthlyDaily.isLoading
+  const points = useMemo<DailyPoint[]>(() => {
+    if (scope.isAll) return allTime.data ? timeseriesToPoints(allTime.data) : []
+    return monthlyDaily.data?.points ?? []
+  }, [scope.isAll, allTime.data, monthlyDaily.data])
 
-  const monthTotal = useMemo(() => (data ? formatCurrency(data.month_total) : null), [data])
+  const total = useMemo(() => {
+    if (scope.isAll) return points.reduce((sum, p) => sum + Number(p.value), 0)
+    return monthlyDaily.data ? Number(monthlyDaily.data.month_total) : null
+  }, [scope.isAll, points, monthlyDaily.data])
+
+  // Same-point click toggles the panel closed; clicking a different
+  // point swaps the panel to the new one without an extra click.
+  const handlePointClick = (source: ClickSource) => (dateKey: string) => {
+    setSelected((current) => (current?.dateKey === dateKey ? null : { dateKey, source }))
+  }
+
+  const panelFilters = useMemo(() => {
+    if (!selected) return null
+    const accountIds = filters.accountIds.length ? filters.accountIds : undefined
+    if (scope.isAll) {
+      // selected.dateKey is a "YYYY-MM" period in All mode — scope the
+      // panel to that whole month.
+      const [year, month] = selected.dateKey.split('-').map(Number)
+      const from = `${selected.dateKey}-01`
+      const lastDay = new Date(year!, month!, 0).getDate()
+      const to = `${selected.dateKey}-${String(lastDay).padStart(2, '0')}`
+      return { date_from: from, date_to: to, account_ids: accountIds, include_excluded: filters.includeExcluded }
+    }
+    return {
+      date_from: selected.dateKey,
+      date_to: selected.dateKey,
+      account_ids: accountIds,
+      include_excluded: filters.includeExcluded,
+    }
+  }, [selected, scope.isAll, filters])
+
+  const panelTitle = useMemo(() => {
+    if (!selected) return ''
+    return scope.isAll ? formatMonthPeriod(selected.dateKey) : selected.dateKey
+  }, [selected, scope.isAll])
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Time Series</h1>
-        <p className={styles.subtitle}>Daily spend for one month at a time — swipe or use the arrows to go back.</p>
+        <p className={styles.subtitle}>
+          Swipe or use the arrows to move between all-time and individual months. Click a bar or point
+          to see the records behind it.
+        </p>
       </header>
 
       <AnalyticsFilterBar filters={filters} onChange={setFilters} />
 
-      {activeMonth ? (
-        <MonthSwiper
-          label={data?.label ?? activeMonth.label}
-          isLatest={isLatest}
-          canGoOlder={canGoOlder}
-          onNewer={() => setMonthIndex((i) => Math.max(0, i - 1))}
-          onOlder={() => setMonthIndex((i) => (months ? Math.min(months.length - 1, i + 1) : i))}
-        />
-      ) : null}
+      <MonthSwiper
+        label={scope.label}
+        canGoNewer={scope.canGoNewer}
+        canGoOlder={scope.canGoOlder}
+        badge={scope.isAll ? 'Entire history' : 'Month view'}
+        onNewer={scope.goNewer}
+        onOlder={scope.goOlder}
+      />
 
       <div className={styles.chartWrap}>
         {isLoading ? (
           <p className={styles.empty}>Loading…</p>
-        ) : data && data.points.length > 0 ? (
+        ) : points.length > 0 ? (
           <>
-            <DailySeriesChart points={data.points} />
-            <div className={styles.monthTotal}>
-              <span className={styles.monthTotalLabel}>Month total </span>
-              <span className={styles.monthTotalValue}>{monthTotal}</span>
-            </div>
+            <CategoryBarsChart
+              points={points}
+              selectedKey={selected?.dateKey ?? null}
+              onPointClick={handlePointClick('bars')}
+              granularity={scope.isAll ? 'month' : 'day'}
+            />
+
+            <NetDayChart
+              points={points}
+              selectedKey={selected?.dateKey ?? null}
+              onPointClick={handlePointClick('bars')}
+              granularity={scope.isAll ? 'month' : 'day'}
+            />
+
+            {selected && panelFilters && (
+              <RecordsPanel title={panelTitle} filters={panelFilters} onClose={() => setSelected(null)} />
+            )}
+
+            <RunningTotalChart
+              points={points}
+              selectedKey={selected?.dateKey ?? null}
+              onPointClick={handlePointClick('running')}
+              granularity={scope.isAll ? 'month' : 'day'}
+              monthBounds={
+                !scope.isAll && scope.month ? { from: scope.month.from, to: scope.month.to } : undefined
+              }
+            />
+
+            {total != null && (
+              <div className={styles.monthTotal}>
+                <span className={styles.monthTotalLabel}>{scope.isAll ? 'All-time total ' : 'Month total '}</span>
+                <span className={styles.monthTotalValue}>{formatCurrency(total)}</span>
+              </div>
+            )}
           </>
         ) : (
-          <p className={styles.empty}>No spend in this month yet.</p>
+          <p className={styles.empty}>No spend in this range yet.</p>
         )}
       </div>
     </div>

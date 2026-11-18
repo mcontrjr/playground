@@ -22,6 +22,7 @@ class TransactionRead(BaseModel):
                     "id": 101,
                     "account_id": 3,
                     "account_name": "Amex ···21003",
+                    "institution_code": "amex",
                     "batch_id": 7,
                     "txn_date": "2026-10-04",
                     "posted_date": "2026-10-05",
@@ -31,6 +32,7 @@ class TransactionRead(BaseModel):
                     "category_id": 8,
                     "category_name": "Food",
                     "category_source": "keyword",
+                    "raw_row": {"Description": "STARBUCKS STORE 01234 SAN FRANCISCO CA", "Amount": "-6.75"},
                     "created_at": "2026-11-13T18:05:00Z",
                 }
             ]
@@ -40,6 +42,7 @@ class TransactionRead(BaseModel):
     id: int
     account_id: int
     account_name: str = Field(description="Account display name, joined for convenience.")
+    institution_code: str = Field(description="The source bank/card, e.g. 'schwab', 'amex' — keys which raw_row columns to expect.")
     batch_id: int
     txn_date: date
     posted_date: date | None
@@ -52,6 +55,13 @@ class TransactionRead(BaseModel):
     is_recurring: bool = Field(description="Whether this transaction is flagged as a recurring bill/subscription.")
     recurrence: Literal["monthly", "yearly"] | None = Field(
         default=None, description="Recurrence cadence when is_recurring is true."
+    )
+    raw_row: dict[str, str] = Field(
+        description=(
+            "The original CSV row, keyed by that bank's own column names — "
+            "shape differs per institution_code, never padded with nulls "
+            "for columns a different bank happens to have."
+        )
     )
     created_at: datetime
 

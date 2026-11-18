@@ -33,3 +33,22 @@
   padding: var(--sp-7) 0;
   text-align: center;
 }
+
+.monthTotal {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2) 0;
+}
+
+.monthTotalLabel {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+}
+
+.monthTotalValue {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

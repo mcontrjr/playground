@@ -14,3 +14,18 @@
   gap: var(--sp-6);
   flex-wrap: wrap;
 }
+
+.clearButton {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  height: fit-content;
+}
+
+.clearButton:hover {
+  color: var(--ink);
+}

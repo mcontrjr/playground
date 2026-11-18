@@ -8,6 +8,7 @@ from app.db import Base
 from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.bucket import Bucket
     from app.models.transaction import Transaction
 
 
@@ -25,13 +26,14 @@ class Category(TimestampMixin, Base):
         Boolean, nullable=False, default=False, server_default="false"
     )
     priority: Mapped[int] = mapped_column(Integer, nullable=False)
-    group: Mapped[str | None] = mapped_column(
-        String(64), nullable=True, server_default=None
+    bucket_id: Mapped[int] = mapped_column(
+        ForeignKey("buckets.id", ondelete="RESTRICT"), nullable=False
     )
-    """Coarse grouping for the category picker dropdown (e.g. 'Essentials',
-    'Lifestyle', 'Income', 'Transfers', 'Savings'). Null falls back to an
-    'Other' bucket client-side."""
+    """Coarse grouping for the category picker dropdown. Every category
+    belongs to exactly one bucket; the API still serializes this as
+    `group: str` (the bucket's uppercase name) for frontend compat."""
 
+    bucket: Mapped["Bucket"] = relationship(back_populates="categories")
     keywords: Mapped[list["CategoryKeyword"]] = relationship(
         back_populates="category",
         cascade="all, delete-orphan",

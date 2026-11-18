@@ -21,8 +21,10 @@ export function Layout({ children }: { children: ReactNode }) {
     { to: '/time-series', label: 'Time Series' },
     { to: '/distribution', label: 'Distribution' },
     { to: '/records', label: 'Records' },
+    { to: '/budget', label: 'Budget' },
     { to: '/categories', label: 'Categories' },
     { to: '/accounts', label: 'Accounts' },
+    { to: '/history', label: 'History' },
   ]
 
   return (

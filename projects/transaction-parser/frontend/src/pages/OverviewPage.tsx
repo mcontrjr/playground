@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { useAnalyticsDistribution, useAnalyticsSummary, useAnalyticsTimeseries } from '../api/hooks/useAnalytics'
+import { useMonthScope } from '../hooks/useMonthScope'
 import { formatCurrency, formatMonthPeriod } from '../components/charts/format'
 import { KpiTile } from '../components/charts/KpiTile'
 import { MiniBarChart } from '../components/charts/MiniBarChart'
+import { MonthSwiper } from '../components/MonthSwiper/MonthSwiper'
 import styles from './OverviewPage.module.css'
 
 const TOP_N = 5
@@ -16,9 +18,12 @@ function formatDateRange(from: string | null, to: string | null): string {
 }
 
 export function OverviewPage() {
-  const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary({})
-  const { data: distribution } = useAnalyticsDistribution({})
-  const { data: timeseries } = useAnalyticsTimeseries('month', {})
+  const scope = useMonthScope()
+  const analyticsFilters = { date_from: scope.dateFrom, date_to: scope.dateTo }
+
+  const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary(analyticsFilters)
+  const { data: distribution } = useAnalyticsDistribution(analyticsFilters)
+  const { data: timeseries } = useAnalyticsTimeseries('month', analyticsFilters)
 
   const topCategories = useMemo(() => (distribution?.entries ?? []).slice(0, TOP_N), [distribution])
 
@@ -40,6 +45,15 @@ export function OverviewPage() {
             : formatDateRange(summary?.date_from ?? null, summary?.date_to ?? null)}
         </p>
       </header>
+
+      <MonthSwiper
+        label={scope.label}
+        canGoNewer={scope.canGoNewer}
+        canGoOlder={scope.canGoOlder}
+        badge={scope.isAll ? 'Entire history' : 'Month view'}
+        onNewer={scope.goNewer}
+        onOlder={scope.goOlder}
+      />
 
       <div className={styles.kpiRow}>
         <KpiTile label="Total spent" value={summary ? formatCurrency(summary.total_spent) : '—'} />

@@ -76,6 +76,10 @@ def test_list_categories_includes_keywords_and_counts(client: TestClient, db_ses
     assert categories["FOOD"]["transaction_count"] >= 1
     assert any(k["keyword"] == "CHIPOTLE" for k in categories["FOOD"]["keywords"])
     assert categories["Uncategorized"]["is_system"] is True
+    # bucket_id + group (bucket name, raw uppercase) are both present.
+    assert categories["FOOD"]["bucket_id"] is not None
+    assert categories["FOOD"]["group"] == "LIFESTYLE"
+    assert categories["Uncategorized"]["group"] == "OTHER"
 
 
 def test_create_category(client: TestClient) -> None:
@@ -85,6 +89,23 @@ def test_create_category(client: TestClient) -> None:
     assert body["name"] == "Test Subscriptions A"
     assert body["is_system"] is False
     assert body["excluded_from_analytics"] is False
+    # No bucket_id given -> defaults to OTHER.
+    assert body["group"] == "OTHER"
+    assert body["bucket_id"] is not None
+
+
+def test_create_category_with_explicit_bucket_id(client: TestClient, db_session: Session) -> None:
+    bucket_resp = client.post("/api/v1/buckets", json={"name": "Explicit Bucket"})
+    bucket_id = bucket_resp.json()["id"]
+
+    resp = client.post(
+        "/api/v1/categories",
+        json={"name": "Test Subscriptions Explicit", "bucket_id": bucket_id},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["bucket_id"] == bucket_id
+    assert body["group"] == "EXPLICIT BUCKET"
 
 
 def test_create_category_duplicate_name_409(client: TestClient) -> None:
@@ -105,6 +126,27 @@ def test_rename_category_returns_affected_count(client: TestClient, db_session: 
     body = resp.json()
     assert body["category"]["name"] == "Dining & Coffee"
     assert body["affected_transaction_count"] == 2
+
+
+def test_patch_category_bucket_id_changes_group(client: TestClient, db_session: Session) -> None:
+    from app.models import Category
+
+    bucket_resp = client.post("/api/v1/buckets", json={"name": "Patch Target Bucket"})
+    bucket_id = bucket_resp.json()["id"]
+
+    food = _seeded_category(db_session, "FOOD")
+    original_bucket_id = food.bucket_id
+
+    resp = client.patch(f"/api/v1/categories/{food.id}", json={"bucket_id": bucket_id})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["category"]["bucket_id"] == bucket_id
+    assert body["category"]["group"] == "PATCH TARGET BUCKET"
+
+    db_session.expire_all()
+    refreshed = db_session.get(Category, food.id)
+    assert refreshed.bucket_id == bucket_id
+    assert refreshed.bucket_id != original_bucket_id
 
 
 def test_delete_category_reassigns_to_uncategorized(client: TestClient, db_session: Session) -> None:

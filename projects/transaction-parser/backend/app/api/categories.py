@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Category, CategoryKeyword, Transaction
+from app.models import Bucket, Category, CategoryKeyword, Transaction
 from app.schemas.categories import (
     CategoryCreate,
     CategoryDeleteResponse,
@@ -23,6 +23,7 @@ from app.schemas.categories import (
     ImpactPreviewResponse,
     ImpactPreviewTransaction,
 )
+from app.services.audit_service import record_event
 from app.services.cache import bump_generation
 from app.services.categorizer import UNCATEGORIZED_CATEGORY_NAME
 from app.services.category_service import (
@@ -34,6 +35,8 @@ from app.services.category_service import (
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
+OTHER_BUCKET_NAME = "OTHER"
+
 
 def _category_to_read(category: Category, transaction_count: int) -> CategoryRead:
     return CategoryRead(
@@ -42,7 +45,8 @@ def _category_to_read(category: Category, transaction_count: int) -> CategoryRea
         is_system=category.is_system,
         excluded_from_analytics=category.excluded_from_analytics,
         priority=category.priority,
-        group=category.group,
+        bucket_id=category.bucket_id,
+        group=category.bucket.name,
         keywords=[CategoryKeywordRead.model_validate(k) for k in category.keywords],
         transaction_count=transaction_count,
     )
@@ -55,6 +59,26 @@ def _get_uncategorized(db: Session) -> Category:
     if category is None:  # pragma: no cover - only if seed hasn't run
         raise RuntimeError("Uncategorized system category missing — has seed run?")
     return category
+
+
+def _get_other_bucket(db: Session) -> Bucket:
+    bucket = db.execute(
+        select(Bucket).where(Bucket.name == OTHER_BUCKET_NAME)
+    ).scalar_one_or_none()
+    if bucket is None:  # pragma: no cover - only if seed hasn't run
+        raise RuntimeError("OTHER system bucket missing — has seed run?")
+    return bucket
+
+
+def _resolve_bucket(db: Session, bucket_id: int | None) -> Bucket:
+    if bucket_id is None:
+        return _get_other_bucket(db)
+    bucket = db.get(Bucket, bucket_id)
+    if bucket is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Bucket {bucket_id} not found"
+        )
+    return bucket
 
 
 def _moves_to_breakdown(
@@ -169,14 +193,27 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)) -> C
         max_priority = db.execute(select(func.max(Category.priority))).scalar_one_or_none()
         priority = (max_priority or 0) + 1
 
+    bucket = _resolve_bucket(db, payload.bucket_id)
+
     category = Category(
         name=payload.name,
         is_system=False,
         excluded_from_analytics=payload.excluded_from_analytics,
         priority=priority,
-        group=payload.group or "Other",
+        bucket_id=bucket.id,
     )
     db.add(category)
+    db.flush()
+
+    record_event(
+        db,
+        event_type="category.created",
+        entity_type="category",
+        entity_id=category.id,
+        description=f"Created category {category.name!r} in bucket {bucket.name!r}.",
+        payload={"name": category.name, "bucket_id": bucket.id, "bucket": bucket.name},
+    )
+
     db.commit()
     db.refresh(category)
     bump_generation()
@@ -226,14 +263,37 @@ def patch_category(
                     "message": f"A category named {payload.name!r} already exists.",
                 },
             )
+        old_name = category.name
         category.name = payload.name
+        record_event(
+            db,
+            event_type="category.renamed",
+            entity_type="category",
+            entity_id=category.id,
+            description=f"Renamed category {old_name!r} to {payload.name!r}.",
+            payload={"from": old_name, "to": payload.name},
+        )
 
     if payload.priority is not None:
         category.priority = payload.priority
     if payload.excluded_from_analytics is not None:
         category.excluded_from_analytics = payload.excluded_from_analytics
-    if payload.group is not None:
-        category.group = payload.group
+    if payload.bucket_id is not None and payload.bucket_id != category.bucket_id:
+        new_bucket = _resolve_bucket(db, payload.bucket_id)
+        old_bucket = db.get(Bucket, category.bucket_id)
+        old_bucket_name = old_bucket.name if old_bucket is not None else None
+        category.bucket_id = new_bucket.id
+        record_event(
+            db,
+            event_type="category.bucket_changed",
+            entity_type="category",
+            entity_id=category.id,
+            description=(
+                f"Moved category {category.name!r} from bucket "
+                f"{old_bucket_name!r} to bucket {new_bucket.name!r}."
+            ),
+            payload={"from_bucket_id": old_bucket.id if old_bucket else None, "to_bucket_id": new_bucket.id},
+        )
 
     db.commit()
     db.refresh(category)
@@ -301,7 +361,22 @@ def delete_category(category_id: int, db: Session = Depends(get_db)) -> Category
         .values(category_id=uncategorized.id, category_source="default")
     )
 
+    deleted_name = category.name
     db.delete(category)  # cascades category_keywords
+
+    record_event(
+        db,
+        event_type="category.deleted",
+        entity_type="category",
+        entity_id=category_id,
+        description=(
+            f"Deleted category {deleted_name!r}; reassigned its transactions "
+            f"to {uncategorized.name!r}."
+        ),
+        payload={"name": deleted_name},
+        affected_count=reassigned_count,
+    )
+
     db.commit()
     bump_generation()
 
@@ -405,6 +480,16 @@ def add_keyword(
         moves = preview_add_keyword(db, category_id=category_id, keyword=keyword_upper)
         applied_count = apply_moves(db, moves)
 
+    record_event(
+        db,
+        event_type="keyword.added",
+        entity_type="category",
+        entity_id=category.id,
+        description=f"Added keyword {keyword_upper!r} to category {category.name!r}.",
+        payload={"keyword": keyword_upper, "category_id": category.id},
+        affected_count=applied_count,
+    )
+
     db.commit()
     db.refresh(keyword_row)
     bump_generation()
@@ -443,12 +528,23 @@ def delete_keyword(
     if reapply:
         moves = preview_remove_keyword(db, category_id=category_id, keyword=keyword_row.keyword)
 
+    deleted_keyword_text = keyword_row.keyword
     db.delete(keyword_row)
     db.flush()
 
     reapplied_count = 0
     if reapply:
         reapplied_count = apply_moves(db, moves)
+
+    record_event(
+        db,
+        event_type="keyword.removed",
+        entity_type="category",
+        entity_id=category.id,
+        description=f"Removed keyword {deleted_keyword_text!r} from category {category.name!r}.",
+        payload={"keyword": deleted_keyword_text, "category_id": category.id},
+        affected_count=reapplied_count,
+    )
 
     db.commit()
     bump_generation()

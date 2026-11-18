@@ -89,11 +89,20 @@ _TABLES_TO_TRUNCATE = (
     "ingest_batches",
     "accounts",
     # institutions are immutable reference data, left intact.
-    # categories/category_keywords ARE truncated below (re-seeded after)
-    # since Phase 4 tests mutate them directly (CRUD, keyword add/remove)
-    # and each test should start from the same known seeded state.
+    # categories/category_keywords/buckets/audit_events ARE truncated below
+    # (re-seeded after) since Phase 2/4 tests mutate them directly (CRUD,
+    # keyword add/remove, bucket CRUD, audit trail assertions) and each
+    # test should start from the same known seeded state. buckets must be
+    # included in the same CASCADE truncate as categories since
+    # categories.bucket_id FKs into it. budget_expenses/
+    # budget_expense_categories are test-created only (nothing seeds them),
+    # but CASCADE-truncating them here keeps budget tests isolated too.
     "categories",
     "category_keywords",
+    "buckets",
+    "audit_events",
+    "budget_expenses",
+    "budget_expense_categories",
 )
 
 

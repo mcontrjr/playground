@@ -73,6 +73,10 @@
   color: var(--ink-faint);
 }
 
+.clickable {
+  cursor: pointer;
+}
+
 .recurringToggle {
   border: 1px solid var(--hairline-strong);
   background: transparent;

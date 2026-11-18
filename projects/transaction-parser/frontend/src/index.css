@@ -1,6 +1,6 @@
-@import '@fontsource/montserrat/300.css';
-@import '@fontsource/montserrat/400.css';
-@import '@fontsource/montserrat/600.css';
+@import '@fontsource/roboto-mono/300.css';
+@import '@fontsource/roboto-mono/400.css';
+@import '@fontsource/roboto-mono/600.css';
 @import './theme/tokens.css';
 
 * {

@@ -1,0 +1,16 @@
+.wrap {
+  width: 100%;
+}
+
+.axisLabel {
+  display: block;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+  padding: 0 var(--sp-2) var(--sp-1);
+}
+
+.wrap :global(.recharts-line-curve) {
+  transition: stroke-opacity var(--duration-fast) var(--ease-standard);
+}

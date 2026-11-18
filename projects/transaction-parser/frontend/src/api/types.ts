@@ -37,7 +37,11 @@ export interface Category {
   is_system: boolean
   excluded_from_analytics: boolean
   priority: number
+  /** Uppercase bucket name, serialized from the related `Bucket` —
+   * kept for display/back-compat even though assignment now goes
+   * through `bucket_id`. */
   group: string | null
+  bucket_id: number
   keywords: CategoryKeyword[]
   transaction_count: number
 }
@@ -46,14 +50,14 @@ export interface CategoryCreate {
   name: string
   excluded_from_analytics?: boolean
   priority?: number
-  group?: string
+  bucket_id?: number
 }
 
 export interface CategoryPatch {
   name?: string
   excluded_from_analytics?: boolean
   priority?: number
-  group?: string
+  bucket_id?: number
 }
 
 export interface CategoryPatchResponse {
@@ -123,6 +127,9 @@ export interface Transaction {
   id: number
   account_id: number
   account_name: string
+  /** The source bank/card, e.g. 'schwab', 'amex' — keys which raw_row
+   * columns to expect; never assume another institution's shape. */
+  institution_code: string
   batch_id: number
   txn_date: string // ISO date
   posted_date: string | null
@@ -135,6 +142,10 @@ export interface Transaction {
   category_source: CategorySource
   is_recurring: boolean
   recurrence: Recurrence | null
+  /** The original CSV row, keyed by that bank's own column names. Shape
+   * differs per institution_code — never padded with nulls for columns
+   * a different bank happens to have. */
+  raw_row: Record<string, string>
   created_at: string
 }
 
@@ -285,6 +296,107 @@ export interface AnalyticsFilters {
   date_to?: string
   account_ids?: number[]
   include_excluded?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Buckets
+// ---------------------------------------------------------------------------
+
+export interface Bucket {
+  id: number
+  name: string
+  category_count: number
+}
+
+export interface BucketCreate {
+  name: string
+}
+
+export interface BucketUpdate {
+  name: string
+}
+
+export interface BucketDeleteResult {
+  moved_category_count: number
+  reassigned_to_bucket_id: number
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+export type AuditEventType =
+  | 'category.created'
+  | 'category.renamed'
+  | 'category.deleted'
+  | 'category.bucket_changed'
+  | 'keyword.added'
+  | 'keyword.removed'
+  | 'transaction.recategorized'
+  | 'bucket.created'
+  | 'bucket.renamed'
+  | 'bucket.deleted'
+
+export interface AuditEvent {
+  id: number
+  event_type: AuditEventType
+  entity_type: string
+  entity_id: number | null
+  description: string
+  payload: Record<string, unknown> | null
+  affected_count: number | null
+  created_at: string
+}
+
+export interface AuditPage {
+  items: AuditEvent[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// ---------------------------------------------------------------------------
+// Budget
+// ---------------------------------------------------------------------------
+
+export interface BudgetCategoryRef {
+  id: number
+  name: string
+}
+
+export interface BudgetExpense {
+  id: number
+  name: string
+  goal_amount: string | null
+  sort_order: number
+  categories: BudgetCategoryRef[]
+  actual_amount: string
+}
+
+export interface BudgetExpenseCreate {
+  name: string
+  goal_amount?: string | null
+  category_ids: number[]
+}
+
+export interface BudgetExpenseUpdate {
+  name?: string
+  goal_amount?: string | null
+  category_ids?: number[]
+  sort_order?: number
+}
+
+export interface BudgetExpenseDeleteResult {
+  deleted_budget_expense_id: number
+}
+
+export interface BudgetSummary {
+  /** "YYYY-MM" */
+  month: string
+  income: string
+  total_goal: string
+  total_actual: string
+  expenses: BudgetExpense[]
 }
 
 // ---------------------------------------------------------------------------

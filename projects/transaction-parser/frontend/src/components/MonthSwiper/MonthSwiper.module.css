@@ -49,6 +49,7 @@
   font-weight: var(--font-weight-semibold);
   color: var(--ink);
   white-space: nowrap;
+  animation: crossfade var(--duration-fast) var(--ease-standard);
 }
 
 .latestBadge {
@@ -56,4 +57,14 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
   color: var(--ink-faint);
+  animation: crossfade var(--duration-fast) var(--ease-standard);
+}
+
+@keyframes crossfade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

@@ -8,17 +8,23 @@ import { AddKeywordDialog } from '../components/CategoryPicker/AddKeywordDialog'
 import { NewCategoryDialog } from '../components/CategoryPicker/NewCategoryDialog'
 import type { RecategorizedInfo } from '../components/CategoryPicker/CategoryPicker'
 import { FilterBar, initialFilterState, type RecordsFilterState } from '../components/FilterBar/FilterBar'
+import { SearchInput } from '../components/FilterBar/SearchInput'
 import { TransactionsTable } from '../components/TransactionsTable/TransactionsTable'
 import styles from './RecordsPage.module.css'
 
 const PAGE_SIZE = 50
 
+/** A custom date range takes priority verbatim (it's mutually
+ * exclusive with month chips at the FilterBar level, so the two are
+ * never both populated — but this order still matters if that
+ * invariant is ever relaxed). */
 function deriveDateRange(
-  monthKeys: string[],
+  filters: Pick<RecordsFilterState, 'monthKeys' | 'dateRange'>,
   options: MonthOption[],
 ): { date_from?: string; date_to?: string } {
-  if (monthKeys.length === 0) return {}
-  const selected = options.filter((option) => monthKeys.includes(option.key))
+  if (filters.dateRange) return { date_from: filters.dateRange.from, date_to: filters.dateRange.to }
+  if (filters.monthKeys.length === 0) return {}
+  const selected = options.filter((option) => filters.monthKeys.includes(option.key))
   if (selected.length === 0) return {}
   const from = selected.reduce((min, o) => (o.from < min ? o.from : min), selected[0]!.from)
   const to = selected.reduce((max, o) => (o.to > max ? o.to : max), selected[0]!.to)
@@ -48,8 +54,8 @@ export function RecordsPage() {
   const patchTransaction = usePatchTransaction()
 
   const dateRange = useMemo(
-    () => deriveDateRange(filters.monthKeys, months ?? []),
-    [filters.monthKeys, months],
+    () => deriveDateRange(filters, months ?? []),
+    [filters, months],
   )
 
   const queryFilters = useMemo(
@@ -114,6 +120,7 @@ export function RecordsPage() {
         onChange={handleFilterChange}
         totalCount={data?.total}
         isLoading={isLoading}
+        hideSearch
       />
 
       {isError && (
@@ -121,6 +128,13 @@ export function RecordsPage() {
           {error instanceof ApiError ? error.message : 'Could not load transactions.'}
         </p>
       )}
+
+      <div className={styles.searchRow}>
+        <SearchInput
+          value={filters.search}
+          onChange={(search) => handleFilterChange({ ...filters, search })}
+        />
+      </div>
 
       <TransactionsTable
         transactions={data?.items ?? []}

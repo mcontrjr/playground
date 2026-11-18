@@ -1,0 +1,93 @@
+.list {
+  position: relative;
+  display: flex;
+  gap: var(--sp-1);
+  background: var(--paper-sunk);
+  border-radius: var(--radius-control);
+  padding: 4px;
+}
+
+.listVertical {
+  flex-direction: column;
+  width: fit-content;
+  min-width: 10rem;
+}
+
+.listFolder {
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  bottom: 4px;
+  background: var(--tile-bg);
+  border-radius: var(--radius-control);
+  transition: transform var(--duration-base) var(--ease-standard);
+  z-index: 0;
+}
+
+.listVertical .indicator {
+  right: 4px;
+  left: 4px;
+}
+
+.listFolder .indicator {
+  display: none;
+}
+
+.tab {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-regular);
+  cursor: pointer;
+  border-radius: var(--radius-control);
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.listVertical .tab {
+  justify-content: flex-start;
+}
+
+.listFolder .tab {
+  flex: none;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  border: 1px solid transparent;
+  margin-bottom: -1px;
+  padding: var(--sp-3) var(--sp-5);
+}
+
+.tab:hover {
+  color: var(--ink-soft);
+}
+
+.tabActive {
+  color: var(--ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.tabActive:hover {
+  color: var(--ink);
+}
+
+.listFolder .tabActive {
+  background: var(--paper);
+  border-color: var(--hairline);
+  border-bottom-color: var(--paper);
+}

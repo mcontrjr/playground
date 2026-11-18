@@ -42,19 +42,39 @@
 .row {
   display: flex;
   align-items: center;
+  width: 100%;
   gap: var(--sp-3);
-  padding: var(--sp-3) 0;
+  padding: var(--sp-3) var(--sp-2);
+  border: none;
   border-bottom: 1px solid var(--hairline);
-  cursor: default;
-  transition: opacity var(--duration-fast) var(--ease-standard);
+  border-radius: var(--radius-control);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
 }
 
 .row:last-child {
   border-bottom: none;
 }
 
+.row:hover:not(.rowDisabled) {
+  background: var(--paper-sunk);
+}
+
 .rowMuted {
   opacity: 0.4;
+}
+
+.rowSelected {
+  background: var(--tile-bg);
+}
+
+.rowDisabled {
+  cursor: default;
 }
 
 .swatch {

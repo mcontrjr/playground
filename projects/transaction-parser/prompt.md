@@ -1,0 +1,14 @@
+# Bugs / Fixes
+
+- Categories and Bucket tabs should be side by side with options under like folder tabs. Bucket selection here is outside of the encasing for the 2 options
+- in the buckets tab Lets show the categories for the buckets and be able to drag them into different buckets
+- Lets focus the graphs to instead be the net spend for that given time period or day. Right now the focus is on spending but change it to be on the net of that month looking at the income or positive against the negative. The net for that day should be shown so income - transactions. For example the Nov 13 day for SCHWAB shows 250 but it should be Income - Spending of that day to make it much higher. If the net is negative it shpuld be negavtie with everything centered around 0
+- Running total should start from the first of the month to the last with the firest if no transaction that day starting at 0. The points should only be on days with transactions and be plotted accordingly. The current graph can have verticies to click on that dont have transactions
+- Near accounts in time series add a clear all option to remove all filters
+- records and transactions have different metadata for each bank. inclue all this metadata in the record and have it be shown when a record is clicked. this can be a category from the bank or any other metadata that bank has. The metadata is not a global object it should be per source so there is no null or none values.
+
+# Budget tab
+
+After fixing the bugs I want you to add a new tab for a user to sort their budget. Everyone one has monthly occuring payments for their essentials. Rent, utilities, insurance etc. Any record or transaction can be added into the budget to be accounted for. For example in my budget tab it will import my income where the total is my income and they can add expenses, For now lets assume these expenses and budget is for a monthly scope since thats usually (not always the case) where most essentials frequent. I can add an expense category (different from transaction category) for rent, car payment, insusrance etc and this is made by the user. The only thing auto imported is the income. As they add expense categories we can link categories that we have bucketed to these expenses to get their total so we can link the amount instead of the user typing it in.
+
+For example an expense can be Groceries and i can link the groceries category here and then I can see how mych of my budget is being takesn up by the total amount. As always we can filter by month. A budget can also have a goal for the expense and that can be input manually when they add an expense. The idea is to create a budget with expenses and goals and then link the transactions to them and analyze how we are doing. I should be able to click on these expenses and ssee their record in a table.
