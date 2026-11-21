@@ -13,7 +13,11 @@ from app.schemas.transactions import (
     BulkRecategorizeRequest,
     BulkRecategorizeResponse,
     MonthOption,
+    RecategorizeAllMove,
+    RecategorizeAllRequest,
+    RecategorizeAllResponse,
     SortOrder,
+    TransactionFacets,
     TransactionListResponse,
     TransactionPatch,
     TransactionRead,
@@ -21,6 +25,12 @@ from app.schemas.transactions import (
 )
 from app.services.audit_service import record_event
 from app.services.cache import bump_generation
+from app.services.category_service import apply_moves, preview_recategorize_all
+
+# Cap on the per-move detail list in the response. The counts are always
+# exact; only this itemization is truncated, so a full-DB catch-up pass
+# can't return a multi-megabyte body.
+_MAX_REPORTED_MOVES = 200
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -30,6 +40,67 @@ _SORT_COLUMNS: dict[str, object] = {
     "description": Transaction.description,
     "category": Category.name,
 }
+
+
+def _apply_filters(
+    stmt,
+    *,
+    date_from: date | None,
+    date_to: date | None,
+    account_ids: list[int] | None,
+    category_ids: list[int] | None,
+    q: str | None,
+    recurring_only: bool,
+    include_excluded: bool,
+    exclude_category_ids: list[int] | None = None,
+    outflows_only: bool = False,
+    skip: str | None = None,
+):
+    """Applies the transaction list filters to `stmt`, optionally
+    skipping one dimension (`skip` is 'date' | 'account' | 'category') —
+    used by the facets endpoint to compute each dimension's available
+    options against every *other* active filter, standard faceted-search
+    style, so e.g. selecting an account doesn't make that account's own
+    chip look unavailable."""
+    if skip != "date":
+        if date_from is not None:
+            stmt = stmt.where(Transaction.txn_date >= date_from)
+        if date_to is not None:
+            stmt = stmt.where(Transaction.txn_date <= date_to)
+    if skip != "account" and account_ids:
+        stmt = stmt.where(Transaction.account_id.in_(account_ids))
+    if skip != "category" and category_ids:
+        stmt = stmt.where(Transaction.category_id.in_(category_ids))
+    if exclude_category_ids:
+        # Deliberately NOT gated behind `skip` — unlike category_ids
+        # this isn't a filter dimension the user toggles, it's a scope
+        # the caller has fixed (the Budget page's unbudgeted set), so
+        # the facet counts must stay inside it. NOT IN is
+        # NULL-propagating, so the explicit IS NULL keeps uncategorized
+        # rows in.
+        stmt = stmt.where(
+            Transaction.category_id.is_(None)
+            | Transaction.category_id.notin_(exclude_category_ids)
+        )
+    if outflows_only:
+        # Money out only. Needed by the Budget page's unbudgeted
+        # analysis, where the donut sums outflows (like
+        # /analytics/distribution) and the record list beside it must
+        # describe the same set — otherwise an income deposit shows up
+        # as "unaccounted-for spend". Note the `include_excluded`
+        # carve-out below always lets "Income" through, so filtering on
+        # the category alone would not be enough.
+        stmt = stmt.where(Transaction.amount < 0)
+    if q:
+        stmt = stmt.where(Transaction.description.ilike(f"%{q}%"))
+    if recurring_only:
+        stmt = stmt.where(Transaction.is_recurring.is_(True))
+    if not include_excluded:
+        stmt = stmt.where(
+            func.coalesce(Category.excluded_from_analytics, False).is_(False)
+            | (Category.name == "Income")
+        )
+    return stmt
 
 
 def _transaction_to_read(txn: Transaction) -> TransactionRead:
@@ -81,6 +152,21 @@ def list_transactions(
             "those too. 'Income' is always included regardless of this flag."
         ),
     ),
+    exclude_category_ids: list[int] | None = Query(
+        None,
+        description=(
+            "Category ids to omit. Uncategorized transactions are still "
+            "included — used by the Budget page to list everything *not* "
+            "linked to a budget expense."
+        ),
+    ),
+    outflows_only: bool = Query(
+        False,
+        description=(
+            "Only money out (amount < 0). Note this also drops 'Income', "
+            "which `include_excluded` otherwise always lets through."
+        ),
+    ),
     sort: TransactionSortField = Query("txn_date", description="Field to sort by."),
     order: SortOrder = Query("desc", description="Sort direction."),
     limit: int = Query(50, ge=1, le=500),
@@ -89,24 +175,18 @@ def list_transactions(
 ) -> TransactionListResponse:
     stmt = select(Transaction).join(Account, Transaction.account_id == Account.id)
     stmt = stmt.outerjoin(Category, Transaction.category_id == Category.id)
-
-    if date_from is not None:
-        stmt = stmt.where(Transaction.txn_date >= date_from)
-    if date_to is not None:
-        stmt = stmt.where(Transaction.txn_date <= date_to)
-    if account_ids:
-        stmt = stmt.where(Transaction.account_id.in_(account_ids))
-    if category_ids:
-        stmt = stmt.where(Transaction.category_id.in_(category_ids))
-    if q:
-        stmt = stmt.where(Transaction.description.ilike(f"%{q}%"))
-    if recurring_only:
-        stmt = stmt.where(Transaction.is_recurring.is_(True))
-    if not include_excluded:
-        stmt = stmt.where(
-            func.coalesce(Category.excluded_from_analytics, False).is_(False)
-            | (Category.name == "Income")
-        )
+    stmt = _apply_filters(
+        stmt,
+        date_from=date_from,
+        date_to=date_to,
+        account_ids=account_ids,
+        category_ids=category_ids,
+        q=q,
+        recurring_only=recurring_only,
+        include_excluded=include_excluded,
+        exclude_category_ids=exclude_category_ids,
+        outflows_only=outflows_only,
+    )
 
     count_stmt = select(func.count()).select_from(stmt.with_only_columns(Transaction.id).subquery())
     total = db.execute(count_stmt).scalar_one()
@@ -154,6 +234,71 @@ def list_months(db: Session = Depends(get_db)) -> list[MonthOption]:
     return months
 
 
+@router.get(
+    "/facets",
+    response_model=TransactionFacets,
+    summary="Which account/category/month filter options currently have matching transactions",
+    description=(
+        "For each filter dimension (account, category, month), returns the "
+        "ids/keys that have at least one matching transaction under the "
+        "*other* active filters — standard faceted search, so e.g. selecting "
+        "an account doesn't make that account's own chip look unavailable. "
+        "The Records filter bar dims any chip missing from these lists."
+    ),
+)
+def get_facets(
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    account_ids: list[int] | None = Query(None),
+    category_ids: list[int] | None = Query(None),
+    q: str | None = Query(None),
+    recurring_only: bool = Query(False),
+    include_excluded: bool = Query(False),
+    exclude_category_ids: list[int] | None = Query(
+        None,
+        description=(
+            "Category ids to omit. Applied to every dimension (it's a fixed "
+            "scope, not a toggleable filter), so facet options stay inside it."
+        ),
+    ),
+    outflows_only: bool = Query(False, description="Only money out (amount < 0)."),
+    db: Session = Depends(get_db),
+) -> TransactionFacets:
+    base = select(Transaction).join(Account, Transaction.account_id == Account.id)
+    base = base.outerjoin(Category, Transaction.category_id == Category.id)
+
+    def _filtered(skip: str):
+        return _apply_filters(
+            base,
+            date_from=date_from,
+            date_to=date_to,
+            account_ids=account_ids,
+            category_ids=category_ids,
+            q=q,
+            recurring_only=recurring_only,
+            include_excluded=include_excluded,
+            exclude_category_ids=exclude_category_ids,
+            outflows_only=outflows_only,
+            skip=skip,
+        )
+
+    account_stmt = _filtered("account").with_only_columns(Transaction.account_id).distinct()
+    category_stmt = _filtered("category").with_only_columns(Transaction.category_id).distinct()
+
+    month_key = func.to_char(Transaction.txn_date, "YYYY-MM")
+    month_stmt = _filtered("date").with_only_columns(month_key).distinct()
+
+    account_ids_result = [row[0] for row in db.execute(account_stmt).all()]
+    category_ids_result = [row[0] for row in db.execute(category_stmt).all() if row[0] is not None]
+    month_keys_result = [row[0] for row in db.execute(month_stmt).all()]
+
+    return TransactionFacets(
+        account_ids=account_ids_result,
+        category_ids=category_ids_result,
+        month_keys=month_keys_result,
+    )
+
+
 @router.post(
     "/bulk-recategorize",
     response_model=BulkRecategorizeResponse,
@@ -198,6 +343,92 @@ def bulk_recategorize(
     bump_generation()
     return BulkRecategorizeResponse(
         affected_count=affected_count, category_id=category.id, category_name=category.name
+    )
+
+
+@router.post(
+    "/recategorize-all",
+    response_model=RecategorizeAllResponse,
+    summary="Re-run the current categorization rules over existing transactions",
+    description=(
+        "Categorization normally runs only at ingest time, so rows keep "
+        "the category they got when first inserted — keywords added or "
+        "re-prioritized later never reach them. This re-runs the live "
+        "rules over every existing transaction and reports (or applies) "
+        "the differences.\n\n"
+        "Defaults to dry_run=true: nothing is written and affected_count "
+        "is 0, so the blast radius can be inspected first. Manual and "
+        "bulk rows are never touched. Respects the same transfer-first / "
+        "priority-then-keyword-length precedence used at ingest."
+    ),
+)
+def recategorize_all(
+    payload: RecategorizeAllRequest | None = None,
+    db: Session = Depends(get_db),
+) -> RecategorizeAllResponse:
+    request = payload or RecategorizeAllRequest()
+
+    moves = preview_recategorize_all(db)
+    candidate_count = len(moves)
+
+    sticky_count = (
+        db.execute(
+            select(func.count())
+            .select_from(Transaction)
+            .where(Transaction.category_source.in_(["manual", "bulk"]))
+        ).scalar_one()
+    )
+
+    # Resolve category names for the report before any mutation, so the
+    # "from" side reflects the pre-change state.
+    category_names = {
+        c.id: c.name for c in db.execute(select(Category)).scalars().all()
+    }
+    reported = [
+        RecategorizeAllMove(
+            transaction_id=move.transaction.id,
+            description=move.transaction.description,
+            from_category_id=move.transaction.category_id,
+            from_category_name=category_names.get(move.transaction.category_id),
+            to_category_id=move.new_category_id,
+            to_category_name=category_names.get(move.new_category_id),
+            to_source=move.new_source,
+        )
+        for move in moves[:_MAX_REPORTED_MOVES]
+    ]
+
+    if request.dry_run:
+        # Drop the uncommitted session state so a dry run can't leak the
+        # loaded-and-compared rows back into the DB on a later flush.
+        db.rollback()
+        return RecategorizeAllResponse(
+            dry_run=True,
+            candidate_count=candidate_count,
+            affected_count=0,
+            skipped_sticky_count=sticky_count,
+            moves=reported,
+        )
+
+    affected_count = apply_moves(db, moves)
+
+    record_event(
+        db,
+        event_type="transaction.recategorized_all",
+        entity_type="transaction",
+        entity_id=None,
+        description=f"Re-ran categorization rules over all transactions; {affected_count} changed.",
+        payload={"candidate_count": candidate_count},
+        affected_count=affected_count,
+    )
+
+    db.commit()
+    bump_generation()
+    return RecategorizeAllResponse(
+        dry_run=False,
+        candidate_count=candidate_count,
+        affected_count=affected_count,
+        skipped_sticky_count=sticky_count,
+        moves=reported,
     )
 
 

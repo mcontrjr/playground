@@ -216,6 +216,152 @@ def test_list_transactions_sort_and_pagination(client: TestClient, db_session: S
     assert amounts == sorted(amounts, key=lambda a: Decimal(a))
 
 
+def test_list_exclude_category_ids_keeps_uncategorized(
+    client: TestClient, db_session: Session
+) -> None:
+    """The Budget page lists "everything not linked to a budget expense"
+    by excluding the budgeted category ids — uncategorized rows must
+    survive that exclusion (NULL NOT IN (...) is NULL, not true)."""
+    account, batch = _make_batch(db_session)
+    food = _seeded_category(db_session, "FOOD")
+    gas = _seeded_category(db_session, "GAS")
+
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 10), amount="-30.00",
+        description="TACOS", category=food, category_source="keyword", content_hash_suffix="x1",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 11), amount="-40.00",
+        description="SHELL", category=gas, category_source="keyword", content_hash_suffix="x2",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 12), amount="-25.00",
+        description="MYSTERY CHARGE", category=None, category_source="default",
+        content_hash_suffix="x3",
+    )
+    db_session.commit()
+
+    resp = client.get(
+        "/api/v1/transactions",
+        params={"exclude_category_ids": [food.id], "include_excluded": "true"},
+    )
+    assert resp.status_code == 200
+    descriptions = {item["description"] for item in resp.json()["items"]}
+    assert descriptions == {"SHELL", "MYSTERY CHARGE"}
+
+    # Excluding every real category leaves only the uncategorized row.
+    both = client.get(
+        "/api/v1/transactions",
+        params={
+            "exclude_category_ids": [food.id, gas.id],
+            "include_excluded": "true",
+        },
+    ).json()
+    assert [item["description"] for item in both["items"]] == ["MYSTERY CHARGE"]
+    assert both["total"] == 1
+
+    # The exclusion also bounds the facet options, since it's a fixed
+    # scope rather than a dimension the user toggles.
+    facets = client.get(
+        "/api/v1/transactions/facets",
+        params={"exclude_category_ids": [food.id], "include_excluded": "true"},
+    ).json()
+    assert food.id not in facets["category_ids"]
+    assert gas.id in facets["category_ids"]
+
+
+def test_list_outflows_only_drops_income(client: TestClient, db_session: Session) -> None:
+    """`outflows_only` keeps money-out rows only. It must drop "Income"
+    too — `include_excluded` has a hard-coded carve-out that always
+    lets Income through, so the Budget page's unbudgeted spend analysis
+    can't rely on the category filter alone to keep a payroll deposit
+    out of its "unaccounted-for spend" list."""
+    account, batch = _make_batch(db_session)
+    food = _seeded_category(db_session, "FOOD")
+    income = _seeded_category(db_session, "Income")
+
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 10), amount="-30.00",
+        description="TACOS", category=food, category_source="keyword", content_hash_suffix="o1",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 15), amount="4130.32",
+        description="SERVE OPERATING PAYROLL", category=income, category_source="keyword",
+        content_hash_suffix="o2",
+    )
+    db_session.commit()
+
+    # Without the flag, the payroll deposit is present (Income is always
+    # included) — that's the behaviour being guarded against.
+    baseline = client.get("/api/v1/transactions").json()
+    assert "SERVE OPERATING PAYROLL" in {i["description"] for i in baseline["items"]}
+
+    resp = client.get("/api/v1/transactions", params={"outflows_only": "true"})
+    assert resp.status_code == 200
+    descriptions = {item["description"] for item in resp.json()["items"]}
+    assert descriptions == {"TACOS"}
+    assert all(Decimal(item["amount"]) < 0 for item in resp.json()["items"])
+
+
+def test_facets_narrow_by_other_filters_but_not_own_dimension(
+    client: TestClient, db_session: Session
+) -> None:
+    account_a, batch_a = _make_batch(db_session, institution_code="amex")
+    account_b, batch_b = _make_batch(db_session, institution_code="schwab")
+    food = _seeded_category(db_session, "FOOD")
+    gas = _seeded_category(db_session, "GAS")
+
+    # account_a: Food in Oct, Gas in Sep. account_b: Food in Nov only.
+    _make_txn(
+        db_session, account_a, batch_a, txn_date=date(2026, 10, 5), amount="-10.00",
+        description="A FOOD OCT", category=food, category_source="keyword", content_hash_suffix="f1",
+    )
+    _make_txn(
+        db_session, account_a, batch_a, txn_date=date(2026, 9, 5), amount="-20.00",
+        description="A GAS SEP", category=gas, category_source="keyword", content_hash_suffix="f2",
+    )
+    _make_txn(
+        db_session, account_b, batch_b, txn_date=date(2026, 11, 5), amount="-15.00",
+        description="B FOOD NOV", category=food, category_source="keyword", content_hash_suffix="f3",
+    )
+    db_session.commit()
+
+    # Filtering to account_b should narrow categories to just Food and
+    # months to just Nov, but account_ids itself should still list BOTH
+    # accounts (an account's own chip ignores the account filter).
+    resp = client.get(
+        "/api/v1/transactions/facets",
+        params={"account_ids": [account_b.id], "include_excluded": "true"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body["account_ids"]) == {account_a.id, account_b.id}
+    assert body["category_ids"] == [food.id]
+    assert body["month_keys"] == ["2026-11"]
+
+    # Filtering to Gas should narrow accounts to just account_a and
+    # months to just Sep, but category_ids itself still lists both.
+    resp2 = client.get(
+        "/api/v1/transactions/facets",
+        params={"category_ids": [gas.id], "include_excluded": "true"},
+    )
+    body2 = resp2.json()
+    assert body2["account_ids"] == [account_a.id]
+    assert set(body2["category_ids"]) == {food.id, gas.id}
+    assert body2["month_keys"] == ["2026-09"]
+
+    # Filtering to Oct..Oct should narrow accounts/categories to
+    # account_a/Food, but month_keys itself ignores the date filter.
+    resp3 = client.get(
+        "/api/v1/transactions/facets",
+        params={"date_from": "2026-10-01", "date_to": "2026-10-31", "include_excluded": "true"},
+    )
+    body3 = resp3.json()
+    assert body3["account_ids"] == [account_a.id]
+    assert body3["category_ids"] == [food.id]
+    assert set(body3["month_keys"]) == {"2026-09", "2026-10", "2026-11"}
+
+
 def test_patch_transaction_manual_recategorize(client: TestClient, db_session: Session) -> None:
     account, batch = _make_batch(db_session)
     food = _seeded_category(db_session, "FOOD")
@@ -367,3 +513,233 @@ def test_manual_recategorize_sticky_against_apply_to_existing(
     db_session.refresh(txn)
     assert txn.category_id == gas.id
     assert txn.category_source == "manual"
+
+
+# --- POST /transactions/recategorize-all -----------------------------------
+# Categorization runs only at ingest, so rows inserted before a keyword
+# existed keep their original category. These cover the catch-up pass.
+
+
+def _uncategorized(db_session: Session) -> Category:
+    return db_session.query(Category).filter(Category.name == "Uncategorized").one()
+
+
+def _transfers(db_session: Session) -> Category:
+    return db_session.query(Category).filter(Category.name == "Payments & Transfers").one()
+
+
+def test_recategorize_all_dry_run_reports_without_writing(
+    client: TestClient, db_session: Session
+) -> None:
+    account, batch = _make_batch(db_session)
+    # A PMT row stranded in Uncategorized, exactly like a row ingested
+    # before the transfer keywords were seeded.
+    txn = _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 9),
+        amount="-4000.00",
+        description="CAPITAL ONE MOBILE PMT CA0D12427086473",
+        category=_uncategorized(db_session),
+        category_source="default",
+    )
+    db_session.commit()
+    stranded_id = txn.id
+
+    response = client.post("/api/v1/transactions/recategorize-all", json={"dry_run": True})
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["dry_run"] is True
+    assert body["candidate_count"] == 1
+    assert body["affected_count"] == 0
+
+    move = next(m for m in body["moves"] if m["transaction_id"] == stranded_id)
+    assert move["from_category_name"] == "Uncategorized"
+    assert move["to_category_name"] == "Payments & Transfers"
+    assert move["to_source"] == "transfer"
+
+    # Nothing was written.
+    db_session.expire_all()
+    after = db_session.get(Transaction, stranded_id)
+    assert after.category_id == _uncategorized(db_session).id
+    assert after.category_source == "default"
+
+
+def test_recategorize_all_applies_and_fixes_stranded_pmt_row(
+    client: TestClient, db_session: Session
+) -> None:
+    account, batch = _make_batch(db_session)
+    txn = _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 9),
+        amount="-4000.00",
+        description="CAPITAL ONE MOBILE PMT CA0D12427086473",
+        category=_uncategorized(db_session),
+        category_source="default",
+    )
+    db_session.commit()
+    stranded_id = txn.id
+
+    response = client.post("/api/v1/transactions/recategorize-all", json={"dry_run": False})
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["dry_run"] is False
+    assert body["affected_count"] == 1
+
+    db_session.expire_all()
+    after = db_session.get(Transaction, stranded_id)
+    assert after.category_id == _transfers(db_session).id
+    assert after.category_source == "transfer"
+
+
+def test_recategorize_all_defaults_to_dry_run_with_no_body(
+    client: TestClient, db_session: Session
+) -> None:
+    account, batch = _make_batch(db_session)
+    txn = _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 9),
+        amount="-4000.00",
+        description="CAPITAL ONE MOBILE PMT",
+        category=_uncategorized(db_session),
+        category_source="default",
+    )
+    db_session.commit()
+    stranded_id = txn.id
+
+    response = client.post("/api/v1/transactions/recategorize-all")
+    assert response.status_code == 200
+    assert response.json()["dry_run"] is True
+    assert response.json()["affected_count"] == 0
+
+    db_session.expire_all()
+    assert db_session.get(Transaction, stranded_id).category_source == "default"
+
+
+def test_recategorize_all_never_touches_manual_or_bulk_rows(
+    client: TestClient, db_session: Session
+) -> None:
+    account, batch = _make_batch(db_session)
+    uncategorized = _uncategorized(db_session)
+    # Both rows would match a transfer keyword, but a person deliberately
+    # put them where they are.
+    manual = _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 9),
+        amount="-10.00",
+        description="SOME PMT I FILED BY HAND",
+        category=uncategorized,
+        category_source="manual",
+        content_hash_suffix="b",
+    )
+    bulk = _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 10),
+        amount="-11.00",
+        description="ANOTHER PMT I BULK SORTED",
+        category=uncategorized,
+        category_source="bulk",
+        content_hash_suffix="c",
+    )
+    db_session.commit()
+    manual_id, bulk_id = manual.id, bulk.id
+
+    body = client.post("/api/v1/transactions/recategorize-all", json={"dry_run": False}).json()
+
+    assert body["affected_count"] == 0
+    assert body["skipped_sticky_count"] == 2
+
+    db_session.expire_all()
+    assert db_session.get(Transaction, manual_id).category_source == "manual"
+    assert db_session.get(Transaction, bulk_id).category_source == "bulk"
+
+
+def test_recategorize_all_is_idempotent(client: TestClient, db_session: Session) -> None:
+    account, batch = _make_batch(db_session)
+    _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 9),
+        amount="-4000.00",
+        description="CAPITAL ONE MOBILE PMT",
+        category=_uncategorized(db_session),
+        category_source="default",
+    )
+    db_session.commit()
+
+    first = client.post("/api/v1/transactions/recategorize-all", json={"dry_run": False}).json()
+    assert first["affected_count"] == 1
+
+    # Rules already satisfied, so a second pass finds nothing to do.
+    second = client.post("/api/v1/transactions/recategorize-all", json={"dry_run": False}).json()
+    assert second["candidate_count"] == 0
+    assert second["affected_count"] == 0
+
+
+def test_recategorize_all_records_one_audit_event_when_applied(
+    client: TestClient, db_session: Session
+) -> None:
+    from app.models import AuditEvent
+
+    account, batch = _make_batch(db_session)
+    _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 9),
+        amount="-4000.00",
+        description="CAPITAL ONE MOBILE PMT",
+        category=_uncategorized(db_session),
+        category_source="default",
+    )
+    db_session.commit()
+
+    client.post("/api/v1/transactions/recategorize-all", json={"dry_run": False})
+
+    events = (
+        db_session.query(AuditEvent)
+        .filter(AuditEvent.event_type == "transaction.recategorized_all")
+        .all()
+    )
+    assert len(events) == 1
+    assert events[0].affected_count == 1
+
+
+def test_recategorize_all_dry_run_records_no_audit_event(
+    client: TestClient, db_session: Session
+) -> None:
+    from app.models import AuditEvent
+
+    account, batch = _make_batch(db_session)
+    _make_txn(
+        db_session,
+        account,
+        batch,
+        txn_date=date(2026, 9, 9),
+        amount="-4000.00",
+        description="CAPITAL ONE MOBILE PMT",
+        category=_uncategorized(db_session),
+        category_source="default",
+    )
+    db_session.commit()
+
+    client.post("/api/v1/transactions/recategorize-all", json={"dry_run": True})
+
+    assert (
+        db_session.query(AuditEvent)
+        .filter(AuditEvent.event_type == "transaction.recategorized_all")
+        .count()
+        == 0
+    )

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { usePreference } from '../api/hooks/usePreference'
 import { useAnalyticsDistribution } from '../api/hooks/useAnalytics'
+import { useMonths } from '../api/hooks/useTransactions'
 import { useMonthScope } from '../hooks/useMonthScope'
+import { deriveDateRange } from '../hooks/deriveDateRange'
 import { AnalyticsFilterBar, type AnalyticsFilterState } from '../components/FilterBar/AnalyticsFilterBar'
 import { DonutChart } from '../components/charts/DonutChart'
 import { formatCurrency, formatPercent } from '../components/charts/format'
@@ -10,17 +12,29 @@ import { MonthSwiper } from '../components/MonthSwiper/MonthSwiper'
 import { RecordsPanel } from '../components/RecordsPanel/RecordsPanel'
 import styles from './DistributionPage.module.css'
 
-const DEFAULT_FILTERS: AnalyticsFilterState = { accountIds: [], includeExcluded: false }
+const DEFAULT_FILTERS: AnalyticsFilterState = {
+  accountIds: [],
+  includeExcluded: false,
+  monthKeys: [],
+  dateRange: undefined,
+}
 
 export function DistributionPage() {
   const [filters, setFilters] = usePreference<AnalyticsFilterState>('filters:distribution', DEFAULT_FILTERS)
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const scope = useMonthScope()
+  const { data: months } = useMonths()
+
+  const hasCustomRange = !!filters.dateRange
+  const hasMonthOverride = hasCustomRange || filters.monthKeys.length > 0
+  const resolved = deriveDateRange(filters, months ?? [])
+  const dateFrom = resolved.date_from ?? scope.dateFrom
+  const dateTo = resolved.date_to ?? scope.dateTo
 
   const { data, isLoading } = useAnalyticsDistribution({
-    date_from: scope.dateFrom,
-    date_to: scope.dateTo,
+    date_from: dateFrom,
+    date_to: dateTo,
     account_ids: filters.accountIds.length ? filters.accountIds : undefined,
     include_excluded: filters.includeExcluded,
   })
@@ -74,10 +88,10 @@ export function DistributionPage() {
       <AnalyticsFilterBar filters={filters} onChange={setFilters} />
 
       <MonthSwiper
-        label={scope.label}
-        canGoNewer={scope.canGoNewer}
-        canGoOlder={scope.canGoOlder}
-        badge={scope.isAll ? 'Entire history' : 'Month view'}
+        label={hasCustomRange ? 'Custom range' : hasMonthOverride ? 'Month filter' : scope.label}
+        canGoNewer={!hasMonthOverride && scope.canGoNewer}
+        canGoOlder={!hasMonthOverride && scope.canGoOlder}
+        badge={hasMonthOverride ? undefined : scope.isAll ? 'Entire history' : 'Month view'}
         onNewer={scope.goNewer}
         onOlder={scope.goOlder}
       />
@@ -134,8 +148,8 @@ export function DistributionPage() {
           title={selectedSlice.label}
           filters={{
             category_ids: selectedSlice.categoryIds,
-            date_from: scope.dateFrom,
-            date_to: scope.dateTo,
+            date_from: dateFrom,
+            date_to: dateTo,
             account_ids: filters.accountIds.length ? filters.accountIds : undefined,
             include_excluded: filters.includeExcluded,
           }}

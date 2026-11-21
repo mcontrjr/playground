@@ -1,6 +1,7 @@
-"""Integration-style tests against the 5 real ground-truth sample CSVs
+"""Integration-style tests against the 6 real ground-truth sample CSVs
 in `transactions/`. Each file must parse with zero failures, and the
-transaction count must equal the number of non-blank data rows.
+transaction count must equal the number of non-blank data rows — except
+Wells Fargo, which deliberately skips `Pending` rows (see its test).
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from app.parsers.capital_one import CapitalOneParser
 from app.parsers.citi import CitiParser
 from app.parsers.discover import DiscoverParser
 from app.parsers.schwab import SchwabParser
+from app.parsers.wells_fargo import WellsFargoParser
 from tests.conftest import read_text, real_file_path
 
 
@@ -112,3 +114,31 @@ def test_schwab_real_file_zero_failures_and_row_count() -> None:
     assert first.description == "SERVE OPERATING PAYROLL"
     assert first.amount == Decimal("4130.32")
     assert first.account_hint == "checking"
+
+
+def test_wells_fargo_real_file_zero_failures_and_row_count() -> None:
+    path = real_file_path("wells_fargo_since_sept.csv")
+    text = read_text(path)
+    result = WellsFargoParser.parse(text, path.name)
+
+    assert result.failures == []
+
+    # Unlike the other five, this file's transaction count is *not* its
+    # data-row count: the real export's single `Pending` row is skipped
+    # by design (its amount/date can still change before it posts).
+    pending_rows = 1
+    assert len(result.transactions) == _count_data_rows(path) - pending_rows
+    assert len(result.transactions) == 38
+    assert all(t.raw_row["STATUS"] == "Posted" for t in result.transactions)
+
+    first = result.transactions[0]
+    assert first.txn_date == date(2026, 11, 18)
+    assert first.amount == Decimal("-9.99")
+    assert first.account_hint == "wells_fargo"
+    assert first.normalized_description.startswith(
+        "RECURRING PAYMENT AUTHORIZED ON 11/16 PARAMOUNT+"
+    )
+
+    # Inflows keep their positive sign straight from the AMOUNT column.
+    deposit = next(t for t in result.transactions if t.amount == Decimal("4400.00"))
+    assert deposit.txn_date == date(2026, 9, 8)

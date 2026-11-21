@@ -397,13 +397,15 @@ function AddCategoryDialog({ onClose, onToast }: { onClose: () => void; onToast:
   )
 }
 
-type SortMode = 'name' | 'group' | 'keywords-desc' | 'keywords-asc'
+type SortMode = 'name' | 'group' | 'keywords-desc' | 'keywords-asc' | 'transactions-desc' | 'transactions-asc'
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: 'name', label: 'Name (A–Z)' },
   { value: 'group', label: 'Bucket' },
   { value: 'keywords-desc', label: 'Keyword count (most first)' },
   { value: 'keywords-asc', label: 'Keyword count (fewest first)' },
+  { value: 'transactions-desc', label: 'Transaction count (most first)' },
+  { value: 'transactions-asc', label: 'Transaction count (fewest first)' },
 ]
 
 function sortCategories(categories: Category[], mode: SortMode): Category[] {
@@ -414,6 +416,10 @@ function sortCategories(categories: Category[], mode: SortMode): Category[] {
     sorted.sort((a, b) => b.keywords.length - a.keywords.length || a.name.localeCompare(b.name))
   } else if (mode === 'keywords-asc') {
     sorted.sort((a, b) => a.keywords.length - b.keywords.length || a.name.localeCompare(b.name))
+  } else if (mode === 'transactions-desc') {
+    sorted.sort((a, b) => b.transaction_count - a.transaction_count || a.name.localeCompare(b.name))
+  } else if (mode === 'transactions-asc') {
+    sorted.sort((a, b) => a.transaction_count - b.transaction_count || a.name.localeCompare(b.name))
   } else {
     sorted.sort((a, b) => a.name.localeCompare(b.name))
   }

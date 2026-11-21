@@ -318,6 +318,11 @@
   border-color: var(--ink);
 }
 
+.categoryChip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .formField {
   display: flex;
   flex-direction: column;

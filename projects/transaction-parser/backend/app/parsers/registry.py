@@ -16,6 +16,7 @@ from app.parsers.capital_one import CapitalOneParser
 from app.parsers.citi import CitiParser
 from app.parsers.discover import DiscoverParser
 from app.parsers.schwab import SchwabParser
+from app.parsers.wells_fargo import WellsFargoParser
 
 _PARSERS: tuple[type[BaseParser], ...] = (
     AmexParser,
@@ -23,6 +24,7 @@ _PARSERS: tuple[type[BaseParser], ...] = (
     DiscoverParser,
     CitiParser,
     SchwabParser,
+    WellsFargoParser,
 )
 
 _PARSERS_BY_CODE: dict[str, type[BaseParser]] = {p.institution_code: p for p in _PARSERS}

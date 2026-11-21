@@ -16,7 +16,13 @@ import type { Preference } from '../types'
  * `{ name: ThemeName }`, etc.) — it's serialized to JSON verbatim, so
  * the only real constraint is "JSON-serializable object," which
  * `object` captures well enough without forcing every caller to add
- * an index signature just to satisfy a generic bound. */
+ * an index signature just to satisfy a generic bound.
+ *
+ * Both the localStorage and server-fetched values are shallow-merged
+ * onto `fallback` rather than used verbatim — a value persisted under
+ * an older shape (e.g. before a new filter field was added) would
+ * otherwise come back missing that field and crash any code assuming
+ * the full current shape. */
 export function usePreference<T extends object>(
   key: string,
   fallback: T,
@@ -24,7 +30,7 @@ export function usePreference<T extends object>(
   const queryClient = useQueryClient()
   const storageKey = `pref:${key}`
 
-  const [value, setValue] = useState<T>(() => readLocal(storageKey, fallback))
+  const [value, setValue] = useState<T>(() => ({ ...fallback, ...readLocal(storageKey, fallback) }))
   const [isReady, setIsReady] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -37,8 +43,9 @@ export function usePreference<T extends object>(
   useEffect(() => {
     if (data === undefined) return
     if (data) {
-      setValue(data.value as T)
-      writeLocal(storageKey, data.value)
+      const merged = { ...fallback, ...(data.value as T) }
+      setValue(merged)
+      writeLocal(storageKey, merged)
     }
     setIsReady(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps

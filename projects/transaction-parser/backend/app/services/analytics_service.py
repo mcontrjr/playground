@@ -31,6 +31,13 @@ class AnalyticsFilters:
     date_to: date | None = None
     account_ids: tuple[int, ...] | None = None
     include_excluded: bool = False
+    #: Categories to leave *out* of the result — the complement of
+    #: `category_ids`, which is what the Budget page's unbudgeted
+    #: analysis needs. Phrased as an exclusion rather than an inclusion
+    #: list so uncategorized transactions (category_id IS NULL) stay in:
+    #: "everything except these" naturally keeps them, whereas an
+    #: explicit id list can never match NULL.
+    exclude_category_ids: tuple[int, ...] | None = None
 
 
 def _apply_filters(stmt: Select, filters: AnalyticsFilters) -> Select:
@@ -40,6 +47,14 @@ def _apply_filters(stmt: Select, filters: AnalyticsFilters) -> Select:
         stmt = stmt.where(Transaction.txn_date <= filters.date_to)
     if filters.account_ids:
         stmt = stmt.where(Transaction.account_id.in_(filters.account_ids))
+    if filters.exclude_category_ids:
+        # NOT IN is NULL-propagating in SQL, so an uncategorized row
+        # would be dropped by `notin_` alone — the explicit IS NULL
+        # keeps it.
+        stmt = stmt.where(
+            Transaction.category_id.is_(None)
+            | Transaction.category_id.notin_(filters.exclude_category_ids)
+        )
     if not filters.include_excluded:
         stmt = stmt.where(
             func.coalesce(Category.excluded_from_analytics, False).is_(False)

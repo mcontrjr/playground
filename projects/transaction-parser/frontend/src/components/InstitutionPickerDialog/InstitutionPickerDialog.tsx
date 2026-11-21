@@ -7,6 +7,7 @@ const INSTITUTION_LABELS: Record<string, string> = {
   discover: 'Discover',
   citi: 'Citi',
   schwab: 'Schwab',
+  wells_fargo: 'Wells Fargo',
 }
 
 interface InstitutionPickerDialogProps {

@@ -15,6 +15,7 @@ from app.parsers.registry import (
     has_csv_extension,
 )
 from app.parsers.schwab import SchwabParser
+from app.parsers.wells_fargo import WellsFargoParser
 
 
 def test_detects_amex() -> None:
@@ -33,6 +34,24 @@ def test_detects_schwab() -> None:
     result = detect(SchwabParser.expected_header, "schwab_since_sept.csv")
     assert isinstance(result, DetectionResult)
     assert result.parser is SchwabParser
+
+
+def test_detects_wells_fargo() -> None:
+    result = detect(WellsFargoParser.expected_header, "wells_fargo_since_sept.csv")
+    assert isinstance(result, DetectionResult)
+    assert result.parser is WellsFargoParser
+
+
+def test_wells_fargo_header_is_unambiguous() -> None:
+    """Wells Fargo's all-caps header is unique, so detection never needs
+    a filename tiebreak — any filename resolves it."""
+    result = detect(WellsFargoParser.expected_header, "download.csv")
+    assert isinstance(result, DetectionResult)
+    assert result.parser is WellsFargoParser
+
+
+def test_get_parser_by_wells_fargo_code() -> None:
+    assert get_parser("wells_fargo") is WellsFargoParser
 
 
 def test_capital_one_filename_tiebreak() -> None:

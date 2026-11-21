@@ -158,6 +158,19 @@
   color: var(--paper);
 }
 
+/* Dims a chip whose option has zero matching transactions under the
+   other active filters — still clickable (e.g. to deselect it), just a
+   visual signal it currently contributes nothing. Combines with
+   .chipActive rather than overriding it, since a selected-but-now-empty
+   chip should still look selected. */
+.chipUnavailable {
+  opacity: 0.35;
+}
+
+.chipUnavailable:hover {
+  opacity: 0.6;
+}
+
 .toggleField {
   display: flex;
   flex-direction: column;

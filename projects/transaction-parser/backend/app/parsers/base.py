@@ -132,8 +132,10 @@ class BaseParser(ABC):
     def parse(cls, text: str, filename: str) -> ParseResult:
         """Parse CSV text into a ParseResult.
 
-        Blank rows (all fields empty/whitespace) are silently skipped.
-        Any other row that raises during ``parse_row`` becomes a
+        Blank rows (all fields empty/whitespace) are silently skipped, as
+        are rows a parser deliberately declines by returning ``None``
+        from ``parse_row`` (e.g. Wells Fargo's not-yet-final ``Pending``
+        rows). Any other row that raises during ``parse_row`` becomes a
         ``RowFailure`` and parsing continues with the next row.
         """
         reader = csv.reader(io.StringIO(text))
@@ -158,7 +160,8 @@ class BaseParser(ABC):
                 fields = _reconcile_field_count(raw_fields, len(fieldnames))
                 row = dict(zip(fieldnames, fields, strict=False))
                 txn = cls.parse_row(row, line_no)
-                transactions.append(txn)
+                if txn is not None:
+                    transactions.append(txn)
             except Exception as exc:  # noqa: BLE001 - isolate any row failure
                 failures.append(
                     RowFailure(
@@ -177,8 +180,10 @@ class BaseParser(ABC):
 
     @classmethod
     @abstractmethod
-    def parse_row(cls, row: dict[str, str], line_no: int) -> ParsedTransaction:
+    def parse_row(cls, row: dict[str, str], line_no: int) -> ParsedTransaction | None:
         """Parse a single CSV row (as a dict keyed by header) into a
         ``ParsedTransaction``. Raise any exception to isolate the row
-        as a failure; the base class catches it."""
+        as a failure; the base class catches it. Return ``None`` to skip
+        the row silently — for rows that are well-formed but shouldn't
+        be ingested at all (not an error, so not a ``RowFailure``)."""
         raise NotImplementedError

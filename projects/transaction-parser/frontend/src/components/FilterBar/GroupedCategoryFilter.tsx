@@ -11,6 +11,9 @@ interface GroupedCategoryFilterProps {
    * per-bucket "Select all"/"Clear" buttons and the page-level "Clear
    * all categories" link. */
   onSetSelection?: (categoryIds: number[]) => void
+  /** Category ids with zero matching transactions under the other
+   * active filters — dimmed, same as FilterChipGroup's unavailableKeys. */
+  unavailableIds?: Set<number>
 }
 
 /** The category filter as pills grouped under their category's bucket
@@ -19,7 +22,13 @@ interface GroupedCategoryFilterProps {
  * color. Ordering comes from `useBuckets()` (name-sorted, OTHER
  * always exists as the fallback bucket) instead of a hardcoded list,
  * since buckets are now user-managed. */
-export function GroupedCategoryFilter({ categories, selected, onToggle, onSetSelection }: GroupedCategoryFilterProps) {
+export function GroupedCategoryFilter({
+  categories,
+  selected,
+  onToggle,
+  onSetSelection,
+  unavailableIds,
+}: GroupedCategoryFilterProps) {
   const { data: buckets } = useBuckets()
 
   const grouped = useMemo(() => {
@@ -77,13 +86,21 @@ export function GroupedCategoryFilter({ categories, selected, onToggle, onSetSel
             <div className={styles.multiSelect}>
               {items.map((category) => {
                 const isActive = selected.includes(category.id)
+                const isUnavailable = !!unavailableIds?.has(category.id)
                 return (
                   <button
                     key={category.id}
                     type="button"
-                    className={isActive ? `${styles.chip} ${styles.chipActive}` : styles.chip}
+                    className={[
+                      styles.chip,
+                      isActive ? styles.chipActive : '',
+                      isUnavailable ? styles.chipUnavailable : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     onClick={() => onToggle(category.id)}
                     aria-pressed={isActive}
+                    title={isUnavailable ? 'No matching transactions with the current filters' : undefined}
                   >
                     {category.name}
                   </button>

@@ -125,6 +125,62 @@ def test_distribution_no_transfers_by_default(client: TestClient, db_session: Se
     assert "Payments & Transfers" in included_names
 
 
+def test_distribution_exclude_category_ids_keeps_uncategorized(
+    client: TestClient, db_session: Session
+) -> None:
+    """`exclude_category_ids` drops the named categories but must NOT
+    drop uncategorized spend — the Budget page's unbudgeted breakdown
+    excludes the budgeted categories and relies on "Uncategorized"
+    still showing up (a plain SQL NOT IN would swallow it, since
+    NULL NOT IN (...) is NULL, not true)."""
+    account, batch = _make_batch(db_session)
+    food = _seeded_category(db_session, "FOOD")
+    gas = _seeded_category(db_session, "GAS")
+
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 10), amount="-30.00",
+        description="TACOS", category=food, category_source="keyword", content_hash_suffix="1",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 11), amount="-40.00",
+        description="SHELL", category=gas, category_source="keyword", content_hash_suffix="2",
+    )
+    _make_txn(
+        db_session, account, batch, txn_date=date(2026, 10, 12), amount="-25.00",
+        description="MYSTERY CHARGE", category=None, category_source="default",
+        content_hash_suffix="3",
+    )
+    db_session.commit()
+
+    resp = client.get(
+        "/api/v1/analytics/distribution", params={"exclude_category_ids": [food.id]}
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    names = {e["name"] for e in body["entries"]}
+    assert "FOOD" not in names
+    assert names == {"GAS", "Uncategorized"}
+    assert Decimal(body["total"]) == Decimal("65.00")
+
+    # Excluding every real category leaves only the uncategorized spend.
+    only_uncat = client.get(
+        "/api/v1/analytics/distribution",
+        params={"exclude_category_ids": [food.id, gas.id]},
+    ).json()
+    assert [e["name"] for e in only_uncat["entries"]] == ["Uncategorized"]
+    assert Decimal(only_uncat["total"]) == Decimal("25.00")
+
+    # Excluding nothing explicitly is the same as not filtering at all.
+    # (Asserted with an explicit empty-ish param rather than a bare
+    # request: `compute_distribution` is memoized per generation on its
+    # filter dataclass, and a bare `AnalyticsFilters()` key is already
+    # populated by other tests in this module/process.)
+    everything = client.get(
+        "/api/v1/analytics/distribution", params={"account_ids": [account.id]}
+    ).json()
+    assert Decimal(everything["total"]) == Decimal("95.00")
+
+
 def test_income_category_always_included(client: TestClient, db_session: Session) -> None:
     """Unlike "Payments & Transfers", rows categorized as "Income" show up
     in every aggregate by default — only transfers are gated behind

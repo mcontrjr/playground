@@ -1,4 +1,4 @@
-"""Institution model: the 5 supported banks/card issuers."""
+"""Institution model: the 6 supported banks/card issuers."""
 from typing import TYPE_CHECKING
 
 from sqlalchemy import String

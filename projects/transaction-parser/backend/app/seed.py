@@ -38,6 +38,7 @@ INSTITUTIONS: list[tuple[str, str]] = [
     ("discover", "Discover"),
     ("citi", "Citi"),
     ("schwab", "Schwab"),
+    ("wells_fargo", "Wells Fargo"),
 ]
 
 

@@ -26,11 +26,23 @@ export function useAnalyticsSummary(filters: AnalyticsFilters) {
   })
 }
 
+/** `exclude_category_ids` is threaded in here rather than in the shared
+ * `analyticsQuery` because /distribution is the only analytics endpoint
+ * that accepts it — sending it to the others would be a silently
+ * ignored param. */
 export function useAnalyticsDistribution(filters: AnalyticsFilters) {
   return useQuery({
     queryKey: queryKeys.analyticsDistribution(filters),
     queryFn: () =>
-      api.get<DistributionResponse>(`/analytics/distribution${analyticsQuery(filters)}`),
+      api.get<DistributionResponse>(
+        `/analytics/distribution${buildQuery({
+          date_from: filters.date_from,
+          date_to: filters.date_to,
+          account_ids: filters.account_ids,
+          include_excluded: filters.include_excluded,
+          exclude_category_ids: filters.exclude_category_ids,
+        })}`,
+      ),
   })
 }
 

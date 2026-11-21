@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { useAccounts } from '../../api/hooks/useAccounts'
 import { useCategories } from '../../api/hooks/useCategories'
 import { useMonths } from '../../api/hooks/useTransactions'
+import type { Category, TransactionFacets } from '../../api/types'
 import { DateRangePicker, type DateRange } from '../DateRangePicker/DateRangePicker'
 import { FilterChipGroup } from './FilterChipGroup'
 import styles from './FilterBar.module.css'
@@ -34,19 +36,57 @@ interface FilterBarProps {
   onChange: (next: RecordsFilterState) => void
   totalCount: number | undefined
   isLoading: boolean
+  /** Which account/category/month options have at least one matching
+   * transaction under the *other* active filters — chips outside these
+   * lists are dimmed. Undefined while loading, in which case nothing
+   * dims yet. */
+  facets?: TransactionFacets
   /** Hide the inline search input — RecordsPage renders its own
    * SearchInput directly above the table instead. */
   hideSearch?: boolean
+  /** Hide the month chips and date-range picker — for callers whose
+   * date scope is fixed by something else on the page (the Budget
+   * page's MonthSwiper), where offering month chips would imply the
+   * section can leave its month. */
+  hideMonths?: boolean
+  /** Narrow the category chip pool. Defaults to every category; the
+   * Budget page's unbudgeted analysis passes only the categories its
+   * scope can actually return, so it doesn't render chips that are
+   * guaranteed to match nothing. */
+  categoryOptions?: Category[]
 }
 
 function toggleInArray<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
 }
 
-export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch }: FilterBarProps) {
+export function FilterBar({
+  filters,
+  onChange,
+  totalCount,
+  isLoading,
+  facets,
+  hideSearch,
+  hideMonths,
+  categoryOptions,
+}: FilterBarProps) {
   const { data: accounts } = useAccounts()
-  const { data: categories } = useCategories()
+  const { data: allCategories } = useCategories()
   const { data: months } = useMonths()
+  const categories = categoryOptions ?? allCategories
+
+  const unavailableAccountIds = useMemo(
+    () => new Set((accounts ?? []).map((a) => a.id).filter((id) => facets && !facets.account_ids.includes(id))),
+    [accounts, facets],
+  )
+  const unavailableCategoryIds = useMemo(
+    () => new Set((categories ?? []).map((c) => c.id).filter((id) => facets && !facets.category_ids.includes(id))),
+    [categories, facets],
+  )
+  const unavailableMonthKeys = useMemo(
+    () => new Set((months ?? []).map((m) => m.key).filter((key) => facets && !facets.month_keys.includes(key))),
+    [months, facets],
+  )
 
   const hasCustomRange = !!filters.dateRange
   const allMonthsSelected = (months ?? []).length > 0 && (months ?? []).every((m) => filters.monthKeys.includes(m.key))
@@ -92,6 +132,7 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
 
       {/* Month, Account, then Category — stacked top-down. */}
       <div className={styles.chipGrid}>
+        {!hideMonths && (
         <div className={styles.field}>
           <div className={styles.fieldLabelRow}>
             <span className={styles.fieldLabel}>Month</span>
@@ -121,16 +162,24 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
           <div className={styles.multiSelect} role="group" aria-label="Filter by month">
             {(months ?? []).map((m) => {
               const isActive = filters.monthKeys.includes(m.key)
+              const isUnavailable = unavailableMonthKeys.has(m.key)
               return (
                 <button
                   key={m.key}
                   type="button"
-                  className={isActive ? `${styles.chip} ${styles.chipActive}` : styles.chip}
+                  className={[
+                    styles.chip,
+                    isActive ? styles.chipActive : '',
+                    isUnavailable ? styles.chipUnavailable : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   disabled={hasCustomRange}
                   onClick={() =>
                     onChange({ ...filters, monthKeys: toggleInArray(filters.monthKeys, m.key) })
                   }
                   aria-pressed={isActive}
+                  title={isUnavailable ? 'No matching transactions with the current filters' : undefined}
                 >
                   {m.label}
                 </button>
@@ -154,6 +203,7 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
             )}
           </div>
         </div>
+        )}
 
         <FilterChipGroup
           label="Account"
@@ -164,6 +214,7 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
             onChange({ ...filters, accountIds: toggleInArray(filters.accountIds, Number(key)) })
           }
           onSetSelection={(keys) => onChange({ ...filters, accountIds: keys.map(Number) })}
+          unavailableKeys={unavailableAccountIds}
         />
 
         <GroupedCategoryFilter
@@ -173,6 +224,7 @@ export function FilterBar({ filters, onChange, totalCount, isLoading, hideSearch
             onChange({ ...filters, categoryIds: toggleInArray(filters.categoryIds, categoryId) })
           }
           onSetSelection={(categoryIds) => onChange({ ...filters, categoryIds })}
+          unavailableIds={unavailableCategoryIds}
         />
       </div>
 

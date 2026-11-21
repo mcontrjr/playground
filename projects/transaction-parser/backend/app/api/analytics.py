@@ -43,12 +43,14 @@ def _filters(
     date_to: date | None,
     account_ids: list[int] | None,
     include_excluded: bool,
+    exclude_category_ids: list[int] | None = None,
 ) -> AnalyticsFilters:
     return AnalyticsFilters(
         date_from=date_from,
         date_to=date_to,
         account_ids=tuple(account_ids) if account_ids else None,
         include_excluded=include_excluded,
+        exclude_category_ids=tuple(exclude_category_ids) if exclude_category_ids else None,
     )
 
 
@@ -176,16 +178,29 @@ def get_monthly_daily(
     "/distribution",
     response_model=DistributionResponse,
     summary="Spend by category",
-    description="Absolute sum of outflows per category, for a pie/donut chart, sorted largest first.",
+    description=(
+        "Absolute sum of outflows per category, for a pie/donut chart, sorted "
+        "largest first. Pass `exclude_category_ids` to leave categories out — "
+        "the Budget page's unbudgeted analysis uses it to chart everything "
+        "*except* the categories already linked to a budget expense. "
+        "Uncategorized spend is never dropped by that exclusion."
+    ),
 )
 def get_distribution(
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
     account_ids: list[int] | None = Query(None),
     include_excluded: bool = Query(False, description="Include transfer/income categories."),
+    exclude_category_ids: list[int] | None = Query(
+        None,
+        description=(
+            "Category ids to omit from the breakdown. Uncategorized "
+            "transactions are still included."
+        ),
+    ),
     db: Session = Depends(get_db),
 ) -> DistributionResponse:
-    filters = _filters(date_from, date_to, account_ids, include_excluded)
+    filters = _filters(date_from, date_to, account_ids, include_excluded, exclude_category_ids)
     rows = compute_distribution(db, filters)
     entries = [
         DistributionEntry(category_id=r.category_id, name=r.category_name, amount=r.amount)

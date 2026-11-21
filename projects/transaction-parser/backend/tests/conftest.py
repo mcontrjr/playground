@@ -19,7 +19,7 @@ def fixtures_csv_dir() -> Path:
 
 @pytest.fixture
 def real_transactions_dir() -> Path:
-    """Directory containing the 5 real ground-truth sample CSVs."""
+    """Directory containing the 6 real ground-truth sample CSVs."""
     return REAL_TRANSACTIONS_DIR
 
 
@@ -29,7 +29,7 @@ def fixture_path(name: str) -> Path:
 
 
 def real_file_path(name: str) -> Path:
-    """Absolute path to one of the 5 real ground-truth sample CSVs."""
+    """Absolute path to one of the 6 real ground-truth sample CSVs."""
     return REAL_TRANSACTIONS_DIR / name
 
 

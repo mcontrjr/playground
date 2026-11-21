@@ -170,13 +170,32 @@ export interface TransactionFilters {
   date_to?: string
   account_ids?: number[]
   category_ids?: number[]
+  /** Categories to leave *out* — the complement of `category_ids`.
+   * Unlike `category_ids`, uncategorized transactions are still
+   * included, so this expresses "everything except these" (the Budget
+   * page's unbudgeted set). */
+  exclude_category_ids?: number[]
   q?: string
   recurring_only?: boolean
   include_excluded?: boolean
+  /** Only money out (amount < 0). Also drops "Income", which
+   * `include_excluded` otherwise always lets through. */
+  outflows_only?: boolean
   sort?: TransactionSortField
   order?: SortOrder
   limit?: number
   offset?: number
+}
+
+/** Which account/category/month filter options currently have at least
+ * one matching transaction, each computed against every *other* active
+ * filter (not its own dimension) — see GET /transactions/facets. Drives
+ * dimming unavailable chips in the Records filter bar. */
+export interface TransactionFacets {
+  account_ids: number[]
+  category_ids: number[]
+  /** "YYYY-MM" */
+  month_keys: string[]
 }
 
 export interface MonthOption {
@@ -307,6 +326,9 @@ export interface AnalyticsFilters {
   date_to?: string
   account_ids?: number[]
   include_excluded?: boolean
+  /** Categories to omit from the aggregate. Uncategorized spend is
+   * still included — see GET /analytics/distribution. */
+  exclude_category_ids?: number[]
 }
 
 // ---------------------------------------------------------------------------

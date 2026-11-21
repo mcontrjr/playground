@@ -102,6 +102,29 @@
   background: var(--paper-sunk);
 }
 
+/* Same pill geometry as .recurringToggle, but read-only: no pointer,
+   no hover affordance. MANUAL is the signal worth spotting (a person
+   touched it), so it carries the emphasis; MATCHED stays recessive so a
+   column of mostly-automatic rows doesn't read as noise. */
+.sourceBadge {
+  display: inline-block;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.sourceManual {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--paper-sunk);
+}
+
 .table td.empty {
   padding: var(--sp-7) 0;
   text-align: center;

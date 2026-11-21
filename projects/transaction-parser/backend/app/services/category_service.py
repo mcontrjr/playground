@@ -201,6 +201,48 @@ def preview_remove_keyword(
     return moves
 
 
+def preview_recategorize_all(db: Session) -> list[CategoryMove]:
+    """Every non-sticky transaction whose category would change if the
+    *current* rules were re-run over it.
+
+    Categorization normally happens only once, at ingest time, so a row
+    keeps whatever category it got when it was first inserted. Keywords
+    added or re-prioritized afterwards therefore never reach rows that
+    predate the change — `apply_to_existing` covers that for a single
+    keyword add/remove, but nothing covers a priority edit, a seed
+    change, or an accumulated backlog. This is the catch-up pass: it
+    diffs the live rules against every existing row.
+
+    Unlike the keyword previews, there's no hypothetical mutation and no
+    description filter — the comparison is the real categorizer against
+    all candidate rows, so a move here means "this row's stored
+    category disagrees with what the rules say today".
+
+    Manual and bulk rows are excluded, same as every other apply path:
+    a deliberate user choice outranks the rules.
+    """
+    categorizer = Categorizer.load(db)
+
+    candidates = (
+        db.execute(
+            select(Transaction).where(Transaction.category_source.not_in(["manual", "bulk"]))
+        )
+        .scalars()
+        .all()
+    )
+
+    moves: list[CategoryMove] = []
+    for txn in candidates:
+        result = categorizer.categorize(txn.normalized_description)
+        if result.category_id != txn.category_id:
+            moves.append(
+                CategoryMove(
+                    transaction=txn, new_category_id=result.category_id, new_source=result.source
+                )
+            )
+    return moves
+
+
 def apply_moves(db: Session, moves: list[CategoryMove]) -> int:
     """Apply a list of CategoryMove results, setting category_id and
     category_source to whatever the hypothetical categorizer decided

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { usePreference } from '../api/hooks/usePreference'
 import { useAnalyticsMonthlyDaily, useAnalyticsTimeseries } from '../api/hooks/useAnalytics'
+import { useMonths } from '../api/hooks/useTransactions'
 import { useMonthScope } from '../hooks/useMonthScope'
+import { deriveDateRange } from '../hooks/deriveDateRange'
 import { AnalyticsFilterBar, type AnalyticsFilterState } from '../components/FilterBar/AnalyticsFilterBar'
 import { CategoryBarsChart } from '../components/charts/CategoryBarsChart'
 import { NetDayChart } from '../components/charts/NetDayChart'
@@ -12,7 +14,12 @@ import { RecordsPanel } from '../components/RecordsPanel/RecordsPanel'
 import type { DailyPoint, TimeseriesResponse } from '../api/types'
 import styles from './TimeSeriesPage.module.css'
 
-const DEFAULT_FILTERS: AnalyticsFilterState = { accountIds: [], includeExcluded: false }
+const DEFAULT_FILTERS: AnalyticsFilterState = {
+  accountIds: [],
+  includeExcluded: false,
+  monthKeys: [],
+  dateRange: undefined,
+}
 
 /** Converts the monthly `TimeseriesResponse` (one value per category
  * per period) into the same `DailyPoint[]` shape `CategoryBarsChart`/
@@ -45,7 +52,18 @@ type ClickSource = 'bars' | 'net' | 'running'
 export function TimeSeriesPage() {
   const [filters, setFilters] = usePreference<AnalyticsFilterState>('filters:time-series', DEFAULT_FILTERS)
   const scope = useMonthScope()
+  const { data: months } = useMonths()
   const [selected, setSelected] = useState<{ dateKey: string; source: ClickSource } | null>(null)
+
+  const hasCustomRange = !!filters.dateRange
+  const hasMonthOverride = hasCustomRange || filters.monthKeys.length > 0
+  const resolvedRange = deriveDateRange(filters, months ?? [])
+  // A custom range or multi-month selection is scoped like "All" (a
+  // per-month breakdown bounded by date_from/date_to) rather than the
+  // single-month daily view — there's no one month to ask
+  // monthly-daily about once the range can span an arbitrary number
+  // of them.
+  const usesMonthlyBreakdown = scope.isAll || hasMonthOverride
 
   const analyticsFilters = {
     account_ids: filters.accountIds.length ? filters.accountIds : undefined,
@@ -53,20 +71,24 @@ export function TimeSeriesPage() {
   }
 
   const monthlyDaily = useAnalyticsMonthlyDaily(scope.month?.from ?? '', analyticsFilters, {
-    enabled: !scope.isAll,
+    enabled: !usesMonthlyBreakdown,
   })
-  const allTime = useAnalyticsTimeseries('month', { ...analyticsFilters })
+  const monthlyBreakdown = useAnalyticsTimeseries('month', {
+    ...analyticsFilters,
+    date_from: hasMonthOverride ? resolvedRange.date_from : undefined,
+    date_to: hasMonthOverride ? resolvedRange.date_to : undefined,
+  })
 
-  const isLoading = scope.isAll ? allTime.isLoading : monthlyDaily.isLoading
+  const isLoading = usesMonthlyBreakdown ? monthlyBreakdown.isLoading : monthlyDaily.isLoading
   const points = useMemo<DailyPoint[]>(() => {
-    if (scope.isAll) return allTime.data ? timeseriesToPoints(allTime.data) : []
+    if (usesMonthlyBreakdown) return monthlyBreakdown.data ? timeseriesToPoints(monthlyBreakdown.data) : []
     return monthlyDaily.data?.points ?? []
-  }, [scope.isAll, allTime.data, monthlyDaily.data])
+  }, [usesMonthlyBreakdown, monthlyBreakdown.data, monthlyDaily.data])
 
   const total = useMemo(() => {
-    if (scope.isAll) return points.reduce((sum, p) => sum + Number(p.value), 0)
+    if (usesMonthlyBreakdown) return points.reduce((sum, p) => sum + Number(p.value), 0)
     return monthlyDaily.data ? Number(monthlyDaily.data.month_total) : null
-  }, [scope.isAll, points, monthlyDaily.data])
+  }, [usesMonthlyBreakdown, points, monthlyDaily.data])
 
   // Clicking the same point on the same chart toggles its panel closed;
   // clicking any other point (same or different chart) opens that
@@ -81,9 +103,9 @@ export function TimeSeriesPage() {
   const panelFilters = useMemo(() => {
     if (!selected) return null
     const accountIds = filters.accountIds.length ? filters.accountIds : undefined
-    if (scope.isAll) {
-      // selected.dateKey is a "YYYY-MM" period in All mode — scope the
-      // panel to that whole month.
+    if (usesMonthlyBreakdown) {
+      // selected.dateKey is a "YYYY-MM" period in All/custom-range
+      // mode — scope the panel to that whole month.
       const [year, month] = selected.dateKey.split('-').map(Number)
       const from = `${selected.dateKey}-01`
       const lastDay = new Date(year!, month!, 0).getDate()
@@ -96,12 +118,12 @@ export function TimeSeriesPage() {
       account_ids: accountIds,
       include_excluded: filters.includeExcluded,
     }
-  }, [selected, scope.isAll, filters])
+  }, [selected, usesMonthlyBreakdown, filters])
 
   const panelTitle = useMemo(() => {
     if (!selected) return ''
-    return scope.isAll ? formatMonthPeriod(selected.dateKey) : selected.dateKey
-  }, [selected, scope.isAll])
+    return usesMonthlyBreakdown ? formatMonthPeriod(selected.dateKey) : selected.dateKey
+  }, [selected, usesMonthlyBreakdown])
 
   return (
     <div className={styles.page}>
@@ -116,10 +138,10 @@ export function TimeSeriesPage() {
       <AnalyticsFilterBar filters={filters} onChange={setFilters} />
 
       <MonthSwiper
-        label={scope.label}
-        canGoNewer={scope.canGoNewer}
-        canGoOlder={scope.canGoOlder}
-        badge={scope.isAll ? 'Entire history' : 'Month view'}
+        label={hasCustomRange ? 'Custom range' : hasMonthOverride ? 'Month filter' : scope.label}
+        canGoNewer={!hasMonthOverride && scope.canGoNewer}
+        canGoOlder={!hasMonthOverride && scope.canGoOlder}
+        badge={hasMonthOverride ? undefined : scope.isAll ? 'Entire history' : 'Month view'}
         onNewer={scope.goNewer}
         onOlder={scope.goOlder}
       />
@@ -133,7 +155,7 @@ export function TimeSeriesPage() {
               points={points}
               selectedKey={selected?.source === 'bars' ? selected.dateKey : null}
               onPointClick={handlePointClick('bars')}
-              granularity={scope.isAll ? 'month' : 'day'}
+              granularity={usesMonthlyBreakdown ? 'month' : 'day'}
             />
 
             {selected?.source === 'bars' && panelFilters && (
@@ -144,7 +166,7 @@ export function TimeSeriesPage() {
               points={points}
               selectedKey={selected?.source === 'net' ? selected.dateKey : null}
               onPointClick={handlePointClick('net')}
-              granularity={scope.isAll ? 'month' : 'day'}
+              granularity={usesMonthlyBreakdown ? 'month' : 'day'}
             />
 
             {selected?.source === 'net' && panelFilters && (
@@ -155,9 +177,9 @@ export function TimeSeriesPage() {
               points={points}
               selectedKey={selected?.source === 'running' ? selected.dateKey : null}
               onPointClick={handlePointClick('running')}
-              granularity={scope.isAll ? 'month' : 'day'}
+              granularity={usesMonthlyBreakdown ? 'month' : 'day'}
               monthBounds={
-                !scope.isAll && scope.month ? { from: scope.month.from, to: scope.month.to } : undefined
+                !usesMonthlyBreakdown && scope.month ? { from: scope.month.from, to: scope.month.to } : undefined
               }
             />
 
@@ -167,7 +189,9 @@ export function TimeSeriesPage() {
 
             {total != null && (
               <div className={styles.monthTotal}>
-                <span className={styles.monthTotalLabel}>{scope.isAll ? 'All-time total ' : 'Month total '}</span>
+                <span className={styles.monthTotalLabel}>
+                  {hasMonthOverride ? 'Range total ' : scope.isAll ? 'All-time total ' : 'Month total '}
+                </span>
                 <span className={styles.monthTotalValue}>{formatCurrency(total)}</span>
               </div>
             )}

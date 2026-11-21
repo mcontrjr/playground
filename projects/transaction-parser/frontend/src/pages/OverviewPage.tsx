@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
+import { usePreference } from '../api/hooks/usePreference'
 import { useAnalyticsDistribution, useAnalyticsSummary, useAnalyticsTimeseries } from '../api/hooks/useAnalytics'
+import { useMonths } from '../api/hooks/useTransactions'
 import { useMonthScope } from '../hooks/useMonthScope'
+import { deriveDateRange } from '../hooks/deriveDateRange'
+import { AnalyticsFilterBar, type AnalyticsFilterState } from '../components/FilterBar/AnalyticsFilterBar'
 import { formatCurrency, formatMonthPeriod } from '../components/charts/format'
 import { KpiTile } from '../components/charts/KpiTile'
 import { MiniBarChart } from '../components/charts/MiniBarChart'
@@ -8,6 +12,12 @@ import { MonthSwiper } from '../components/MonthSwiper/MonthSwiper'
 import styles from './OverviewPage.module.css'
 
 const TOP_N = 5
+const DEFAULT_FILTERS: AnalyticsFilterState = {
+  accountIds: [],
+  includeExcluded: false,
+  monthKeys: [],
+  dateRange: undefined,
+}
 
 function formatDateRange(from: string | null, to: string | null): string {
   if (!from || !to) return 'No transactions in range yet.'
@@ -18,8 +28,20 @@ function formatDateRange(from: string | null, to: string | null): string {
 }
 
 export function OverviewPage() {
+  const [filters, setFilters] = usePreference<AnalyticsFilterState>('filters:overview', DEFAULT_FILTERS)
   const scope = useMonthScope()
-  const analyticsFilters = { date_from: scope.dateFrom, date_to: scope.dateTo }
+  const { data: months } = useMonths()
+  const hasCustomRange = !!filters.dateRange
+  const hasMonthOverride = hasCustomRange || filters.monthKeys.length > 0
+  const resolved = deriveDateRange(filters, months ?? [])
+  const dateFrom = resolved.date_from ?? scope.dateFrom
+  const dateTo = resolved.date_to ?? scope.dateTo
+  const analyticsFilters = {
+    date_from: dateFrom,
+    date_to: dateTo,
+    account_ids: filters.accountIds.length ? filters.accountIds : undefined,
+    include_excluded: filters.includeExcluded,
+  }
 
   const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary(analyticsFilters)
   const { data: distribution } = useAnalyticsDistribution(analyticsFilters)
@@ -46,11 +68,13 @@ export function OverviewPage() {
         </p>
       </header>
 
+      <AnalyticsFilterBar filters={filters} onChange={setFilters} />
+
       <MonthSwiper
-        label={scope.label}
-        canGoNewer={scope.canGoNewer}
-        canGoOlder={scope.canGoOlder}
-        badge={scope.isAll ? 'Entire history' : 'Month view'}
+        label={hasCustomRange ? 'Custom range' : hasMonthOverride ? 'Month filter' : scope.label}
+        canGoNewer={!hasMonthOverride && scope.canGoNewer}
+        canGoOlder={!hasMonthOverride && scope.canGoOlder}
+        badge={hasMonthOverride ? undefined : scope.isAll ? 'Entire history' : 'Month view'}
         onNewer={scope.goNewer}
         onOlder={scope.goOlder}
       />

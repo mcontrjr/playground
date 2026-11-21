@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePatchTransaction } from '../../api/hooks/usePatchTransaction'
-import type { SortOrder, Transaction, TransactionSortField } from '../../api/types'
+import type { CategorySource, SortOrder, Transaction, TransactionSortField } from '../../api/types'
 import { CategoryPicker, type RecategorizedInfo } from '../CategoryPicker/CategoryPicker'
 import { TransactionDetailModal } from './TransactionDetailModal'
 import styles from './TransactionsTable.module.css'
@@ -94,6 +94,32 @@ function formatAmount(amount: string): string {
 
 function formatDate(isoDate: string): string {
   return DATE_FORMATTER.format(new Date(`${isoDate}T00:00:00`))
+}
+
+/** How a transaction's category was decided, collapsed to the two
+ * cases that matter when scanning Records: did a person set this, or
+ * did the parser? 'manual' (a single edit) and 'bulk' (a bulk sort) are
+ * both user intent; 'keyword'/'transfer'/'default' are all automatic. */
+function sourceLabel(source: CategorySource): 'MATCHED' | 'MANUAL' {
+  return source === 'manual' || source === 'bulk' ? 'MANUAL' : 'MATCHED'
+}
+
+function SourceBadge({ source }: { source: CategorySource }) {
+  const label = sourceLabel(source)
+  const isManual = label === 'MANUAL'
+
+  return (
+    <span
+      className={isManual ? `${styles.sourceBadge} ${styles.sourceManual}` : styles.sourceBadge}
+      // The underlying value is finer-grained than the badge (bulk vs.
+      // manual, keyword vs. transfer vs. default) — keep it on hover.
+      title={`Category source: ${source}`}
+      data-testid="source-badge"
+      data-source={source}
+    >
+      {label}
+    </span>
+  )
 }
 
 /** Cycles none -> monthly -> yearly -> none. Independent of
@@ -202,6 +228,9 @@ export function TransactionsTable({
                 </th>
               ))}
               <th>
+                <span className="label-caps">Source</span>
+              </th>
+              <th>
                 <span className="label-caps">Account</span>
               </th>
               <th>
@@ -212,7 +241,7 @@ export function TransactionsTable({
           <tbody>
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length + 2 + (selectionEnabled ? 1 : 0)} className={styles.empty}>
+                <td colSpan={COLUMNS.length + 3 + (selectionEnabled ? 1 : 0)} className={styles.empty}>
                   No transactions match these filters.
                 </td>
               </tr>
@@ -259,6 +288,9 @@ export function TransactionsTable({
                     onClick={() => setDetailTxn(txn)}
                   >
                     {formatAmount(txn.amount)}
+                  </td>
+                  <td>
+                    <SourceBadge source={txn.category_source} />
                   </td>
                   <td className={`${styles.muted} ${styles.clickable}`} onClick={() => setDetailTxn(txn)}>
                     {txn.account_name}

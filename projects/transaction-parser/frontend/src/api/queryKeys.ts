@@ -5,6 +5,7 @@ export const queryKeys = {
   transactions: (filters: TransactionFilters) => ['transactions', filters] as const,
   transactionsAll: ['transactions'] as const,
   months: ['transactions', 'months'] as const,
+  transactionFacets: (filters: TransactionFilters) => ['transactions', 'facets', filters] as const,
   accounts: ['accounts'] as const,
   categories: ['categories'] as const,
   failures: (resolved?: boolean) => ['failures', resolved] as const,

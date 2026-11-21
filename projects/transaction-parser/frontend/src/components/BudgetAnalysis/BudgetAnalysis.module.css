@@ -1,0 +1,280 @@
+/* The Budget page's bottom "analysis" section. A mosaic: pie + legend
+   and the leaderboard sit side by side on one row, with the full
+   records table spanning underneath — so the shape of the leftover
+   month is visible at a glance before you start drilling in. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  /* Set apart from the expense list above it — this is a distinct
+     "chapter" of the page, not another expense row. */
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--hairline-strong);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-size: var(--fs-h1);
+  font-weight: var(--font-weight-light);
+  letter-spacing: -0.01em;
+}
+
+.sectionSubtitle {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  max-width: 44rem;
+  margin-top: var(--sp-2);
+}
+
+/* The one solid tile in the section — mirrors the summary tiles at the
+   top of the page so the two totals read as the same kind of fact. */
+.headlineTile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  background: var(--tile-bg);
+  color: var(--tile-fg);
+  border-radius: var(--radius-tile);
+  padding: var(--sp-4) var(--sp-5);
+  min-width: 13rem;
+}
+
+.headlineLabel {
+  composes: label-caps from global;
+  opacity: 0.7;
+}
+
+.headlineValue {
+  font-size: var(--fs-h1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.headlineSub {
+  font-size: var(--fs-micro);
+  color: var(--tile-fg-soft);
+}
+
+/* Pie takes the wider column; the leaderboard is a narrower companion.
+   Both collapse to full width on narrow viewports. */
+.mosaic {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .mosaic {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tile {
+  background: var(--paper-sunk);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-tile);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.tileTitle {
+  composes: label-caps from global;
+  color: var(--ink-faint);
+}
+
+/* The donut half of the mosaic row. */
+.pieTile {
+  min-width: 0;
+}
+
+/* The leaderboard half — the row's height is usually set here (5 fixed
+   rows), which is why .pieLayout stretches to fill rather than
+   centring. */
+.leaderTile {
+  min-width: 0;
+}
+
+.pieLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: center;
+  /* Fill the tile rather than sitting centred in it: the row's height
+     is set by whichever of the two tiles is taller (usually the
+     leaderboard), and a vertically-centred donut leaves a visible band
+     of dead space under it. */
+  flex: 1;
+}
+
+@media (max-width: 1100px) {
+  .pieLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Legend rows mirror the Distribution page's list: swatch, name,
+   percent, amount — hover-synced with the donut. Not buttons here:
+   the records table below is already the drill-down, so a click
+   target would promise a second one that doesn't exist. */
+.legend {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2);
+  border-bottom: 1px solid var(--hairline);
+  font-size: var(--fs-small);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.legendRow:last-child {
+  border-bottom: none;
+}
+
+.legendRowMuted {
+  opacity: 0.4;
+}
+
+.swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendPercent {
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.legendAmount {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The "biggest unplanned hits" leaderboard. */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: none;
+}
+
+.leaderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--hairline);
+  min-width: 0;
+}
+
+.leaderRow:last-child {
+  border-bottom: none;
+}
+
+.leaderRank {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--tile-bg);
+  color: var(--tile-fg);
+  font-size: var(--fs-micro);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.leaderDescription {
+  font-size: var(--fs-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderMeta {
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+}
+
+.leaderAmount {
+  flex-shrink: 0;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-negative);
+}
+
+/* The records tile spans the full width under the mosaic row. */
+.recordsTile {
+  gap: var(--sp-3);
+}
+
+.recordsHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.recordsCount {
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.searchRow {
+  display: flex;
+}
+
+.empty {
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  padding: var(--sp-5) 0;
+  text-align: center;
+}
+
+.errorBanner {
+  border: 1px solid var(--accent-negative);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--accent-negative);
+  font-size: var(--fs-small);
+}
