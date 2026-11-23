@@ -4,19 +4,116 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-7);
-  padding: var(--sp-7) var(--sp-4);
+  gap: var(--sp-6);
+  /* Slightly more padding below than above: optical centering, so the
+     composition sits just above true center instead of reading as
+     bottom-heavy on tall screens. */
+  padding: var(--sp-7) var(--sp-4) var(--sp-8);
   background: var(--paper);
+}
+
+/* A soft lift behind the mark, so the logo arrives into light rather
+   than onto a flat field. Sits under everything and never intercepts. */
+.screen::before {
+  content: '';
+  position: fixed;
+  top: 38%;
+  left: 50%;
+  width: min(42rem, 90vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle at center,
+    var(--paper-sunk) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  animation: glow-in 1.4s var(--ease-arrival) 0.1s forwards;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* The loading state centers the mark on its own, with no card below. */
+.screenLoading {
+  justify-content: center;
+  gap: 0;
 }
 
 /* --- Hero -------------------------------------------------------------- */
 
 .hero {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--sp-4);
   text-align: center;
+}
+
+/* --- The arrival sequence ---------------------------------------------- */
+
+/* One orchestrated moment on load: the mark settles in, then the
+   wordmark, tagline and card follow it up. Each step reuses the same
+   two keyframes on a shared delay ladder, so the whole screen resolves
+   as a single gesture rather than four separate effects. */
+
+.markArrival {
+  animation: mark-settle 0.9s var(--ease-arrival) both;
+}
+
+.riseOne {
+  animation: rise 0.7s var(--ease-arrival) 0.26s both;
+}
+
+.riseTwo {
+  animation: rise 0.7s var(--ease-arrival) 0.38s both;
+}
+
+.riseThree {
+  animation: rise 0.7s var(--ease-arrival) 0.5s both;
+}
+
+@keyframes mark-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes glow-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* The arrival is an accent, not information: with reduced motion the
+   screen simply appears, already composed. */
+@media (prefers-reduced-motion: reduce) {
+  .screen::before,
+  .markArrival,
+  .riseOne,
+  .riseTwo,
+  .riseThree {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .wordmark {
@@ -25,6 +122,7 @@
   font-weight: var(--font-weight-light);
   letter-spacing: var(--tracking-wide);
   color: var(--ink);
+  line-height: 1.05;
 }
 
 .tagline {
@@ -38,10 +136,27 @@
 /* --- The two options --------------------------------------------------- */
 
 .options {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: var(--sp-4);
   width: 100%;
   max-width: 420px;
+}
+
+/* The caption under the spinning logo while a workspace loads. */
+.loadingNote {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  letter-spacing: var(--tracking-wide);
+  animation: rise 0.6s var(--ease-arrival) 0.15s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingNote {
+    animation: none;
+  }
 }
 
 .card {
@@ -105,8 +220,7 @@
 }
 
 .input:focus-visible {
-  outline: 2px solid var(--accent-focus);
-  outline-offset: 1px;
+  outline: none;
   border-color: var(--accent-focus);
 }
 
@@ -155,7 +269,16 @@
   background: var(--paper-sunk);
 }
 
-.primary:disabled,
+/* Disabled reads as "not yet filled in", so it recedes to an outline
+   rather than staying a solid fill at reduced opacity — at this contrast
+   a dimmed solid still looks pressable. */
+.primary:disabled {
+  background: transparent;
+  border-color: var(--hairline-strong);
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
 .secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;

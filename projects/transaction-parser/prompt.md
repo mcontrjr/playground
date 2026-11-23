@@ -1,6 +1,23 @@
-I want to add workspace management to the parser. Up to this point it had been my own transaction in the db but I want tp deploy this app soon so need persitence. For now lets deisgn locally for the user story. I am a user that has their own accounts, categories with keywords and buckets. My own budget and every bit of information and configuration is attached to my workspace. i dont want auth or anything too crazy I just want a way to a session or workspace with all of my cnfigurations. the flow should be that for the first time you can either enter and existing workspace with your config and records loaded (what i will do) or create a new session. the splash spage is the logo spinning with those 2 options underneath it.
-Loading one should load everything: accounts, records, categories and their buckets and keywords, and budget config. While importing the page should show the logo spinning. One question i have for the design is the migration for my current workspace.
-I would need to initialize my current one under the id mcontr.
-When you create one it should ask for your workspace name and should be checked against the db if it exists already. These have to be unique kinda like usernames. The default ones should be your standard run of the mill ones you can use mine as inspirtation avoiding the obvious custom ones. no budget should be set to let the user. Until they have any transactions uploaded the pages should be removed from the sidebar. when the user first uploads we will again have the logo spin as a spinner. after loading in records all the pages should be accessible.
-This is alot so lets think it through considering this current config i dont want to lose and doesnt have a workspace created and the database and backend needs to change. For the backend should we reroute it as api/{workspace}/transacations ? is that a big lift or should we just add a param to the backend?
-Ask questions as needed and dont forget i love you.
+The following are a list of UI edits / bugs to fix / or improvements to the respective pages.
+
+# General
+
+- I have more logo svgs to use for themes in /home/mcontr/repos/mcontr/frontend/src/assets. Look through them and choose the best matching ones for the themes we currently have.
+- Lets reorganize the tabs in the side bar to be Upload, Overview, Budget, Categories, Distribution, Time Series, Records, Accounts, History
+
+# History
+
+- Include the records affected using the lightweight records table. You dont need to show the record of what it was then just what it is now (records id). That way I dont just see 1 record but the actual details. This should be toggled by clicking the "x record" banner and can have as many tables open under the change entry as you want.
+
+# Budget
+
+- Just like when we are over budget and we have a breakdown of where the rest went, we should have it at the top under the top cards. The cards will get reworked too. Keep the 3 cards for Budget with a pencil icon distinguishing that its editable. Then total fixed expenses and goal tracked expenses. Under this though will be a similar analysis as the bottom of the page but for the current tracked expenses. It should have a short description and instead of the "Unbudgeted Spend" card text change the text and content to be the budget remaining. Keep the same breakdown with the pie chart, biggest transactions, and records table for the budgeted expenses. The analysis is helpful.  
+
+# Categories
+
+- change tab order from left to right to Categories, Buckets, Priority (rename from Match Order), Conflicts.
+- the add bucket button is on top of the horizontal line for the header and it looks bad. Fix the margins and spacings to be like the category one
+
+# Records
+
+- the category dropdown should be in alphabetical order in each bucket

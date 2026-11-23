@@ -1,20 +1,19 @@
-.spinner {
+.mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.mark {
+.image {
   display: block;
-  animation: spin 1.4s linear infinite;
 }
 
-/* Respect the reduced-motion preference: the logo still reads as "busy"
-   via a gentle pulse rather than continuous rotation. */
-@media (prefers-reduced-motion: reduce) {
-  .mark {
-    animation: pulse 1.6s ease-in-out infinite;
-  }
+/* Spin only while work is in flight. A slight ease on each turn reads as
+   a mechanism being driven rather than a free-running loader. */
+.markSpinning .image {
+  animation: spin 1.5s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
 }
 
 @keyframes spin {
@@ -23,6 +22,14 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Respect the reduced-motion preference: the logo still reads as "busy"
+   via a gentle pulse rather than continuous rotation. */
+@media (prefers-reduced-motion: reduce) {
+  .markSpinning .image {
+    animation: pulse 1.6s ease-in-out infinite;
   }
 }
 

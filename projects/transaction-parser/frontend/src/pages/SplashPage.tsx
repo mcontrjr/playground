@@ -1,6 +1,11 @@
 /**
- * The app's entry screen: the spinning logo over two choices — enter an
- * existing workspace, or create a new one.
+ * The app's entry screen: the logo over two choices — enter an existing
+ * workspace, or create a new one.
+ *
+ * On load the screen plays one short arrival: the mark settles in, then
+ * the wordmark, tagline and card rise behind it. The logo is static
+ * there and spins only while a workspace is actually loading, so motion
+ * on this screen always means the app is busy.
  *
  * Loading a workspace is one request (`/workspaces/{slug}/bootstrap`),
  * and this screen stays on the spinning logo for exactly that round
@@ -17,7 +22,7 @@ import {
   workspacesApi,
   type WorkspaceBootstrap,
 } from '../api/workspaces'
-import { LogoSpinner } from '../components/LogoSpinner/LogoSpinner'
+import { LogoMark } from '../components/LogoSpinner/LogoSpinner'
 import { useWorkspace } from '../workspace/WorkspaceContext'
 import styles from './SplashPage.module.css'
 
@@ -143,15 +148,19 @@ export function SplashPage() {
     setAvailability({ checking: false, available: null, reason: null })
   }
 
-  // While loading, the logo is the only thing on screen — the same
-  // spinner the first import uses, so "the app is working" always looks
-  // the same.
+  // While loading, the logo is the only thing on screen, and this is the
+  // one place it spins — the same indicator the first import uses, so
+  // "the app is working" always looks the same.
   if (busy) {
     return (
-      <div className={styles.screen}>
+      <div className={`${styles.screen} ${styles.screenLoading}`}>
         <div className={styles.hero}>
-          <LogoSpinner size={96} label="Loading workspace" />
-          <p className={styles.tagline}>
+          <LogoMark
+            size={96}
+            spinning
+            label={mode === 'create' ? 'Creating workspace' : 'Loading workspace'}
+          />
+          <p className={styles.loadingNote}>
             {mode === 'create' ? 'Setting up your workspace…' : 'Loading your workspace…'}
           </p>
         </div>
@@ -165,14 +174,14 @@ export function SplashPage() {
   return (
     <div className={styles.screen}>
       <div className={styles.hero}>
-        <LogoSpinner size={96} label="Parser" />
-        <h1 className={styles.wordmark}>Parser</h1>
-        <p className={styles.tagline}>
+        <LogoMark size={96} className={styles.markArrival} />
+        <h1 className={`${styles.wordmark} ${styles.riseOne}`}>Parser</h1>
+        <p className={`${styles.tagline} ${styles.riseTwo}`}>
           Your accounts, categories, budget and records live in a workspace.
         </p>
       </div>
 
-      <div className={styles.options}>
+      <div className={`${styles.options} ${styles.riseThree}`}>
         {mode === 'choose' ? (
           <>
             <section className={styles.card}>

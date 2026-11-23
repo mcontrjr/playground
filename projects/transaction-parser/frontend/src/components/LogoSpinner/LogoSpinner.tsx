@@ -1,21 +1,44 @@
 /**
- * The spinning parser logo, used as the app's one loading indicator:
- * on the splash screen while a workspace loads, and over the Upload page
- * while the first import runs.
+ * The parser logo, in its two states.
+ *
+ * At rest it is just the mark — the splash screen's identity, sitting
+ * still. It spins only while something is actually in flight: a
+ * workspace loading, or the first import running. Keeping the spin tied
+ * to real work means motion on screen always means "the app is busy",
+ * and never just "the app is open".
  */
 import logo from '../../assets/parser-logo.svg'
 import styles from './LogoSpinner.module.css'
 
-interface LogoSpinnerProps {
+interface LogoMarkProps {
   size?: number
-  /** Accessible description of what is loading. */
+  /** Rotate the mark, and announce it to assistive tech as busy. */
+  spinning?: boolean
+  /** Describes what is loading; only used while spinning. */
   label?: string
+  className?: string
 }
 
-export function LogoSpinner({ size = 48, label = 'Loading' }: LogoSpinnerProps) {
+/**
+ * The logo. Static by default; pass `spinning` while work is in flight.
+ *
+ * Only the spinning form is a live region — a resting logo is decoration
+ * and shouldn't announce itself.
+ */
+export function LogoMark({
+  size = 48,
+  spinning = false,
+  label = 'Loading',
+  className = '',
+}: LogoMarkProps) {
   return (
-    <span className={styles.spinner} role="status" aria-live="polite" aria-label={label}>
-      <img src={logo} alt="" className={styles.mark} width={size} height={size} />
+    <span
+      className={`${styles.mark} ${spinning ? styles.markSpinning : ''} ${className}`}
+      {...(spinning
+        ? { role: 'status', 'aria-live': 'polite', 'aria-label': label }
+        : { 'aria-hidden': true })}
+    >
+      <img src={logo} alt="" className={styles.image} width={size} height={size} />
     </span>
   )
 }
@@ -28,7 +51,7 @@ interface LoadingOverlayProps {
   fullScreen?: boolean
 }
 
-/** Centered spinner plus caption, for whole-page loading states. */
+/** Centered spinning logo plus caption, for whole-page loading states. */
 export function LoadingOverlay({
   message = 'Loading',
   size = 56,
@@ -36,7 +59,7 @@ export function LoadingOverlay({
 }: LoadingOverlayProps) {
   return (
     <div className={`${styles.overlay} ${fullScreen ? styles.overlayFull : ''}`}>
-      <LogoSpinner size={size} label={message} />
+      <LogoMark size={size} spinning label={message} />
       <p className={styles.label}>{message}</p>
     </div>
   )

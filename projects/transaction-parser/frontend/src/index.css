@@ -62,6 +62,18 @@ a {
   border-radius: 2px;
 }
 
+/* Text fields show focus through their own border rather than a ring
+   stacked outside it — an offset outline around an already-bordered box
+   reads as a heavy double frame. The caret and the border shift are
+   enough to locate focus here; buttons and links keep the ring above,
+   where it's the only focus affordance they have. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent-focus);
+}
+
 /* Numerals that should align in tables / KPI tiles */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
