@@ -103,6 +103,11 @@ _TABLES_TO_TRUNCATE = (
     "audit_events",
     "budget_expenses",
     "budget_expense_categories",
+    # seed_suppressions must be truncated alongside categories: a tombstone
+    # left behind from a previous test's delete would make the re-seed below
+    # skip that category, so the next test would not start from the known
+    # seeded state. Delete-tests assert on the tombstones they create.
+    "seed_suppressions",
 )
 
 

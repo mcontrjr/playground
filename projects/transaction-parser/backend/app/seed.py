@@ -24,7 +24,15 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.db import Base, SessionLocal, engine
-from app.models import Account, Bucket, Category, CategoryKeyword, Institution  # noqa: F401
+from app.models import (  # noqa: F401
+    Account,
+    Bucket,
+    Category,
+    CategoryKeyword,
+    Institution,
+    SeedSuppression,
+)
+from app.models.seed_suppression import CATEGORY, KEYWORD
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("seed")
@@ -254,11 +262,26 @@ def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]
     existing_categories = {c.name: c for c in db.query(Category).all()}
     existing_keywords = {k.keyword for k in db.query(CategoryKeyword).all()}
 
+    # Items the user deleted through the UI. This seeder is get-or-create by
+    # name and runs on every backend start, so without these tombstones an
+    # absent row looks identical to a never-seeded one and gets recreated —
+    # silently undoing the deletion on the next restart.
+    suppressed = {
+        (s.kind, s.name)
+        for s in db.query(SeedSuppression).all()
+    }
+
     next_priority = 0
     for entry in plan:
         name = entry["name"]
         bucket = buckets_by_name[entry["group"]]
         category = existing_categories.get(name)
+
+        if category is None and (CATEGORY, name) in suppressed:
+            logger.info("category: skipped %r (deleted by user)", name)
+            next_priority += 1
+            continue
+
         if category is None:
             category = Category(
                 name=name,
@@ -271,12 +294,9 @@ def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]
             db.flush()
             existing_categories[name] = category
             logger.info("category: created %r (priority=%d)", name, next_priority)
-        elif category.bucket_id != bucket.id:
-            # Re-sync bucket to the plan's value on every run. This only
-            # ever touches the ~20 seeded legacy categories (matched by
-            # name); a user's own categories, created via POST /categories,
-            # are never in CATEGORY_GROUPS and are untouched by this branch.
-            category.bucket_id = bucket.id
+        # An existing category's bucket is left alone: this used to re-sync
+        # to the plan's value on every run, which reverted any bucket move
+        # the user made through the UI the next time the backend restarted.
         next_priority += 1
 
         for raw_kw in entry["keywords"]:
@@ -296,6 +316,10 @@ def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]
 
             if kw in existing_keywords:
                 continue  # already persisted from a prior run
+
+            if (KEYWORD, kw) in suppressed:
+                logger.info("keyword: skipped %r -> %r (removed by user)", kw, name)
+                continue
 
             db.add(CategoryKeyword(category_id=category.id, keyword=kw))
             existing_keywords.add(kw)

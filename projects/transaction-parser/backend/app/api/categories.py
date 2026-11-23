@@ -6,7 +6,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Bucket, Category, CategoryKeyword, ClashDismissal, Transaction
+from app.models import (
+    Bucket,
+    Category,
+    CategoryKeyword,
+    ClashDismissal,
+    SeedSuppression,
+    Transaction,
+)
+from app.models.seed_suppression import CATEGORY as SUPPRESS_CATEGORY
+from app.models.seed_suppression import KEYWORD as SUPPRESS_KEYWORD
 from app.schemas.categories import (
     CategoryCreate,
     CategoryDeleteResponse,
@@ -55,6 +64,38 @@ from app.services.category_service import (
 router = APIRouter(prefix="/categories", tags=["categories"])
 
 OTHER_BUCKET_NAME = "OTHER"
+
+
+def _suppress_seed(db: Session, kind: str, name: str) -> None:
+    """Tombstone a name so `app.seed` stops recreating it on every restart.
+
+    The seeder is get-or-create by name, so a hard delete alone lasts only
+    until the next backend start. Adding to the session (not committing)
+    follows the audit-service convention: the caller's own `db.commit()`
+    makes the delete and its tombstone atomic.
+    """
+    exists = db.execute(
+        select(SeedSuppression.id).where(
+            SeedSuppression.kind == kind, SeedSuppression.name == name
+        )
+    ).first()
+    if exists is None:
+        db.add(SeedSuppression(kind=kind, name=name))
+
+
+def _unsuppress_seed(db: Session, kind: str, name: str) -> None:
+    """Drop a tombstone because the user recreated the item by hand.
+
+    Without this, creating a category (or keyword) that had previously been
+    deleted would leave the tombstone in place — harmless while the row
+    exists, but it would suppress re-seeding if the row were ever deleted
+    and the user later wanted the seeded default back.
+    """
+    db.execute(
+        SeedSuppression.__table__.delete().where(
+            SeedSuppression.kind == kind, SeedSuppression.name == name
+        )
+    )
 
 
 def _category_to_read(category: Category, transaction_count: int) -> CategoryRead:
@@ -222,6 +263,7 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)) -> C
         bucket_id=bucket.id,
     )
     db.add(category)
+    _unsuppress_seed(db, SUPPRESS_CATEGORY, category.name)
     db.flush()
 
     record_event(
@@ -409,7 +451,15 @@ def delete_category(
         )
 
     deleted_name = category.name
+    # Capture the keyword texts before the cascade removes them: each needs
+    # its own tombstone, or the seeder would re-add them to whichever
+    # category claims them next.
+    deleted_keywords = [k.keyword for k in category.keywords]
     db.delete(category)  # cascades category_keywords
+
+    _suppress_seed(db, SUPPRESS_CATEGORY, deleted_name)
+    for kw in deleted_keywords:
+        _suppress_seed(db, SUPPRESS_KEYWORD, kw)
 
     record_event(
         db,
@@ -523,6 +573,7 @@ def add_keyword(
 
     keyword_row = CategoryKeyword(category_id=category_id, keyword=keyword_upper)
     db.add(keyword_row)
+    _unsuppress_seed(db, SUPPRESS_KEYWORD, keyword_upper)
     db.flush()
 
     applied_count = 0
@@ -580,6 +631,7 @@ def delete_keyword(
 
     deleted_keyword_text = keyword_row.keyword
     db.delete(keyword_row)
+    _suppress_seed(db, SUPPRESS_KEYWORD, deleted_keyword_text)
     db.flush()
 
     reapplied_count = 0

@@ -8,6 +8,7 @@ from app.models.clash_dismissal import ClashDismissal
 from app.models.ingest import IngestBatch, ParseFailure
 from app.models.institution import Institution
 from app.models.preference import UserPreference
+from app.models.seed_suppression import SeedSuppression
 from app.models.transaction import Transaction
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "IngestBatch",
     "Institution",
     "ParseFailure",
+    "SeedSuppression",
     "Transaction",
     "UserPreference",
 ]
