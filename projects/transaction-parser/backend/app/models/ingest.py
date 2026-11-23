@@ -25,6 +25,9 @@ class IngestBatch(TimestampMixin, Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     filename: Mapped[str] = mapped_column(String(256), nullable=False)
     institution_id: Mapped[int] = mapped_column(
         ForeignKey("institutions.id", ondelete="CASCADE"), nullable=False
@@ -62,6 +65,12 @@ class ParseFailure(TimestampMixin, Base):
     __tablename__ = "parse_failures"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    """Denormalized from `batch` so the failures list can filter without
+    a join."""
+
     batch_id: Mapped[int] = mapped_column(
         ForeignKey("ingest_batches.id", ondelete="CASCADE"), nullable=False
     )

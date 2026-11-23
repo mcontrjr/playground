@@ -10,12 +10,26 @@ from sqlalchemy.orm import Session
 from app.models import Account, Category, Institution, IngestBatch, Transaction
 
 
+def _ws_id(db_session: Session) -> int:
+    """Id of the seeded `init` workspace these tests operate in.
+
+    Resolved here rather than threaded through every helper call so the
+    existing single-workspace tests read exactly as they did before
+    workspaces existed.
+    """
+    from app.models import Workspace
+    from app.seed import INIT_SLUG
+
+    return db_session.query(Workspace).filter(Workspace.slug == INIT_SLUG).one().id
+
+
 def _make_batch(db_session: Session, institution_code: str = "amex"):
     institution = db_session.query(Institution).filter(Institution.code == institution_code).one()
-    account = Account(institution_id=institution.id, account_hint="88888", display_name="Test Account", kind="card")
+    account = Account(workspace_id=_ws_id(db_session), institution_id=institution.id, account_hint="88888", display_name="Test Account", kind="card")
     db_session.add(account)
     db_session.flush()
     batch = IngestBatch(
+        workspace_id=_ws_id(db_session),
         filename="test.csv",
         institution_id=institution.id,
         account_id=account.id,
@@ -40,6 +54,7 @@ def _make_txn(
     amount: str = "-10.00",
 ) -> Transaction:
     txn = Transaction(
+        workspace_id=_ws_id(db_session),
         account_id=account.id,
         batch_id=batch.id,
         txn_date=txn_date,

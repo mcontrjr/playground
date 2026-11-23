@@ -5,6 +5,17 @@ command). Uses INSERT-if-missing / get-or-create patterns throughout so
 repeated runs never raise integrity errors and never change existing data
 beyond filling in what's missing.
 
+**Scope.** Institutions are global. Everything else here belongs to one
+specific workspace — `INIT_SLUG` below, the original single-user data set
+this app grew out of, adopted by the workspaces migration.
+
+This category list is *not* a default. It is one particular person's
+merchants (APPFOLIO, PRUNEYARD CINEMAS, LA VICTORIA SANTA) and must
+never be handed to anyone else. New workspaces get the generic defaults
+in `app.provisioning`, once, at create time. Keeping the two apart is
+what lets this list go on being re-synced on every restart without
+leaking into another workspace.
+
 Category/keyword source of truth: the legacy hardcoded dict at
 `/home/mcontr/repos/mcontr/server/src/config.py` (CATEGORY_KEYWORDS, line 38).
 Dict order is preserved as ascending priority (lower = matched first, i.e.
@@ -21,6 +32,7 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import Base, SessionLocal, engine
@@ -31,11 +43,18 @@ from app.models import (  # noqa: F401
     CategoryKeyword,
     Institution,
     SeedSuppression,
+    Workspace,
 )
 from app.models.seed_suppression import CATEGORY, KEYWORD
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("seed")
+
+#: The one workspace this file's category list belongs to — the
+#: pre-workspace data set, adopted by the `g1h2i3j4k5l6` migration.
+#: Created on first run if missing (fresh database, nothing to adopt).
+INIT_SLUG = "init"
+INIT_NAME = "init"
 
 
 # --- Institutions -----------------------------------------------------------
@@ -236,15 +255,37 @@ def seed_institutions(db: Session) -> None:
     db.flush()
 
 
-def seed_buckets(db: Session) -> dict[str, Bucket]:
+def get_or_create_init_workspace(db: Session) -> Workspace:
+    """Return the `init` workspace, creating it if absent.
+
+    Normally the workspaces migration has already created it and
+    backfilled every pre-workspace row into it. The create path here is
+    for a database built from scratch (fresh dev volume, test setup),
+    where the migration had no rows to adopt.
+    """
+    workspace = db.scalar(select(Workspace).where(Workspace.slug == INIT_SLUG))
+    if workspace is None:
+        workspace = Workspace(slug=INIT_SLUG, name=INIT_NAME)
+        db.add(workspace)
+        db.flush()
+        logger.info("workspace: created %r", INIT_SLUG)
+    return workspace
+
+
+def seed_buckets(db: Session, workspace: Workspace) -> dict[str, Bucket]:
     """Create the fixed uppercase bucket rows if missing. Idempotent
-    lookup-by-name; returns a name -> Bucket map for the category seed
-    step below."""
-    existing = {b.name: b for b in db.query(Bucket).all()}
+    lookup-by-name within the workspace; returns a name -> Bucket map for
+    the category seed step below."""
+    existing = {
+        b.name: b
+        for b in db.scalars(
+            select(Bucket).where(Bucket.workspace_id == workspace.id)
+        ).all()
+    }
     for name in BUCKET_NAMES:
         if name in existing:
             continue
-        bucket = Bucket(name=name)
+        bucket = Bucket(workspace_id=workspace.id, name=name)
         db.add(bucket)
         db.flush()
         existing[name] = bucket
@@ -252,15 +293,29 @@ def seed_buckets(db: Session) -> dict[str, Bucket]:
     return existing
 
 
-def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]) -> None:
+def seed_categories_and_keywords(
+    db: Session, workspace: Workspace, buckets_by_name: dict[str, Bucket]
+) -> None:
     plan = _build_category_plan()
 
-    # Globally-unique keyword guard across the whole plan, by priority order
-    # (lower priority index = higher precedence, i.e. seen first wins).
+    # Keyword uniqueness is per-workspace, and the plan is walked in
+    # priority order (lower index = higher precedence, i.e. seen first wins).
     claimed_keywords: dict[str, str] = {}  # keyword -> category name that owns it
 
-    existing_categories = {c.name: c for c in db.query(Category).all()}
-    existing_keywords = {k.keyword for k in db.query(CategoryKeyword).all()}
+    existing_categories = {
+        c.name: c
+        for c in db.scalars(
+            select(Category).where(Category.workspace_id == workspace.id)
+        ).all()
+    }
+    existing_keywords = {
+        k.keyword
+        for k in db.scalars(
+            select(CategoryKeyword).where(
+                CategoryKeyword.workspace_id == workspace.id
+            )
+        ).all()
+    }
 
     # Items the user deleted through the UI. This seeder is get-or-create by
     # name and runs on every backend start, so without these tombstones an
@@ -268,7 +323,11 @@ def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]
     # silently undoing the deletion on the next restart.
     suppressed = {
         (s.kind, s.name)
-        for s in db.query(SeedSuppression).all()
+        for s in db.scalars(
+            select(SeedSuppression).where(
+                SeedSuppression.workspace_id == workspace.id
+            )
+        ).all()
     }
 
     next_priority = 0
@@ -284,6 +343,7 @@ def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]
 
         if category is None:
             category = Category(
+                workspace_id=workspace.id,
                 name=name,
                 is_system=entry["is_system"],
                 excluded_from_analytics=entry["excluded_from_analytics"],
@@ -321,7 +381,13 @@ def seed_categories_and_keywords(db: Session, buckets_by_name: dict[str, Bucket]
                 logger.info("keyword: skipped %r -> %r (removed by user)", kw, name)
                 continue
 
-            db.add(CategoryKeyword(category_id=category.id, keyword=kw))
+            db.add(
+                CategoryKeyword(
+                    workspace_id=workspace.id,
+                    category_id=category.id,
+                    keyword=kw,
+                )
+            )
             existing_keywords.add(kw)
             logger.info("keyword: created %r -> %r", kw, name)
 
@@ -336,8 +402,9 @@ def run() -> None:
     db = SessionLocal()
     try:
         seed_institutions(db)
-        buckets_by_name = seed_buckets(db)
-        seed_categories_and_keywords(db, buckets_by_name)
+        workspace = get_or_create_init_workspace(db)
+        buckets_by_name = seed_buckets(db, workspace)
+        seed_categories_and_keywords(db, workspace, buckets_by_name)
         db.commit()
         logger.info("seed: complete")
     except Exception:

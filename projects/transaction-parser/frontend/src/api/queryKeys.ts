@@ -24,4 +24,6 @@ export const queryKeys = {
   budgetAll: ['budget'] as const,
   clashes: (includeSettled: boolean) => ['categories', 'clashes', includeSettled] as const,
   clashesAll: ['categories', 'clashes'] as const,
+  workspaceBootstrap: (slug: string) => ['workspace', slug, 'bootstrap'] as const,
+  workspaceAvailability: (slug: string) => ['workspace', 'availability', slug] as const,
 }

@@ -18,6 +18,7 @@ from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.category import Category
+    from app.models.workspace import Workspace
 
 
 budget_expense_categories = Table(
@@ -36,6 +37,9 @@ class BudgetExpense(TimestampMixin, Base):
     __tablename__ = "budget_expenses"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     goal_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     is_fixed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")

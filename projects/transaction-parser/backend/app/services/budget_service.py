@@ -29,12 +29,23 @@ class ExpenseActuals:
     by_expense_id: dict[int, Decimal]
 
 
-def compute_actuals(db: Session, month: date, expense_ids: list[int] | None = None) -> ExpenseActuals:
+def compute_actuals(
+    db: Session,
+    workspace_id: int,
+    month: date,
+    expense_ids: list[int] | None = None,
+) -> ExpenseActuals:
     """Sum of outflows (amount < 0, reported as a positive number) per
     budget expense, across that expense's linked categories, for the
     given month. An expense with no linked categories (or none of its
     categories had any matching transactions) is simply absent from the
-    result — callers default to Decimal('0.00')."""
+    result — callers default to Decimal('0.00').
+
+    `budget_expense_categories` carries no workspace of its own (both
+    sides of the join are already scoped), so the filter goes on
+    `Transaction`: that is what keeps another workspace's spend out of
+    this workspace's budget totals.
+    """
     month_start, month_end = month_bounds(month)
 
     stmt = (
@@ -44,6 +55,7 @@ def compute_actuals(db: Session, month: date, expense_ids: list[int] | None = No
         )
         .select_from(budget_expense_categories)
         .join(Transaction, Transaction.category_id == budget_expense_categories.c.category_id)
+        .where(Transaction.workspace_id == workspace_id)
         .where(Transaction.txn_date >= month_start)
         .where(Transaction.txn_date <= month_end)
         .where(Transaction.amount < 0)

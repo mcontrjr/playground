@@ -42,6 +42,7 @@ class ClashDismissal(TimestampMixin, Base):
         # transaction_id would happily allow duplicate rule-level rows.
         Index(
             "uq_clash_dismissal_rule",
+            "workspace_id",
             "winner_category_id",
             "loser_category_id",
             unique=True,
@@ -49,6 +50,7 @@ class ClashDismissal(TimestampMixin, Base):
         ),
         Index(
             "uq_clash_dismissal_row",
+            "workspace_id",
             "winner_category_id",
             "loser_category_id",
             "transaction_id",
@@ -59,6 +61,9 @@ class ClashDismissal(TimestampMixin, Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     winner_category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), nullable=False
     )

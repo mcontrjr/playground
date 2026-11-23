@@ -5,7 +5,7 @@ events). Follows the JSONB pattern established in `preference.py`.
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Index, Integer, String, func, text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,10 +19,17 @@ class AuditEvent(Base):
 
     __tablename__ = "audit_events"
     __table_args__ = (
-        Index("ix_audit_events_created_at", text("created_at DESC")),
+        Index(
+            "ix_audit_events_created_at",
+            "workspace_id",
+            text("created_at DESC"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
+    )
     event_type: Mapped[str] = mapped_column(String(40), nullable=False)
     """One of: category.created|category.renamed|category.deleted|
     category.bucket_changed|keyword.added|keyword.removed|

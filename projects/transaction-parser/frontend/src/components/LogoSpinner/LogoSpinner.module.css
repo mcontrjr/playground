@@ -1,0 +1,62 @@
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mark {
+  display: block;
+  animation: spin 1.4s linear infinite;
+}
+
+/* Respect the reduced-motion preference: the logo still reads as "busy"
+   via a gentle pulse rather than continuous rotation. */
+@media (prefers-reduced-motion: reduce) {
+  .mark {
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* --- Full-area overlay form ------------------------------------------- */
+
+.overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-5);
+  min-height: 60vh;
+  padding: var(--sp-7) var(--sp-4);
+  text-align: center;
+}
+
+.overlayFull {
+  min-height: 100vh;
+}
+
+.label {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  margin: 0;
+}

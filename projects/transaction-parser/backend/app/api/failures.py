@@ -6,7 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import ParseFailure
+from app.deps import get_workspace
+from app.models import ParseFailure, Workspace
 from app.schemas.failures import ParseFailurePatch, ParseFailureRead
 
 router = APIRouter(prefix="/failures", tags=["failures"])
@@ -21,8 +22,13 @@ router = APIRouter(prefix="/failures", tags=["failures"])
 def list_failures(
     resolved: bool | None = None,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> list[ParseFailureRead]:
-    stmt = select(ParseFailure).order_by(ParseFailure.created_at.desc())
+    stmt = (
+        select(ParseFailure)
+        .where(ParseFailure.workspace_id == ws.id)
+        .order_by(ParseFailure.created_at.desc())
+    )
     if resolved is not None:
         stmt = stmt.where(ParseFailure.resolved == resolved)
     failures = db.execute(stmt).scalars().all()
@@ -38,9 +44,10 @@ def patch_failure(
     failure_id: int,
     payload: ParseFailurePatch,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ParseFailureRead:
     failure = db.get(ParseFailure, failure_id)
-    if failure is None:
+    if failure is None or failure.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Failure not found")
 
     failure.resolved = payload.resolved

@@ -12,7 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import IngestBatch
+from app.deps import get_workspace
+from app.models import IngestBatch, Workspace
 from app.parsers.registry import UnknownFormatError
 from app.schemas.uploads import BatchCounts, BatchDetail, BatchSummary
 from app.services.ingest_service import (
@@ -75,13 +76,18 @@ async def upload_file(
         ),
     ),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> BatchDetail:
     filename = file.filename or ""
     file_bytes = await file.read()
 
     try:
         outcome = ingest_file(
-            db, filename=filename, file_bytes=file_bytes, institution=institution
+            db,
+            workspace_id=ws.id,
+            filename=filename,
+            file_bytes=file_bytes,
+            institution=institution,
         )
     except InvalidFileExtensionError as exc:
         raise HTTPException(
@@ -136,10 +142,14 @@ async def upload_file(
 def list_batches(
     limit: int = 50,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> list[BatchSummary]:
     batches = (
         db.execute(
-            select(IngestBatch).order_by(IngestBatch.created_at.desc()).limit(limit)
+            select(IngestBatch)
+            .where(IngestBatch.workspace_id == ws.id)
+            .order_by(IngestBatch.created_at.desc())
+            .limit(limit)
         )
         .scalars()
         .all()
@@ -152,8 +162,12 @@ def list_batches(
     response_model=BatchDetail,
     summary="Get one ingest batch, including its parse failures",
 )
-def get_batch(batch_id: int, db: Session = Depends(get_db)) -> BatchDetail:
+def get_batch(
+    batch_id: int,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> BatchDetail:
     batch = db.get(IngestBatch, batch_id)
-    if batch is None:
+    if batch is None or batch.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
     return _batch_to_detail(batch)

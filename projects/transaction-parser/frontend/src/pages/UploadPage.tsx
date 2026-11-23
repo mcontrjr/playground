@@ -3,10 +3,12 @@ import { ApiError } from '../api/client'
 import { useBatches } from '../api/hooks/useBatches'
 import { useFailures } from '../api/hooks/useFailures'
 import { AmbiguousInstitutionApiError, useUploadFile } from '../api/hooks/useUploadFile'
+import { useWorkspaceBootstrap } from '../api/hooks/useWorkspaceBootstrap'
 import type { BatchDetail, ParseFailure } from '../api/types'
 import { BatchList } from '../components/BatchList/BatchList'
 import { FailuresList } from '../components/FailuresList/FailuresList'
 import { InstitutionPickerDialog } from '../components/InstitutionPickerDialog/InstitutionPickerDialog'
+import { LoadingOverlay } from '../components/LogoSpinner/LogoSpinner'
 import { UploadDropzone } from '../components/UploadDropzone/UploadDropzone'
 import styles from './UploadPage.module.css'
 
@@ -39,6 +41,7 @@ function makeQueueId(file: File, index: number): string {
 
 export function UploadPage() {
   const uploadFile = useUploadFile()
+  const { data: bootstrap, refetch: refetchBootstrap } = useWorkspaceBootstrap()
   const { data: batches } = useBatches()
   const { data: unresolvedFailures } = useFailures(false)
   // Unfiltered, so a failure resolved from the in-session results panel
@@ -59,6 +62,10 @@ export function UploadPage() {
     rest: QueueItem[]
     candidates: string[]
   } | null>(null)
+  /** True while the workspace's first import is being absorbed. */
+  const [unlocking, setUnlocking] = useState(false)
+
+  const hadRecordsBefore = bootstrap?.has_transactions ?? false
 
   /** Uploads one file; on success, records the result and reports it. On
    * ambiguity, surfaces the candidates for the dialog instead of throwing. */
@@ -90,6 +97,23 @@ export function UploadPage() {
     }
   }
 
+  /** Re-read the workspace so `has_transactions` (and therefore the
+   * sidebar) reflects what was just imported. On the very first import
+   * this is the moment the rest of the app unlocks, so it gets the
+   * spinning logo rather than a silent nav change. */
+  const absorbImport = async () => {
+    if (hadRecordsBefore) {
+      void refetchBootstrap()
+      return
+    }
+    setUnlocking(true)
+    try {
+      await refetchBootstrap()
+    } finally {
+      setUnlocking(false)
+    }
+  }
+
   const processQueue = async (items: QueueItem[]) => {
     for (let i = 0; i < items.length; i += 1) {
       const item = items[i]!
@@ -99,6 +123,7 @@ export function UploadPage() {
         return
       }
     }
+    await absorbImport()
   }
 
   const handleFilesSelected = (files: File[]) => {
@@ -129,6 +154,16 @@ export function UploadPage() {
       ),
     )
     void processQueue(rest)
+  }
+
+  // The first import unlocks the rest of the app, so it takes over the
+  // page with the same spinning logo the splash screen uses.
+  if (unlocking) {
+    return (
+      <div className={styles.page}>
+        <LoadingOverlay message="Importing your records" />
+      </div>
+    )
   }
 
   return (

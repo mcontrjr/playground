@@ -1,16 +1,16 @@
 """Server-side cache for small pieces of UI state: the active theme and
-each page's last-used filter selections. Single-user/local app, so one
-row per `key` is enough — no auth/user scoping needed.
+each page's last-used filter selections. Keyed by `(workspace, key)`, so
+each workspace keeps its own theme and filter selections.
 """
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import UserPreference
+from app.deps import get_workspace
+from app.models import UserPreference, Workspace
 from app.schemas.preferences import PreferenceRead, PreferenceWrite
 
 router = APIRouter(prefix="/preferences", tags=["preferences"])
@@ -22,8 +22,12 @@ router = APIRouter(prefix="/preferences", tags=["preferences"])
     summary="Get a persisted preference",
     description="Returns null if nothing has been stored under this key yet.",
 )
-def get_preference(key: str, db: Session = Depends(get_db)) -> PreferenceRead | None:
-    pref = db.get(UserPreference, key)
+def get_preference(
+    key: str,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> PreferenceRead | None:
+    pref = db.get(UserPreference, (ws.id, key))
     if pref is None:
         return None
     return PreferenceRead(key=pref.key, value=pref.value)
@@ -35,11 +39,18 @@ def get_preference(key: str, db: Session = Depends(get_db)) -> PreferenceRead | 
     summary="Set a persisted preference",
     description="Upserts the value under this key, replacing whatever was there.",
 )
-def put_preference(key: str, payload: PreferenceWrite, db: Session = Depends(get_db)) -> PreferenceRead:
+def put_preference(
+    key: str,
+    payload: PreferenceWrite,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> PreferenceRead:
     stmt = (
         pg_insert(UserPreference)
-        .values(key=key, value=payload.value)
-        .on_conflict_do_update(index_elements=["key"], set_={"value": payload.value})
+        .values(workspace_id=ws.id, key=key, value=payload.value)
+        .on_conflict_do_update(
+            index_elements=["workspace_id", "key"], set_={"value": payload.value}
+        )
     )
     db.execute(stmt)
     db.commit()

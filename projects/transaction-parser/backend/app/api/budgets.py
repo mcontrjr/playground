@@ -11,7 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
-from app.models import BudgetExpense, Category
+from app.deps import get_workspace
+from app.models import BudgetExpense, Category, Workspace
 from app.schemas.budgets import (
     BudgetCategoryRef,
     BudgetExpenseCreate,
@@ -39,10 +40,18 @@ def _expense_to_read(expense: BudgetExpense, actuals: ExpenseActuals) -> BudgetE
     )
 
 
-def _resolve_categories(db: Session, category_ids: list[int]) -> list[Category]:
+def _resolve_categories(
+    db: Session, workspace_id: int, category_ids: list[int]
+) -> list[Category]:
     if not category_ids:
         return []
-    categories = db.execute(select(Category).where(Category.id.in_(category_ids))).scalars().all()
+    # Scoped so a budget line can never link a category from another
+    # workspace: such an id falls into `missing` and 404s.
+    categories = db.execute(
+        select(Category).where(
+            Category.workspace_id == workspace_id, Category.id.in_(category_ids)
+        )
+    ).scalars().all()
     found_ids = {c.id for c in categories}
     missing = set(category_ids) - found_ids
     if missing:
@@ -77,18 +86,20 @@ def _parse_month(month: str) -> date:
 def get_summary(
     month: str = Query(..., description="YYYY-MM"),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> BudgetSummary:
     month_date = _parse_month(month)
     expenses = (
         db.execute(
             select(BudgetExpense)
+            .where(BudgetExpense.workspace_id == ws.id)
             .options(selectinload(BudgetExpense.categories))
             .order_by(BudgetExpense.sort_order, BudgetExpense.name)
         )
         .scalars()
         .all()
     )
-    actuals = compute_actuals(db, month_date)
+    actuals = compute_actuals(db, ws.id, month_date)
 
     expense_reads = [_expense_to_read(e, actuals) for e in expenses]
     total_goal = sum((e.goal_amount for e in expense_reads if e.goal_amount is not None), Decimal("0.00"))
@@ -114,11 +125,17 @@ def create_expense(
     payload: BudgetExpenseCreate,
     month: str = Query(..., description="YYYY-MM — which month's actual_amount to return in the response."),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> BudgetExpenseRead:
-    categories = _resolve_categories(db, payload.category_ids)
+    categories = _resolve_categories(db, ws.id, payload.category_ids)
 
-    max_sort_order = db.execute(select(BudgetExpense.sort_order).order_by(BudgetExpense.sort_order.desc())).scalars().first()
+    max_sort_order = db.execute(
+        select(BudgetExpense.sort_order)
+        .where(BudgetExpense.workspace_id == ws.id)
+        .order_by(BudgetExpense.sort_order.desc())
+    ).scalars().first()
     expense = BudgetExpense(
+        workspace_id=ws.id,
         name=payload.name,
         goal_amount=None if payload.is_fixed else payload.goal_amount,
         is_fixed=payload.is_fixed,
@@ -130,6 +147,7 @@ def create_expense(
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="budget_expense.created",
         entity_type="budget_expense",
         entity_id=expense.id,
@@ -142,7 +160,7 @@ def create_expense(
     bump_generation()
 
     month_date = _parse_month(month)
-    actuals = compute_actuals(db, month_date, expense_ids=[expense.id])
+    actuals = compute_actuals(db, ws.id, month_date, expense_ids=[expense.id])
     return _expense_to_read(expense, actuals)
 
 
@@ -157,9 +175,10 @@ def patch_expense(
     payload: BudgetExpenseUpdate,
     month: str = Query(..., description="YYYY-MM — which month's actual_amount to return in the response."),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> BudgetExpenseRead:
     expense = db.get(BudgetExpense, expense_id)
-    if expense is None:
+    if expense is None or expense.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget expense not found")
 
     fields_set = payload.model_fields_set
@@ -174,10 +193,11 @@ def patch_expense(
     if payload.sort_order is not None:
         expense.sort_order = payload.sort_order
     if payload.category_ids is not None:
-        expense.categories = _resolve_categories(db, payload.category_ids)
+        expense.categories = _resolve_categories(db, ws.id, payload.category_ids)
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="budget_expense.updated",
         entity_type="budget_expense",
         entity_id=expense.id,
@@ -190,7 +210,7 @@ def patch_expense(
     bump_generation()
 
     month_date = _parse_month(month)
-    actuals = compute_actuals(db, month_date, expense_ids=[expense.id])
+    actuals = compute_actuals(db, ws.id, month_date, expense_ids=[expense.id])
     return _expense_to_read(expense, actuals)
 
 
@@ -199,9 +219,13 @@ def patch_expense(
     response_model=BudgetExpenseDeleteResult,
     summary="Delete a budget expense",
 )
-def delete_expense(expense_id: int, db: Session = Depends(get_db)) -> BudgetExpenseDeleteResult:
+def delete_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> BudgetExpenseDeleteResult:
     expense = db.get(BudgetExpense, expense_id)
-    if expense is None:
+    if expense is None or expense.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget expense not found")
 
     deleted_name = expense.name
@@ -209,6 +233,7 @@ def delete_expense(expense_id: int, db: Session = Depends(get_db)) -> BudgetExpe
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="budget_expense.deleted",
         entity_type="budget_expense",
         entity_id=expense_id,

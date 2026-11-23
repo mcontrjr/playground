@@ -34,9 +34,21 @@ class _CategorySnapshot:
     keywords_by_category_id: dict[int, list[str]]
 
 
-def _load_snapshot(db: Session) -> _CategorySnapshot:
-    categories = list(db.execute(select(Category)).scalars().all())
-    keywords = list(db.execute(select(CategoryKeyword)).scalars().all())
+def _load_snapshot(db: Session, workspace_id: int) -> _CategorySnapshot:
+    """Load one workspace's categories and keywords as a rule snapshot.
+
+    Scoping here is what keeps the categorizer honest: an unscoped load
+    would build rules out of every workspace's keywords and happily
+    assign one workspace's transactions to another's categories.
+    """
+    categories = list(
+        db.scalars(select(Category).where(Category.workspace_id == workspace_id)).all()
+    )
+    keywords = list(
+        db.scalars(
+            select(CategoryKeyword).where(CategoryKeyword.workspace_id == workspace_id)
+        ).all()
+    )
     keywords_by_category_id: dict[int, list[str]] = {}
     for kw in keywords:
         keywords_by_category_id.setdefault(kw.category_id, []).append(kw.keyword)
@@ -144,7 +156,7 @@ class CategoryMove:
 
 
 def preview_add_keyword(
-    db: Session, *, category_id: int, keyword: str
+    db: Session, *, workspace_id: int, category_id: int, keyword: str
 ) -> list[CategoryMove]:
     """Candidate transactions that would change category if `keyword`
     were added to `category_id`, under full categorizer precedence.
@@ -158,7 +170,7 @@ def preview_add_keyword(
     it.
     """
     keyword_upper = keyword.upper().strip()
-    snapshot = _load_snapshot(db)
+    snapshot = _load_snapshot(db, workspace_id)
     hypothetical = _build_categorizer_from_snapshot(
         _snapshot_with_keyword_added(snapshot, category_id, keyword_upper)
     )
@@ -166,6 +178,7 @@ def preview_add_keyword(
     candidates = (
         db.execute(
             select(Transaction)
+            .where(Transaction.workspace_id == workspace_id)
             .where(Transaction.category_source.not_in(["manual", "bulk"]))
             .where(Transaction.normalized_description.like(f"%{keyword_upper}%"))
         )
@@ -189,7 +202,7 @@ def preview_add_keyword(
 
 
 def preview_remove_keyword(
-    db: Session, *, category_id: int, keyword: str
+    db: Session, *, workspace_id: int, category_id: int, keyword: str
 ) -> list[CategoryMove]:
     """Candidate transactions currently matched BY this exact keyword
     (i.e. the keyword is a substring of their normalized_description
@@ -197,7 +210,7 @@ def preview_remove_keyword(
     the keyword were removed. Manual and bulk rows are never
     candidates."""
     keyword_upper = keyword.upper().strip()
-    snapshot = _load_snapshot(db)
+    snapshot = _load_snapshot(db, workspace_id)
     hypothetical = _build_categorizer_from_snapshot(
         _snapshot_with_keyword_removed(snapshot, category_id, keyword_upper)
     )
@@ -205,6 +218,7 @@ def preview_remove_keyword(
     candidates = (
         db.execute(
             select(Transaction)
+            .where(Transaction.workspace_id == workspace_id)
             .where(Transaction.category_source.not_in(["manual", "bulk"]))
             .where(Transaction.normalized_description.like(f"%{keyword_upper}%"))
         )
@@ -246,7 +260,9 @@ class TransactionClash:
         return list(dict.fromkeys(c.category_id for c in self.report.claims))
 
 
-def _load_dismissals(db: Session) -> tuple[set[tuple[int, int]], set[tuple[int, int, int]]]:
+def _load_dismissals(
+    db: Session, workspace_id: int
+) -> tuple[set[tuple[int, int]], set[tuple[int, int, int]]]:
     """Dismissed pairings, as (rule_level, row_level) lookup sets.
 
     Rule-level keys are ``(winner_id, loser_id)``; row-level keys add the
@@ -255,7 +271,9 @@ def _load_dismissals(db: Session) -> tuple[set[tuple[int, int]], set[tuple[int, 
     """
     rules: set[tuple[int, int]] = set()
     rows: set[tuple[int, int, int]] = set()
-    for d in db.execute(select(ClashDismissal)).scalars().all():
+    for d in db.scalars(
+        select(ClashDismissal).where(ClashDismissal.workspace_id == workspace_id)
+    ).all():
         if d.transaction_id is None:
             rules.add((d.winner_category_id, d.loser_category_id))
         else:
@@ -292,7 +310,11 @@ def _is_dismissed(
 
 
 def find_clashes(
-    db: Session, *, include_settled: bool = False, include_dismissed: bool = False
+    db: Session,
+    *,
+    workspace_id: int,
+    include_settled: bool = False,
+    include_dismissed: bool = False,
 ) -> list[TransactionClash]:
     """Every transaction whose description is claimed by two or more
     categories, i.e. where the categorizer silently picked a winner.
@@ -302,11 +324,13 @@ def find_clashes(
     rows (never actionable); ``include_dismissed`` also returns pairings
     the user already judged correct.
     """
-    categorizer = Categorizer.load(db)
-    rules, rows = _load_dismissals(db)
+    categorizer = Categorizer.load(db, workspace_id=workspace_id)
+    rules, rows = _load_dismissals(db, workspace_id)
 
     clashes: list[TransactionClash] = []
-    for txn in db.execute(select(Transaction)).scalars().all():
+    for txn in db.scalars(
+        select(Transaction).where(Transaction.workspace_id == workspace_id)
+    ).all():
         report = categorizer.explain(txn.normalized_description)
         if not report.is_clash:
             continue
@@ -320,18 +344,20 @@ def find_clashes(
     return clashes
 
 
-def count_dismissed_clashes(db: Session) -> int:
+def count_dismissed_clashes(db: Session, *, workspace_id: int) -> int:
     """How many live clashing rows are currently hidden by a dismissal.
 
     Counted against real transactions rather than dismissal rows, so one
     rule-level dismissal covering nine Uber rows reports nine — which is
     what "N dismissed" in the UI should mean.
     """
-    categorizer = Categorizer.load(db)
-    rules, rows = _load_dismissals(db)
+    categorizer = Categorizer.load(db, workspace_id=workspace_id)
+    rules, rows = _load_dismissals(db, workspace_id)
 
     hidden = 0
-    for txn in db.execute(select(Transaction)).scalars().all():
+    for txn in db.scalars(
+        select(Transaction).where(Transaction.workspace_id == workspace_id)
+    ).all():
         report = categorizer.explain(txn.normalized_description)
         if not report.is_clash:
             continue
@@ -345,7 +371,9 @@ def count_dismissed_clashes(db: Session) -> int:
     return hidden
 
 
-def clashes_for_keyword(db: Session, *, category_id: int, keyword: str) -> list[TransactionClash]:
+def clashes_for_keyword(
+    db: Session, *, workspace_id: int, category_id: int, keyword: str
+) -> list[TransactionClash]:
     """Rows that would be claimed by BOTH ``category_id`` (via the
     hypothetical new ``keyword``) and some other category.
 
@@ -355,7 +383,7 @@ def clashes_for_keyword(db: Session, *, category_id: int, keyword: str) -> list[
     choice already governs them.
     """
     keyword_upper = keyword.upper().strip()
-    snapshot = _load_snapshot(db)
+    snapshot = _load_snapshot(db, workspace_id)
     hypothetical = _build_categorizer_from_snapshot(
         _snapshot_with_keyword_added(snapshot, category_id, keyword_upper)
     )
@@ -363,6 +391,7 @@ def clashes_for_keyword(db: Session, *, category_id: int, keyword: str) -> list[
     candidates = (
         db.execute(
             select(Transaction)
+            .where(Transaction.workspace_id == workspace_id)
             .where(Transaction.category_source.not_in(["manual", "bulk"]))
             .where(Transaction.normalized_description.like(f"%{keyword_upper}%"))
         )
@@ -383,6 +412,7 @@ def clashes_for_keyword(db: Session, *, category_id: int, keyword: str) -> list[
 def dismiss_clash(
     db: Session,
     *,
+    workspace_id: int,
     winner_category_id: int,
     loser_category_id: int,
     transaction_id: int | None = None,
@@ -400,6 +430,7 @@ def dismiss_clash(
     """
     existing = db.execute(
         select(ClashDismissal)
+        .where(ClashDismissal.workspace_id == workspace_id)
         .where(ClashDismissal.winner_category_id == winner_category_id)
         .where(ClashDismissal.loser_category_id == loser_category_id)
         .where(ClashDismissal.transaction_id == transaction_id)
@@ -408,6 +439,7 @@ def dismiss_clash(
         return existing
 
     dismissal = ClashDismissal(
+        workspace_id=workspace_id,
         winner_category_id=winner_category_id,
         loser_category_id=loser_category_id,
         transaction_id=transaction_id,
@@ -418,10 +450,14 @@ def dismiss_clash(
     return dismissal
 
 
-def undismiss_clash(db: Session, *, dismissal_id: int) -> bool:
-    """Drop a dismissal so its conflicts return to the queue."""
+def undismiss_clash(db: Session, *, workspace_id: int, dismissal_id: int) -> bool:
+    """Drop a dismissal so its conflicts return to the queue.
+
+    A dismissal belonging to another workspace reports as not-found
+    rather than being deleted.
+    """
     dismissal = db.get(ClashDismissal, dismissal_id)
-    if dismissal is None:
+    if dismissal is None or dismissal.workspace_id != workspace_id:
         return False
     db.delete(dismissal)
     db.flush()
@@ -431,6 +467,7 @@ def undismiss_clash(db: Session, *, dismissal_id: int) -> bool:
 def resolve_clash(
     db: Session,
     *,
+    workspace_id: int,
     transaction_ids: list[int],
     category_id: int,
 ) -> int:
@@ -441,9 +478,19 @@ def resolve_clash(
     so neither a future keyword add, a priority reorder, nor a
     recategorize-all pass can silently undo what the user chose here.
     Does not commit.
+
+    `transaction_ids` reach here from a request body, so the workspace
+    filter is applied again rather than trusted from the caller: being
+    self-scoping means this can't be turned into a cross-workspace write
+    by a future call site that forgets to pre-filter.
     """
     rows = (
-        db.execute(select(Transaction).where(Transaction.id.in_(transaction_ids)))
+        db.execute(
+            select(Transaction).where(
+                Transaction.workspace_id == workspace_id,
+                Transaction.id.in_(transaction_ids),
+            )
+        )
         .scalars()
         .all()
     )
@@ -455,7 +502,9 @@ def resolve_clash(
     return len(rows)
 
 
-def preview_delete_category(db: Session, *, category_id: int) -> list[CategoryMove]:
+def preview_delete_category(
+    db: Session, *, workspace_id: int, category_id: int
+) -> list[CategoryMove]:
     """Where this category's transactions would land if it were deleted
     and the remaining rules were re-run.
 
@@ -470,7 +519,7 @@ def preview_delete_category(db: Session, *, category_id: int) -> list[CategoryMo
     delete itself (the FK would dangle otherwise), but they are not the
     rules' business to re-match.
     """
-    snapshot = _load_snapshot(db)
+    snapshot = _load_snapshot(db, workspace_id)
     hypothetical = _build_categorizer_from_snapshot(
         _snapshot_without_category(snapshot, category_id)
     )
@@ -478,6 +527,7 @@ def preview_delete_category(db: Session, *, category_id: int) -> list[CategoryMo
     candidates = (
         db.execute(
             select(Transaction)
+            .where(Transaction.workspace_id == workspace_id)
             .where(Transaction.category_id == category_id)
             .where(Transaction.category_source.not_in(["manual", "bulk"]))
         )
@@ -499,7 +549,7 @@ def preview_delete_category(db: Session, *, category_id: int) -> list[CategoryMo
     return moves
 
 
-def preview_recategorize_all(db: Session) -> list[CategoryMove]:
+def preview_recategorize_all(db: Session, *, workspace_id: int) -> list[CategoryMove]:
     """Every non-sticky transaction whose category would change if the
     *current* rules were re-run over it.
 
@@ -519,11 +569,13 @@ def preview_recategorize_all(db: Session) -> list[CategoryMove]:
     Manual and bulk rows are excluded, same as every other apply path:
     a deliberate user choice outranks the rules.
     """
-    categorizer = Categorizer.load(db)
+    categorizer = Categorizer.load(db, workspace_id=workspace_id)
 
     candidates = (
         db.execute(
-            select(Transaction).where(Transaction.category_source.not_in(["manual", "bulk"]))
+            select(Transaction)
+            .where(Transaction.workspace_id == workspace_id)
+            .where(Transaction.category_source.not_in(["manual", "bulk"]))
         )
         .scalars()
         .all()
@@ -545,7 +597,7 @@ def preview_recategorize_all(db: Session) -> list[CategoryMove]:
 
 
 def preview_reprioritize(
-    db: Session, *, priorities: dict[int, int]
+    db: Session, *, workspace_id: int, priorities: dict[int, int]
 ) -> list[CategoryMove]:
     """Rows that would change category if categories were re-prioritized
     to ``priorities`` (category_id -> new priority).
@@ -556,7 +608,7 @@ def preview_reprioritize(
     the keyword previews: a hypothetical snapshot, the real categorizer,
     and sticky rows excluded.
     """
-    snapshot = _load_snapshot(db)
+    snapshot = _load_snapshot(db, workspace_id)
 
     # Re-prioritize on detached copies so the caller's session is never
     # left holding speculative priority values it might flush.
@@ -569,9 +621,9 @@ def preview_reprioritize(
 
         candidates = (
             db.execute(
-                select(Transaction).where(
-                    Transaction.category_source.not_in(["manual", "bulk"])
-                )
+                select(Transaction)
+                .where(Transaction.workspace_id == workspace_id)
+                .where(Transaction.category_source.not_in(["manual", "bulk"]))
             )
             .scalars()
             .all()

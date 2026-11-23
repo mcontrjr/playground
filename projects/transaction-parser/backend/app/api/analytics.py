@@ -15,6 +15,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.deps import get_workspace
+from app.models import Workspace
 from app.schemas.analytics import (
     AnalyticsSummary,
     DailyCategoryAmount,
@@ -39,6 +41,7 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
 def _filters(
+    workspace_id: int,
     date_from: date | None,
     date_to: date | None,
     account_ids: list[int] | None,
@@ -46,6 +49,7 @@ def _filters(
     exclude_category_ids: list[int] | None = None,
 ) -> AnalyticsFilters:
     return AnalyticsFilters(
+        workspace_id=workspace_id,
         date_from=date_from,
         date_to=date_to,
         account_ids=tuple(account_ids) if account_ids else None,
@@ -69,8 +73,11 @@ def get_summary(
     account_ids: list[int] | None = Query(None),
     include_excluded: bool = Query(False, description="Include transfer/income categories."),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> AnalyticsSummary:
-    filters = _filters(date_from, date_to, account_ids, include_excluded)
+    filters = _filters(
+        ws.id,
+        date_from, date_to, account_ids, include_excluded)
     result = compute_summary(db, filters)
     return AnalyticsSummary(
         total_spent=result.total_spent,
@@ -101,8 +108,11 @@ def get_timeseries(
     account_ids: list[int] | None = Query(None),
     include_excluded: bool = Query(False, description="Include transfer/income categories."),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> TimeseriesResponse:
-    filters = _filters(date_from, date_to, account_ids, include_excluded)
+    filters = _filters(
+        ws.id,
+        date_from, date_to, account_ids, include_excluded)
     rows = compute_timeseries(db, filters, granularity)
 
     periods: list[str] = sorted({r.period for r in rows})
@@ -148,9 +158,11 @@ def get_monthly_daily(
     account_ids: list[int] | None = Query(None),
     include_excluded: bool = Query(False, description="Include transfer/income categories."),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> MonthlyDailySeries:
     result = compute_monthly_daily_series(
         db,
+        ws.id,
         date(month.year, month.month, 1),
         tuple(account_ids) if account_ids else None,
         include_excluded,
@@ -199,8 +211,11 @@ def get_distribution(
         ),
     ),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> DistributionResponse:
-    filters = _filters(date_from, date_to, account_ids, include_excluded, exclude_category_ids)
+    filters = _filters(
+        ws.id,
+        date_from, date_to, account_ids, include_excluded, exclude_category_ids)
     rows = compute_distribution(db, filters)
     entries = [
         DistributionEntry(category_id=r.category_id, name=r.category_name, amount=r.amount)

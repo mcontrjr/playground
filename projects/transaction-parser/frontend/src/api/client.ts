@@ -4,9 +4,28 @@
  * forwards in docker-compose. Errors are normalized into `ApiError` so
  * callers can branch on structured `code` values (e.g. the 409
  * AMBIGUOUS_INSTITUTION upload flow) without re-parsing the response.
+ *
+ * Workspace scoping lives here too: the backend reads the active
+ * workspace from an `X-Workspace` header, and injecting it at this one
+ * choke point is what let every existing query hook stay untouched.
+ * The value is set from React (see `WorkspaceProvider`) via
+ * `setActiveWorkspaceSlug`, because `api` is a plain module, not a hook.
  */
 
 const API_BASE = '/api/v1'
+
+export const WORKSPACE_HEADER = 'X-Workspace'
+
+let activeWorkspaceSlug: string | null = null
+
+/** Point every subsequent request at this workspace (null clears it). */
+export function setActiveWorkspaceSlug(slug: string | null): void {
+  activeWorkspaceSlug = slug
+}
+
+export function getActiveWorkspaceSlug(): string | null {
+  return activeWorkspaceSlug
+}
 
 export class ApiError extends Error {
   readonly status: number
@@ -64,6 +83,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.body && !(init.body instanceof FormData)
         ? { 'Content-Type': 'application/json' }
         : {}),
+      // Listed before `init.headers` so a caller can still override it —
+      // the workspace endpoints take the slug in the path instead.
+      ...(activeWorkspaceSlug ? { [WORKSPACE_HEADER]: activeWorkspaceSlug } : {}),
       ...init?.headers,
     },
   })

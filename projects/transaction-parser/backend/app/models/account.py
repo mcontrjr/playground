@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.models.ingest import IngestBatch
     from app.models.institution import Institution
     from app.models.transaction import Transaction
+    from app.models.workspace import Workspace
 
 
 class Account(TimestampMixin, Base):
@@ -24,12 +25,18 @@ class Account(TimestampMixin, Base):
     __tablename__ = "accounts"
     __table_args__ = (
         UniqueConstraint(
-            "institution_id", "account_hint", name="uq_accounts_institution_hint"
+            "workspace_id",
+            "institution_id",
+            "account_hint",
+            name="uq_accounts_institution_hint",
         ),
         CheckConstraint("kind IN ('card', 'checking')", name="ck_accounts_kind"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     institution_id: Mapped[int] = mapped_column(
         ForeignKey("institutions.id", ondelete="CASCADE"), nullable=False
     )
@@ -37,6 +44,7 @@ class Account(TimestampMixin, Base):
     display_name: Mapped[str] = mapped_column(String(128), nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
 
+    workspace: Mapped["Workspace"] = relationship(back_populates="accounts")
     institution: Mapped["Institution"] = relationship(back_populates="accounts")
     transactions: Mapped[list["Transaction"]] = relationship(
         back_populates="account",

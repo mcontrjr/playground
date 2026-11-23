@@ -42,6 +42,8 @@ TEST_DATABASE_URL = (
 # database, since app.db builds its engine at import time from app.config.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
+from app.seed import INIT_SLUG  # noqa: E402 — must follow the env var above
+
 
 def _create_database_if_missing() -> None:
     admin_conn = psycopg.connect(
@@ -108,6 +110,11 @@ _TABLES_TO_TRUNCATE = (
     # skip that category, so the next test would not start from the known
     # seeded state. Delete-tests assert on the tombstones they create.
     "seed_suppressions",
+    # `workspaces` is deliberately NOT truncated: every table above FKs
+    # into it with ON DELETE CASCADE, so truncating it would wipe the
+    # seeded workspace and the re-seed would create a new one with a
+    # different id on every test. The seed's get-or-create keeps the same
+    # `init` row across the whole session instead.
 )
 
 
@@ -117,6 +124,12 @@ def _truncate_between_tests(test_engine, _test_database) -> Generator[None, None
     with test_engine.begin() as conn:
         tables = ", ".join(_TABLES_TO_TRUNCATE)
         conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
+        # Workspaces created by a test are dropped, but `init` survives:
+        # truncating the table outright would cascade away the seeded
+        # workspace and give it a new id on every re-seed.
+        conn.execute(
+            text("DELETE FROM workspaces WHERE slug <> :keep"), {"keep": INIT_SLUG}
+        )
 
     from app import seed as seed_module
 
@@ -134,7 +147,49 @@ def db_session(test_engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
+def workspace(db_session):
+    """The seeded `init` workspace every API test operates in."""
+    from sqlalchemy import select
+
+    from app.models import Workspace
+
+    ws = db_session.scalar(select(Workspace).where(Workspace.slug == INIT_SLUG))
+    assert ws is not None, "seed should have created the init workspace"
+    return ws
+
+
+@pytest.fixture
 def client(test_engine) -> Generator[TestClient, None, None]:
+    """TestClient that sends `X-Workspace` on every request.
+
+    Setting it as a default header (rather than per call) keeps the
+    existing tests untouched: they were written against a single
+    implicit workspace, which is exactly what `init` now is.
+    """
+    from app.db import get_db
+    from app.main import app
+
+    TestSessionLocal = sessionmaker(bind=test_engine, autoflush=False, autocommit=False, future=True)
+
+    def _override_get_db() -> Generator[Session, None, None]:
+        db = TestSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = _override_get_db
+    try:
+        with TestClient(app, headers={"X-Workspace": INIT_SLUG}) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
+def unscoped_client(test_engine) -> Generator[TestClient, None, None]:
+    """TestClient with no `X-Workspace` header, for testing the guard
+    itself and the workspace lifecycle endpoints."""
     from app.db import get_db
     from app.main import app
 

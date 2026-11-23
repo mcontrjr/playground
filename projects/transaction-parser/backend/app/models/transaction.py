@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from app.models.account import Account
     from app.models.category import Category
     from app.models.ingest import IngestBatch
+    from app.models.workspace import Workspace
 
 
 class Transaction(TimestampMixin, Base):
@@ -41,8 +42,17 @@ class Transaction(TimestampMixin, Base):
 
     __tablename__ = "transactions"
     __table_args__ = (
+        # `workspace_id` is part of the idempotency key, not just a filter:
+        # content_hash is derived purely from the statement's own contents,
+        # so two workspaces uploading the same file produce identical
+        # hashes. Without the workspace in this constraint, the second
+        # workspace's rows would be silently discarded as already-ingested
+        # duplicates of the first's.
         UniqueConstraint(
-            "content_hash", "occurrence_index", name="uq_transactions_hash_occurrence"
+            "workspace_id",
+            "content_hash",
+            "occurrence_index",
+            name="uq_transactions_hash_occurrence",
         ),
         CheckConstraint(
             "category_source IN ('keyword', 'manual', 'transfer', 'default')",
@@ -58,6 +68,9 @@ class Transaction(TimestampMixin, Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     account_id: Mapped[int] = mapped_column(
         ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False
     )
@@ -90,6 +103,7 @@ class Transaction(TimestampMixin, Base):
     Drives the site-wide "recurring" badge/filter so a subscription or an
     annual payment can be flagged independent of its category."""
 
+    workspace: Mapped["Workspace"] = relationship()
     account: Mapped["Account"] = relationship(back_populates="transactions")
     batch: Mapped["IngestBatch"] = relationship(back_populates="transactions")
     category: Mapped["Category | None"] = relationship(back_populates="transactions")

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
+import { WorkspaceProvider } from './workspace/WorkspaceContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,9 +23,13 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      {/* Inside QueryClientProvider: entering or leaving a workspace
+          clears the query cache so no other workspace's rows linger. */}
+      <WorkspaceProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </WorkspaceProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

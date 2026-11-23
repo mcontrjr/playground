@@ -27,6 +27,14 @@ from app.services.cache import cached
 
 @dataclass(frozen=True, slots=True)
 class AnalyticsFilters:
+    #: Required and deliberately first: every aggregate in this module
+    #: funnels through `_apply_filters`, so carrying the workspace in the
+    #: filter object makes scoping structural rather than something each
+    #: query has to remember. It also lands in the `@cached` key — which
+    #: is load-bearing, since that cache is keyed on the filters alone
+    #: (the Session is excluded), so without it one workspace would be
+    #: served another's cached totals.
+    workspace_id: int
     date_from: date | None = None
     date_to: date | None = None
     account_ids: tuple[int, ...] | None = None
@@ -41,6 +49,7 @@ class AnalyticsFilters:
 
 
 def _apply_filters(stmt: Select, filters: AnalyticsFilters) -> Select:
+    stmt = stmt.where(Transaction.workspace_id == filters.workspace_id)
     if filters.date_from is not None:
         stmt = stmt.where(Transaction.txn_date >= filters.date_from)
     if filters.date_to is not None:
@@ -248,6 +257,7 @@ class MonthlyDailySeriesResult:
 @cached
 def compute_monthly_daily_series(
     db: Session,
+    workspace_id: int,
     month: date,
     account_ids: tuple[int, ...] | None,
     include_excluded: bool,
@@ -269,6 +279,7 @@ def compute_monthly_daily_series(
     month_end = date(year, month_num, days_in_month)
 
     filters = AnalyticsFilters(
+        workspace_id=workspace_id,
         date_from=month_start,
         date_to=month_end,
         account_ids=account_ids,

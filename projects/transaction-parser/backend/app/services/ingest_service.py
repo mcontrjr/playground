@@ -10,7 +10,10 @@ This is the only layer that touches both the pure parsing code
   Capital One's two card numbers in one export), so accounts are
   resolved per-row, not once per file.
 - Idempotent bulk insert of transactions via
-  ``INSERT ... ON CONFLICT (content_hash, occurrence_index) DO NOTHING``.
+  ``INSERT ... ON CONFLICT (workspace_id, content_hash, occurrence_index)
+  DO NOTHING`` — the workspace is part of the key because the hash is
+  derived from the statement's contents alone, so two workspaces
+  uploading the same file produce identical hashes.
 - Persisting isolated row failures as ``ParseFailure`` rows.
 - Batch status/counts bookkeeping, with errors never swallowed into a
   200: any exception during the rows+batch transaction rolls it back
@@ -139,17 +142,23 @@ def _sniff_header(text: str) -> tuple[str, ...]:
 
 def _get_or_create_account(
     db: Session,
+    workspace_id: int,
     institution: Institution,
     account_hint: str,
     kind: str,
 ) -> Account:
-    """Get-or-create the Account row for (institution, account_hint).
+    """Get-or-create the Account row for (workspace, institution, hint).
+
+    Accounts are per-workspace even though institutions are global: two
+    workspaces can each hold an Amex ···21003 and they are different
+    accounts, so the lookup and the insert both carry the workspace.
 
     Flushes so the new row has an id available for FK use within the
     same transaction, without committing.
     """
     existing = db.execute(
         select(Account).where(
+            Account.workspace_id == workspace_id,
             Account.institution_id == institution.id,
             Account.account_hint == account_hint,
         )
@@ -158,6 +167,7 @@ def _get_or_create_account(
         return existing
 
     account = Account(
+        workspace_id=workspace_id,
         institution_id=institution.id,
         account_hint=account_hint,
         display_name=_account_display_name(institution.display_name, account_hint, kind),
@@ -171,6 +181,7 @@ def _get_or_create_account(
 def ingest_file(
     db: Session,
     *,
+    workspace_id: int,
     filename: str,
     file_bytes: bytes,
     institution: str | None = None,
@@ -208,6 +219,7 @@ def ingest_file(
     file_sha256 = hashlib.sha256(file_bytes).hexdigest()
 
     batch = IngestBatch(
+        workspace_id=workspace_id,
         filename=filename,
         institution_id=institution_row.id,
         account_id=None,  # may span multiple accounts; set below if exactly one
@@ -219,7 +231,7 @@ def ingest_file(
     db.flush()  # assign batch.id
 
     try:
-        categorizer = Categorizer.load(db)
+        categorizer = Categorizer.load(db, workspace_id=workspace_id)
 
         account_cache: dict[str, Account] = {}
 
@@ -227,7 +239,9 @@ def ingest_file(
             cached = account_cache.get(hint)
             if cached is not None:
                 return cached
-            acct = _get_or_create_account(db, institution_row, hint, parser.account_kind)
+            acct = _get_or_create_account(
+                db, workspace_id, institution_row, hint, parser.account_kind
+            )
             account_cache[hint] = acct
             return acct
 
@@ -252,6 +266,7 @@ def ingest_file(
             stmt = (
                 pg_insert(Transaction)
                 .values(
+                    workspace_id=workspace_id,
                     account_id=account.id,
                     batch_id=batch.id,
                     txn_date=txn.txn_date,
@@ -268,7 +283,8 @@ def ingest_file(
                     raw_row=txn.raw_row,
                 )
                 .on_conflict_do_nothing(
-                    index_elements=["content_hash", "occurrence_index"]
+                    # Must match uq_transactions_hash_occurrence exactly.
+                    index_elements=["workspace_id", "content_hash", "occurrence_index"]
                 )
                 .returning(Transaction.id)
             )
@@ -281,6 +297,7 @@ def ingest_file(
         failure_rows: list[ParseFailure] = []
         for failure in parse_result.failures:
             failure_row = ParseFailure(
+                workspace_id=workspace_id,
                 batch_id=batch.id,
                 line_number=failure.line_number,
                 raw_line=failure.raw_line,

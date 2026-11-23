@@ -8,7 +8,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Account, Category, Transaction
+from app.deps import get_workspace
+from app.models import Account, Category, Transaction, Workspace
 from app.schemas.transactions import (
     BulkRecategorizeRequest,
     BulkRecategorizeResponse,
@@ -45,6 +46,7 @@ _SORT_COLUMNS: dict[str, object] = {
 def _apply_filters(
     stmt,
     *,
+    workspace_id: int,
     date_from: date | None,
     date_to: date | None,
     account_ids: list[int] | None,
@@ -61,7 +63,12 @@ def _apply_filters(
     used by the facets endpoint to compute each dimension's available
     options against every *other* active filter, standard faceted-search
     style, so e.g. selecting an account doesn't make that account's own
-    chip look unavailable."""
+    chip look unavailable.
+
+    The workspace filter is applied here, unconditionally and never
+    affected by `skip`: every caller funnels through this helper, so
+    scoping once at the bottom means no endpoint can forget it."""
+    stmt = stmt.where(Transaction.workspace_id == workspace_id)
     if skip != "date":
         if date_from is not None:
             stmt = stmt.where(Transaction.txn_date >= date_from)
@@ -173,11 +180,13 @@ def list_transactions(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> TransactionListResponse:
     stmt = select(Transaction).join(Account, Transaction.account_id == Account.id)
     stmt = stmt.outerjoin(Category, Transaction.category_id == Category.id)
     stmt = _apply_filters(
         stmt,
+        workspace_id=ws.id,
         date_from=date_from,
         date_to=date_to,
         account_ids=account_ids,
@@ -213,10 +222,14 @@ def list_transactions(
         "the Time Series month-swipe both want to walk the list."
     ),
 )
-def list_months(db: Session = Depends(get_db)) -> list[MonthOption]:
+def list_months(
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> list[MonthOption]:
     month_start = func.date_trunc("month", Transaction.txn_date)
     stmt = (
         select(month_start.label("month_start"))
+        .where(Transaction.workspace_id == ws.id)
         .distinct()
         .order_by(month_start.desc())
     )
@@ -264,6 +277,7 @@ def get_facets(
     ),
     outflows_only: bool = Query(False, description="Only money out (amount < 0)."),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> TransactionFacets:
     base = select(Transaction).join(Account, Transaction.account_id == Account.id)
     base = base.outerjoin(Category, Transaction.category_id == Category.id)
@@ -271,6 +285,7 @@ def get_facets(
     def _filtered(skip: str):
         return _apply_filters(
             base,
+            workspace_id=ws.id,
             date_from=date_from,
             date_to=date_to,
             account_ids=account_ids,
@@ -315,9 +330,10 @@ def get_facets(
 def bulk_recategorize(
     payload: BulkRecategorizeRequest,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> BulkRecategorizeResponse:
     category = db.get(Category, payload.category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Category {payload.category_id} not found",
@@ -325,6 +341,10 @@ def bulk_recategorize(
 
     result = db.execute(
         Transaction.__table__.update()
+        # The workspace predicate is essential, not redundant: the ids
+        # come straight from the request body, so without it a crafted
+        # payload would rewrite another workspace's categories in bulk.
+        .where(Transaction.workspace_id == ws.id)
         .where(Transaction.id.in_(payload.transaction_ids))
         # A person chose these; clear any keyword that previously decided them.
         .values(category_id=category.id, category_source="bulk", matched_keyword=None)
@@ -333,6 +353,7 @@ def bulk_recategorize(
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="transaction.bulk_recategorized",
         entity_type="transaction",
         entity_id=None,
@@ -367,16 +388,18 @@ def bulk_recategorize(
 def recategorize_all(
     payload: RecategorizeAllRequest | None = None,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> RecategorizeAllResponse:
     request = payload or RecategorizeAllRequest()
 
-    moves = preview_recategorize_all(db)
+    moves = preview_recategorize_all(db, workspace_id=ws.id)
     candidate_count = len(moves)
 
     sticky_count = (
         db.execute(
             select(func.count())
             .select_from(Transaction)
+            .where(Transaction.workspace_id == ws.id)
             .where(Transaction.category_source.in_(["manual", "bulk"]))
         ).scalar_one()
     )
@@ -384,7 +407,10 @@ def recategorize_all(
     # Resolve category names for the report before any mutation, so the
     # "from" side reflects the pre-change state.
     category_names = {
-        c.id: c.name for c in db.execute(select(Category)).scalars().all()
+        c.id: c.name
+        for c in db.scalars(
+            select(Category).where(Category.workspace_id == ws.id)
+        ).all()
     }
     reported = [
         RecategorizeAllMove(
@@ -415,6 +441,7 @@ def recategorize_all(
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="transaction.recategorized_all",
         entity_type="transaction",
         entity_id=None,
@@ -448,14 +475,15 @@ def patch_transaction(
     transaction_id: int,
     payload: TransactionPatch,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> TransactionRead:
     txn = db.get(Transaction, transaction_id)
-    if txn is None:
+    if txn is None or txn.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
 
     if payload.category_id is not None:
         category = db.get(Category, payload.category_id)
-        if category is None:
+        if category is None or category.workspace_id != ws.id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Category {payload.category_id} not found",
@@ -465,6 +493,7 @@ def patch_transaction(
             old_category_name = old_category.name if old_category is not None else None
             record_event(
                 db,
+                workspace_id=ws.id,
                 event_type="transaction.recategorized",
                 entity_type="transaction",
                 entity_id=txn.id,

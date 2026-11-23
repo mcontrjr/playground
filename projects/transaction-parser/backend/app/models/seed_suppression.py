@@ -16,7 +16,7 @@ a deleted row is gone for good.
 `kind` distinguishes the two namespaces a name can live in; a category
 called "GAS" and a keyword "GAS" are unrelated suppressions.
 """
-from sqlalchemy import DateTime, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -27,10 +27,17 @@ class SeedSuppression(Base):
 
     __tablename__ = "seed_suppressions"
     __table_args__ = (
-        UniqueConstraint("kind", "name", name="uq_seed_suppressions_kind_name"),
+        UniqueConstraint(
+            "workspace_id", "kind", "name", name="uq_seed_suppressions_kind_name"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    """One workspace deleting a seeded category must not suppress it for
+    everyone else."""
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     """Either 'category' or 'keyword' — the namespace `name` belongs to."""
 

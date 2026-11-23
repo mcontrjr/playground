@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.deps import get_workspace
 from app.models import (
     Bucket,
     Category,
@@ -13,6 +14,7 @@ from app.models import (
     ClashDismissal,
     SeedSuppression,
     Transaction,
+    Workspace,
 )
 from app.models.seed_suppression import CATEGORY as SUPPRESS_CATEGORY
 from app.models.seed_suppression import KEYWORD as SUPPRESS_KEYWORD
@@ -66,24 +68,29 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 OTHER_BUCKET_NAME = "OTHER"
 
 
-def _suppress_seed(db: Session, kind: str, name: str) -> None:
+def _suppress_seed(db: Session, workspace_id: int, kind: str, name: str) -> None:
     """Tombstone a name so `app.seed` stops recreating it on every restart.
 
     The seeder is get-or-create by name, so a hard delete alone lasts only
     until the next backend start. Adding to the session (not committing)
     follows the audit-service convention: the caller's own `db.commit()`
     makes the delete and its tombstone atomic.
+
+    Tombstones are per-workspace: one workspace deleting a seeded category
+    must not suppress it for anyone else.
     """
     exists = db.execute(
         select(SeedSuppression.id).where(
-            SeedSuppression.kind == kind, SeedSuppression.name == name
+            SeedSuppression.workspace_id == workspace_id,
+            SeedSuppression.kind == kind,
+            SeedSuppression.name == name,
         )
     ).first()
     if exists is None:
-        db.add(SeedSuppression(kind=kind, name=name))
+        db.add(SeedSuppression(workspace_id=workspace_id, kind=kind, name=name))
 
 
-def _unsuppress_seed(db: Session, kind: str, name: str) -> None:
+def _unsuppress_seed(db: Session, workspace_id: int, kind: str, name: str) -> None:
     """Drop a tombstone because the user recreated the item by hand.
 
     Without this, creating a category (or keyword) that had previously been
@@ -93,7 +100,9 @@ def _unsuppress_seed(db: Session, kind: str, name: str) -> None:
     """
     db.execute(
         SeedSuppression.__table__.delete().where(
-            SeedSuppression.kind == kind, SeedSuppression.name == name
+            SeedSuppression.workspace_id == workspace_id,
+            SeedSuppression.kind == kind,
+            SeedSuppression.name == name,
         )
     )
 
@@ -112,29 +121,36 @@ def _category_to_read(category: Category, transaction_count: int) -> CategoryRea
     )
 
 
-def _get_uncategorized(db: Session) -> Category:
+def _get_uncategorized(db: Session, workspace_id: int) -> Category:
     category = db.execute(
-        select(Category).where(Category.name == UNCATEGORIZED_CATEGORY_NAME)
+        select(Category).where(
+            Category.workspace_id == workspace_id,
+            Category.name == UNCATEGORIZED_CATEGORY_NAME,
+        )
     ).scalar_one_or_none()
-    if category is None:  # pragma: no cover - only if seed hasn't run
-        raise RuntimeError("Uncategorized system category missing — has seed run?")
+    if category is None:  # pragma: no cover - only if provisioning hasn't run
+        raise RuntimeError("Uncategorized system category missing — is the workspace provisioned?")
     return category
 
 
-def _get_other_bucket(db: Session) -> Bucket:
+def _get_other_bucket(db: Session, workspace_id: int) -> Bucket:
     bucket = db.execute(
-        select(Bucket).where(Bucket.name == OTHER_BUCKET_NAME)
+        select(Bucket).where(
+            Bucket.workspace_id == workspace_id, Bucket.name == OTHER_BUCKET_NAME
+        )
     ).scalar_one_or_none()
-    if bucket is None:  # pragma: no cover - only if seed hasn't run
-        raise RuntimeError("OTHER system bucket missing — has seed run?")
+    if bucket is None:  # pragma: no cover - only if provisioning hasn't run
+        raise RuntimeError("OTHER system bucket missing — is the workspace provisioned?")
     return bucket
 
 
-def _resolve_bucket(db: Session, bucket_id: int | None) -> Bucket:
+def _resolve_bucket(db: Session, workspace_id: int, bucket_id: int | None) -> Bucket:
     if bucket_id is None:
-        return _get_other_bucket(db)
+        return _get_other_bucket(db, workspace_id)
     bucket = db.get(Bucket, bucket_id)
-    if bucket is None:
+    # A bucket in another workspace reads as missing: accepting it would
+    # file this workspace's category under a foreign bucket.
+    if bucket is None or bucket.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Bucket {bucket_id} not found"
         )
@@ -148,6 +164,9 @@ def _moves_to_breakdown(
     category_ids.discard(None)
     categories = {
         c.id: c
+        # Ids come from moves produced by workspace-scoped previews, so
+        # they are already this workspace's; resolved by id alone to keep
+        # this a plain name lookup.
         for c in db.execute(select(Category).where(Category.id.in_(category_ids))).scalars().all()
     }
 
@@ -179,6 +198,9 @@ def _moves_to_sample(
     category_ids.discard(None)
     categories = {
         c.id: c
+        # Ids come from moves produced by workspace-scoped previews, so
+        # they are already this workspace's; resolved by id alone to keep
+        # this a plain name lookup.
         for c in db.execute(select(Category).where(Category.id.in_(category_ids))).scalars().all()
     }
     sample = []
@@ -204,11 +226,23 @@ def _moves_to_sample(
     summary="List categories",
     description="All categories with their keywords, system/exclusion flags, priority, and transaction counts.",
 )
-def list_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
-    categories = db.execute(select(Category).order_by(Category.priority)).scalars().all()
+def list_categories(
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> list[CategoryRead]:
+    categories = (
+        db.execute(
+            select(Category)
+            .where(Category.workspace_id == ws.id)
+            .order_by(Category.priority)
+        )
+        .scalars()
+        .all()
+    )
     counts = dict(
         db.execute(
             select(Transaction.category_id, func.count())
+            .where(Transaction.workspace_id == ws.id)
             .group_by(Transaction.category_id)
         ).all()
     )
@@ -237,8 +271,16 @@ def list_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
         },
     },
 )
-def create_category(payload: CategoryCreate, db: Session = Depends(get_db)) -> CategoryRead:
-    existing = db.execute(select(Category).where(Category.name == payload.name)).scalar_one_or_none()
+def create_category(
+    payload: CategoryCreate,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> CategoryRead:
+    existing = db.execute(
+        select(Category).where(
+            Category.workspace_id == ws.id, Category.name == payload.name
+        )
+    ).scalar_one_or_none()
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -250,12 +292,15 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)) -> C
 
     priority = payload.priority
     if priority is None:
-        max_priority = db.execute(select(func.max(Category.priority))).scalar_one_or_none()
+        max_priority = db.execute(
+            select(func.max(Category.priority)).where(Category.workspace_id == ws.id)
+        ).scalar_one_or_none()
         priority = (max_priority or 0) + 1
 
-    bucket = _resolve_bucket(db, payload.bucket_id)
+    bucket = _resolve_bucket(db, ws.id, payload.bucket_id)
 
     category = Category(
+        workspace_id=ws.id,
         name=payload.name,
         is_system=False,
         excluded_from_analytics=payload.excluded_from_analytics,
@@ -263,11 +308,12 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)) -> C
         bucket_id=bucket.id,
     )
     db.add(category)
-    _unsuppress_seed(db, SUPPRESS_CATEGORY, category.name)
+    _unsuppress_seed(db, ws.id, SUPPRESS_CATEGORY, category.name)
     db.flush()
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="category.created",
         entity_type="category",
         entity_id=category.id,
@@ -307,14 +353,19 @@ def patch_category(
     category_id: int,
     payload: CategoryPatch,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> CategoryPatchResponse:
     category = db.get(Category, category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     if payload.name is not None and payload.name != category.name:
         name_conflict = db.execute(
-            select(Category).where(Category.name == payload.name, Category.id != category_id)
+            select(Category).where(
+                Category.workspace_id == ws.id,
+                Category.name == payload.name,
+                Category.id != category_id,
+            )
         ).scalar_one_or_none()
         if name_conflict is not None:
             raise HTTPException(
@@ -328,6 +379,7 @@ def patch_category(
         category.name = payload.name
         record_event(
             db,
+            workspace_id=ws.id,
             event_type="category.renamed",
             entity_type="category",
             entity_id=category.id,
@@ -340,12 +392,13 @@ def patch_category(
     if payload.excluded_from_analytics is not None:
         category.excluded_from_analytics = payload.excluded_from_analytics
     if payload.bucket_id is not None and payload.bucket_id != category.bucket_id:
-        new_bucket = _resolve_bucket(db, payload.bucket_id)
+        new_bucket = _resolve_bucket(db, ws.id, payload.bucket_id)
         old_bucket = db.get(Bucket, category.bucket_id)
         old_bucket_name = old_bucket.name if old_bucket is not None else None
         category.bucket_id = new_bucket.id
         record_event(
             db,
+            workspace_id=ws.id,
             event_type="category.bucket_changed",
             entity_type="category",
             entity_id=category.id,
@@ -408,9 +461,10 @@ def delete_category(
         ),
     ),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> CategoryDeleteResponse:
     category = db.get(Category, category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     if category.is_system:
@@ -422,7 +476,7 @@ def delete_category(
             },
         )
 
-    uncategorized = _get_uncategorized(db)
+    uncategorized = _get_uncategorized(db, ws.id)
 
     reassigned_count = db.execute(
         select(func.count()).select_from(Transaction).where(Transaction.category_id == category.id)
@@ -432,7 +486,9 @@ def delete_category(
     # keywords still exist to be excluded from the hypothetical snapshot.
     rematch_moves: list[CategoryMove] = []
     if rematch:
-        rematch_moves = preview_delete_category(db, category_id=category.id)
+        rematch_moves = preview_delete_category(
+            db, workspace_id=ws.id, category_id=category.id
+        )
 
     # Park everything on Uncategorized first: rows the rules don't claim
     # (and manual/bulk rows, which re-matching deliberately skips) still
@@ -457,12 +513,13 @@ def delete_category(
     deleted_keywords = [k.keyword for k in category.keywords]
     db.delete(category)  # cascades category_keywords
 
-    _suppress_seed(db, SUPPRESS_CATEGORY, deleted_name)
+    _suppress_seed(db, ws.id, SUPPRESS_CATEGORY, deleted_name)
     for kw in deleted_keywords:
-        _suppress_seed(db, SUPPRESS_KEYWORD, kw)
+        _suppress_seed(db, ws.id, SUPPRESS_KEYWORD, kw)
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="category.deleted",
         entity_type="category",
         entity_id=category_id,
@@ -498,16 +555,22 @@ def delete_category(
     ),
 )
 def impact_preview(
-    payload: ImpactPreviewRequest, db: Session = Depends(get_db)
+    payload: ImpactPreviewRequest,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ImpactPreviewResponse:
     category = db.get(Category, payload.category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     if payload.action == "add_keyword":
-        moves = preview_add_keyword(db, category_id=payload.category_id, keyword=payload.keyword)
+        moves = preview_add_keyword(
+            db, workspace_id=ws.id, category_id=payload.category_id, keyword=payload.keyword
+        )
     else:
-        moves = preview_remove_keyword(db, category_id=payload.category_id, keyword=payload.keyword)
+        moves = preview_remove_keyword(
+            db, workspace_id=ws.id, category_id=payload.category_id, keyword=payload.keyword
+        )
 
     return ImpactPreviewResponse(
         affected_count=len(moves),
@@ -522,10 +585,10 @@ def impact_preview(
     status_code=status.HTTP_201_CREATED,
     summary="Add a keyword to a category",
     description=(
-        "Keywords are globally unique across all categories (409 with the "
-        "owning category on conflict). When apply_to_existing is true, "
-        "re-runs the same logic as /impact-preview and applies it, setting "
-        "category_source='keyword' on affected (non-manual) rows."
+        "Keywords are unique across all of a workspace's categories (409 "
+        "with the owning category on conflict). When apply_to_existing is "
+        "true, re-runs the same logic as /impact-preview and applies it, "
+        "setting category_source='keyword' on affected (non-manual) rows."
     ),
     responses={
         409: {
@@ -550,14 +613,18 @@ def add_keyword(
     category_id: int,
     payload: CategoryKeywordCreate,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> CategoryKeywordCreateResponse:
     category = db.get(Category, category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     keyword_upper = payload.keyword.upper().strip()
     existing = db.execute(
-        select(CategoryKeyword).where(CategoryKeyword.keyword == keyword_upper)
+        select(CategoryKeyword).where(
+            CategoryKeyword.workspace_id == ws.id,
+            CategoryKeyword.keyword == keyword_upper,
+        )
     ).scalar_one_or_none()
     if existing is not None:
         owner = db.get(Category, existing.category_id)
@@ -571,18 +638,23 @@ def add_keyword(
             },
         )
 
-    keyword_row = CategoryKeyword(category_id=category_id, keyword=keyword_upper)
+    keyword_row = CategoryKeyword(
+        workspace_id=ws.id, category_id=category_id, keyword=keyword_upper
+    )
     db.add(keyword_row)
-    _unsuppress_seed(db, SUPPRESS_KEYWORD, keyword_upper)
+    _unsuppress_seed(db, ws.id, SUPPRESS_KEYWORD, keyword_upper)
     db.flush()
 
     applied_count = 0
     if payload.apply_to_existing:
-        moves = preview_add_keyword(db, category_id=category_id, keyword=keyword_upper)
+        moves = preview_add_keyword(
+            db, workspace_id=ws.id, category_id=category_id, keyword=keyword_upper
+        )
         applied_count = apply_moves(db, moves)
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="keyword.added",
         entity_type="category",
         entity_id=category.id,
@@ -616,9 +688,10 @@ def delete_keyword(
     keyword_id: int,
     reapply: bool = Query(False, description="Re-categorize affected transactions after removal."),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> CategoryKeywordDeleteResponse:
     category = db.get(Category, category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     keyword_row = db.get(CategoryKeyword, keyword_id)
@@ -627,11 +700,13 @@ def delete_keyword(
 
     moves: list[CategoryMove] = []
     if reapply:
-        moves = preview_remove_keyword(db, category_id=category_id, keyword=keyword_row.keyword)
+        moves = preview_remove_keyword(
+            db, workspace_id=ws.id, category_id=category_id, keyword=keyword_row.keyword
+        )
 
     deleted_keyword_text = keyword_row.keyword
     db.delete(keyword_row)
-    _suppress_seed(db, SUPPRESS_KEYWORD, deleted_keyword_text)
+    _suppress_seed(db, ws.id, SUPPRESS_KEYWORD, deleted_keyword_text)
     db.flush()
 
     reapplied_count = 0
@@ -640,6 +715,7 @@ def delete_keyword(
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="keyword.removed",
         entity_type="category",
         entity_id=category.id,
@@ -680,12 +756,18 @@ def list_clashes(
     ),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ClashListResponse:
-    clashes = find_clashes(db, include_settled=include_settled)
-    all_with_settled = find_clashes(db, include_settled=True)
+    clashes = find_clashes(db, workspace_id=ws.id, include_settled=include_settled)
+    all_with_settled = find_clashes(db, workspace_id=ws.id, include_settled=True)
     settled_count = sum(1 for c in all_with_settled if c.is_settled)
 
-    categories = {c.id: c for c in db.execute(select(Category)).scalars().all()}
+    categories = {
+        c.id: c
+        for c in db.scalars(
+            select(Category).where(Category.workspace_id == ws.id)
+        ).all()
+    }
 
     items: list[TransactionClashRead] = []
     for clash in clashes[:limit]:
@@ -722,7 +804,7 @@ def list_clashes(
     return ClashListResponse(
         total=len(clashes),
         settled_count=settled_count,
-        dismissed_count=count_dismissed_clashes(db),
+        dismissed_count=count_dismissed_clashes(db, workspace_id=ws.id),
         items=items,
     )
 
@@ -741,18 +823,24 @@ def list_clashes(
 def preview_keyword_clashes(
     payload: ImpactPreviewRequest,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ClashListResponse:
     category = db.get(Category, payload.category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Category {payload.category_id} not found",
         )
 
     clashes = clashes_for_keyword(
-        db, category_id=payload.category_id, keyword=payload.keyword
+        db, workspace_id=ws.id, category_id=payload.category_id, keyword=payload.keyword
     )
-    categories = {c.id: c for c in db.execute(select(Category)).scalars().all()}
+    categories = {
+        c.id: c
+        for c in db.scalars(
+            select(Category).where(Category.workspace_id == ws.id)
+        ).all()
+    }
 
     items: list[TransactionClashRead] = []
     for clash in clashes[:100]:
@@ -810,15 +898,26 @@ def preview_keyword_clashes(
 def resolve_clashes(
     payload: ClashResolveRequest,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ClashResolveResponse:
     category = db.get(Category, payload.category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Category {payload.category_id} not found",
         )
 
-    transaction_ids = list(payload.transaction_ids)
+    # Drop any ids that aren't this workspace's: the request body is
+    # client-supplied, so an id from another workspace must not be pinned
+    # to this workspace's category.
+    transaction_ids = list(
+        db.scalars(
+            select(Transaction.id).where(
+                Transaction.workspace_id == ws.id,
+                Transaction.id.in_(list(payload.transaction_ids)),
+            )
+        ).all()
+    ) if payload.transaction_ids else []
 
     if payload.scope == "all_matching":
         if not payload.keyword or not payload.keyword.strip():
@@ -830,6 +929,7 @@ def resolve_clashes(
         siblings = (
             db.execute(
                 select(Transaction.id)
+                .where(Transaction.workspace_id == ws.id)
                 .where(Transaction.category_source.not_in(["manual", "bulk"]))
                 .where(Transaction.normalized_description.like(f"%{keyword_upper}%"))
             )
@@ -838,10 +938,16 @@ def resolve_clashes(
         )
         transaction_ids = list(dict.fromkeys([*transaction_ids, *siblings]))
 
-    resolved = resolve_clash(db, transaction_ids=transaction_ids, category_id=category.id)
+    resolved = resolve_clash(
+        db,
+        workspace_id=ws.id,
+        transaction_ids=transaction_ids,
+        category_id=category.id,
+    )
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="category.clash_resolved",
         entity_type="category",
         entity_id=category.id,
@@ -882,10 +988,18 @@ def resolve_clashes(
 def reprioritize(
     payload: ReprioritizeRequest,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ReprioritizeResponse:
     priorities = {int(k): int(v) for k, v in payload.priorities.items()}
 
-    categories = {c.id: c for c in db.execute(select(Category)).scalars().all()}
+    categories = {
+        c.id: c
+        for c in db.scalars(
+            select(Category).where(Category.workspace_id == ws.id)
+        ).all()
+    }
+    # Ids outside this workspace fall into `missing` and 404 — a reorder
+    # must never reach another workspace's categories.
     missing = [cid for cid in priorities if cid not in categories]
     if missing:
         raise HTTPException(
@@ -893,7 +1007,7 @@ def reprioritize(
             detail=f"Unknown category id(s): {sorted(missing)}",
         )
 
-    moves = preview_reprioritize(db, priorities=priorities)
+    moves = preview_reprioritize(db, workspace_id=ws.id, priorities=priorities)
     candidate_count = len(moves)
 
     # Names resolved before mutating, so "from" reflects the prior state.
@@ -923,13 +1037,14 @@ def reprioritize(
 
     # Recompute against the now-committed ordering rather than reusing the
     # dry-run moves, so the applied result can't drift from the real rules.
-    final_moves = preview_reprioritize(db, priorities={})
+    final_moves = preview_reprioritize(db, workspace_id=ws.id, priorities={})
     for cid, new_priority in priorities.items():
         categories[cid].priority = new_priority
     affected_count = apply_moves(db, final_moves)
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="category.reprioritized",
         entity_type="category",
         entity_id=None,
@@ -967,10 +1082,12 @@ def reprioritize(
     responses={404: {"model": ErrorDetail}},
 )
 def delete_category_preview(
-    category_id: int, db: Session = Depends(get_db)
+    category_id: int,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ImpactPreviewResponse:
     category = db.get(Category, category_id)
-    if category is None:
+    if category is None or category.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     # System categories can't be deleted (DELETE returns 409), and the
@@ -985,7 +1102,7 @@ def delete_category_preview(
             },
         )
 
-    moves = preview_delete_category(db, category_id=category_id)
+    moves = preview_delete_category(db, workspace_id=ws.id, category_id=category_id)
     breakdown = _moves_to_breakdown(db, moves)
     sample = _moves_to_sample(db, moves)
 
@@ -1010,14 +1127,26 @@ def delete_category_preview(
         "covering nine rows reports nine — what 'N dismissed' should mean."
     ),
 )
-def list_clash_dismissals(db: Session = Depends(get_db)) -> ClashDismissalListResponse:
-    dismissals = db.execute(select(ClashDismissal)).scalars().all()
-    categories = {c.id: c for c in db.execute(select(Category)).scalars().all()}
+def list_clash_dismissals(
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> ClashDismissalListResponse:
+    dismissals = db.scalars(
+        select(ClashDismissal).where(ClashDismissal.workspace_id == ws.id)
+    ).all()
+    categories = {
+        c.id: c
+        for c in db.scalars(
+            select(Category).where(Category.workspace_id == ws.id)
+        ).all()
+    }
 
     # Attribute hidden rows to the dismissal that covers them, so each
     # row in the UI can say how much it is actually suppressing.
     hidden_by_dismissal: dict[int, int] = {d.id: 0 for d in dismissals}
-    for clash in find_clashes(db, include_settled=True, include_dismissed=True):
+    for clash in find_clashes(
+        db, workspace_id=ws.id, include_settled=True, include_dismissed=True
+    ):
         winner = clash.report.winner
         if winner is None:
             continue
@@ -1053,7 +1182,7 @@ def list_clash_dismissals(db: Session = Depends(get_db)) -> ClashDismissalListRe
 
     return ClashDismissalListResponse(
         total=len(items),
-        hidden_total=count_dismissed_clashes(db),
+        hidden_total=count_dismissed_clashes(db, workspace_id=ws.id),
         items=items,
     )
 
@@ -1075,21 +1204,30 @@ def list_clash_dismissals(db: Session = Depends(get_db)) -> ClashDismissalListRe
 def dismiss_clash_endpoint(
     payload: ClashDismissRequest,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> ClashDismissalRead:
-    categories = {c.id: c for c in db.execute(select(Category)).scalars().all()}
+    categories = {
+        c.id: c
+        for c in db.scalars(
+            select(Category).where(Category.workspace_id == ws.id)
+        ).all()
+    }
     for cid in (payload.winner_category_id, payload.loser_category_id):
         if cid not in categories:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Category {cid} not found"
             )
-    if payload.transaction_id is not None and db.get(Transaction, payload.transaction_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Transaction {payload.transaction_id} not found",
-        )
+    if payload.transaction_id is not None:
+        txn = db.get(Transaction, payload.transaction_id)
+        if txn is None or txn.workspace_id != ws.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Transaction {payload.transaction_id} not found",
+            )
 
     dismissal = dismiss_clash(
         db,
+        workspace_id=ws.id,
         winner_category_id=payload.winner_category_id,
         loser_category_id=payload.loser_category_id,
         transaction_id=payload.transaction_id,
@@ -1101,6 +1239,7 @@ def dismiss_clash_endpoint(
     scope = "this record" if payload.transaction_id else "all records"
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="category.clash_dismissed",
         entity_type="category",
         entity_id=payload.winner_category_id,
@@ -1137,12 +1276,17 @@ def dismiss_clash_endpoint(
     description="Returns the conflicts it was hiding to the review queue.",
     responses={404: {"model": ErrorDetail}},
 )
-def undismiss_clash_endpoint(dismissal_id: int, db: Session = Depends(get_db)) -> None:
-    if not undismiss_clash(db, dismissal_id=dismissal_id):
+def undismiss_clash_endpoint(
+    dismissal_id: int,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> None:
+    if not undismiss_clash(db, workspace_id=ws.id, dismissal_id=dismissal_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dismissal not found")
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="category.clash_undismissed",
         entity_type="category",
         entity_id=None,

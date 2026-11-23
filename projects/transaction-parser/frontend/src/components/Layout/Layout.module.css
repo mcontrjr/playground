@@ -93,6 +93,70 @@
   line-height: 1;
 }
 
+/* --- Active workspace -------------------------------------------------- */
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-2);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  background: var(--paper-sunk);
+}
+
+.workspaceLabel {
+  grid-column: 1 / -1;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--ink-faint);
+}
+
+.workspaceName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+}
+
+.workspaceSwitch {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--ink-faint);
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.workspaceSwitch:hover {
+  color: var(--ink);
+}
+
+.workspaceSwitch:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.navHint {
+  margin: var(--sp-3) 0 0;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
 .sidebarFooter {
   margin-top: var(--sp-5);
   padding-top: var(--sp-4);

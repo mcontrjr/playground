@@ -10,6 +10,7 @@ from app.models.institution import Institution
 from app.models.preference import UserPreference
 from app.models.seed_suppression import SeedSuppression
 from app.models.transaction import Transaction
+from app.models.workspace import Workspace
 
 __all__ = [
     "Account",
@@ -26,4 +27,5 @@ __all__ = [
     "SeedSuppression",
     "Transaction",
     "UserPreference",
+    "Workspace",
 ]

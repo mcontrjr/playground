@@ -12,12 +12,21 @@ from app.api import (
     preferences,
     transactions,
     uploads,
+    workspaces,
 )
 
 TAGS_METADATA = [
     {
         "name": "health",
         "description": "Liveness/readiness probe used by docker compose and operators.",
+    },
+    {
+        "name": "workspaces",
+        "description": (
+            "Workspace lifecycle: resolve, create, and bootstrap. The only "
+            "endpoints that do not require the X-Workspace header — every "
+            "other route reads it to scope its data."
+        ),
     },
     {
         "name": "uploads",
@@ -96,6 +105,9 @@ def create_app() -> FastAPI:
     def api_root() -> dict[str, str]:
         return {"api": "v1", "status": "ok"}
 
+    # Mounted first: the splash screen talks to this before any workspace
+    # is chosen, so it is the one router that takes no X-Workspace header.
+    api_v1.include_router(workspaces.router)
     api_v1.include_router(uploads.router)
     api_v1.include_router(failures.router)
     api_v1.include_router(transactions.router)

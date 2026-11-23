@@ -7,7 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Bucket, Category
+from app.deps import get_workspace
+from app.models import Bucket, Category, Workspace
 from app.schemas.buckets import BucketCreate, BucketDeleteResult, BucketRead, BucketUpdate
 from app.services.audit_service import record_event
 from app.services.cache import bump_generation
@@ -21,12 +22,14 @@ def _normalize_name(raw: str) -> str:
     return raw.strip().upper()
 
 
-def _get_other_bucket(db: Session) -> Bucket:
+def _get_other_bucket(db: Session, workspace_id: int) -> Bucket:
     bucket = db.execute(
-        select(Bucket).where(Bucket.name == OTHER_BUCKET_NAME)
+        select(Bucket).where(
+            Bucket.workspace_id == workspace_id, Bucket.name == OTHER_BUCKET_NAME
+        )
     ).scalar_one_or_none()
-    if bucket is None:  # pragma: no cover - only if seed hasn't run
-        raise RuntimeError("OTHER system bucket missing — has seed run?")
+    if bucket is None:  # pragma: no cover - only if provisioning hasn't run
+        raise RuntimeError("OTHER system bucket missing — has the workspace been provisioned?")
     return bucket
 
 
@@ -40,11 +43,22 @@ def _bucket_to_read(bucket: Bucket, category_count: int) -> BucketRead:
     summary="List buckets",
     description="All buckets ordered by name, with how many categories currently belong to each.",
 )
-def list_buckets(db: Session = Depends(get_db)) -> list[BucketRead]:
-    buckets = db.execute(select(Bucket).order_by(Bucket.name)).scalars().all()
+def list_buckets(
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> list[BucketRead]:
+    buckets = (
+        db.execute(
+            select(Bucket).where(Bucket.workspace_id == ws.id).order_by(Bucket.name)
+        )
+        .scalars()
+        .all()
+    )
     counts = dict(
         db.execute(
-            select(Category.bucket_id, func.count()).group_by(Category.bucket_id)
+            select(Category.bucket_id, func.count())
+            .where(Category.workspace_id == ws.id)
+            .group_by(Category.bucket_id)
         ).all()
     )
     return [_bucket_to_read(b, counts.get(b.id, 0)) for b in buckets]
@@ -60,9 +74,15 @@ def list_buckets(db: Session = Depends(get_db)) -> list[BucketRead]:
         409: {"description": "A bucket with this name already exists."},
     },
 )
-def create_bucket(payload: BucketCreate, db: Session = Depends(get_db)) -> BucketRead:
+def create_bucket(
+    payload: BucketCreate,
+    db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
+) -> BucketRead:
     name = _normalize_name(payload.name)
-    existing = db.execute(select(Bucket).where(Bucket.name == name)).scalar_one_or_none()
+    existing = db.execute(
+        select(Bucket).where(Bucket.workspace_id == ws.id, Bucket.name == name)
+    ).scalar_one_or_none()
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -72,12 +92,13 @@ def create_bucket(payload: BucketCreate, db: Session = Depends(get_db)) -> Bucke
             },
         )
 
-    bucket = Bucket(name=name)
+    bucket = Bucket(workspace_id=ws.id, name=name)
     db.add(bucket)
     db.flush()
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="bucket.created",
         entity_type="bucket",
         entity_id=bucket.id,
@@ -105,9 +126,10 @@ def patch_bucket(
     bucket_id: int,
     payload: BucketUpdate,
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> BucketRead:
     bucket = db.get(Bucket, bucket_id)
-    if bucket is None:
+    if bucket is None or bucket.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bucket not found")
 
     if bucket.name == OTHER_BUCKET_NAME:
@@ -122,7 +144,11 @@ def patch_bucket(
     new_name = _normalize_name(payload.name)
     if new_name != bucket.name:
         conflict = db.execute(
-            select(Bucket).where(Bucket.name == new_name, Bucket.id != bucket_id)
+            select(Bucket).where(
+                Bucket.workspace_id == ws.id,
+                Bucket.name == new_name,
+                Bucket.id != bucket_id,
+            )
         ).scalar_one_or_none()
         if conflict is not None:
             raise HTTPException(
@@ -138,6 +164,7 @@ def patch_bucket(
 
         record_event(
             db,
+            workspace_id=ws.id,
             event_type="bucket.renamed",
             entity_type="bucket",
             entity_id=bucket.id,
@@ -174,9 +201,10 @@ def delete_bucket(
         None, description="Bucket to move this bucket's categories into. Defaults to OTHER."
     ),
     db: Session = Depends(get_db),
+    ws: Workspace = Depends(get_workspace),
 ) -> BucketDeleteResult:
     bucket = db.get(Bucket, bucket_id)
-    if bucket is None:
+    if bucket is None or bucket.workspace_id != ws.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bucket not found")
 
     if bucket.name == OTHER_BUCKET_NAME:
@@ -199,13 +227,15 @@ def delete_bucket(
 
     if reassign_to_bucket_id is not None:
         target = db.get(Bucket, reassign_to_bucket_id)
-        if target is None:
+        # Reject a target in another workspace: without this check the
+        # categories would be moved across the tenancy boundary.
+        if target is None or target.workspace_id != ws.id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Bucket {reassign_to_bucket_id} not found",
             )
     else:
-        target = _get_other_bucket(db)
+        target = _get_other_bucket(db, ws.id)
 
     moved_count = db.execute(
         select(func.count()).select_from(Category).where(Category.bucket_id == bucket.id)
@@ -222,6 +252,7 @@ def delete_bucket(
 
     record_event(
         db,
+        workspace_id=ws.id,
         event_type="bucket.deleted",
         entity_type="bucket",
         entity_id=bucket_id,

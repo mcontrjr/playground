@@ -125,31 +125,41 @@ class Categorizer:
         self._uncategorized_category_id = uncategorized_category_id
 
     @classmethod
-    def load(cls, db: Session) -> "Categorizer":
-        """Build a ``Categorizer`` from the current state of the
-        ``categories``/``category_keywords`` tables.
+    def load(cls, db: Session, *, workspace_id: int) -> "Categorizer":
+        """Build a ``Categorizer`` from one workspace's current
+        ``categories``/``category_keywords`` rows.
+
+        `workspace_id` is required: these rules decide what category a
+        transaction gets, so loading them unscoped would let one
+        workspace's keywords categorize another workspace's rows into
+        categories it doesn't even own.
 
         Raises ``CategorizerConfigError`` if the ``Payments & Transfers``
-        or ``Uncategorized`` system categories haven't been seeded.
+        or ``Uncategorized`` system categories are missing from this
+        workspace.
         """
-        categories = db.execute(select(Category)).scalars().all()
+        categories = db.scalars(
+            select(Category).where(Category.workspace_id == workspace_id)
+        ).all()
         by_name = {c.name: c for c in categories}
 
         transfer_category = by_name.get(TRANSFER_CATEGORY_NAME)
         if transfer_category is None:
             raise CategorizerConfigError(
                 f"Required system category {TRANSFER_CATEGORY_NAME!r} is "
-                "missing — has the seed script been run?"
+                "missing — has this workspace been provisioned?"
             )
 
         uncategorized_category = by_name.get(UNCATEGORIZED_CATEGORY_NAME)
         if uncategorized_category is None:
             raise CategorizerConfigError(
                 f"Required system category {UNCATEGORIZED_CATEGORY_NAME!r} is "
-                "missing — has the seed script been run?"
+                "missing — has this workspace been provisioned?"
             )
 
-        keywords = db.execute(select(CategoryKeyword)).scalars().all()
+        keywords = db.scalars(
+            select(CategoryKeyword).where(CategoryKeyword.workspace_id == workspace_id)
+        ).all()
         keywords_by_category_id: dict[int, list[str]] = {}
         for kw in keywords:
             keywords_by_category_id.setdefault(kw.category_id, []).append(kw.keyword)

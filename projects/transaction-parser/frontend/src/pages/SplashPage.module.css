@@ -1,0 +1,225 @@
+.screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-7);
+  padding: var(--sp-7) var(--sp-4);
+  background: var(--paper);
+}
+
+/* --- Hero -------------------------------------------------------------- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  text-align: center;
+}
+
+.wordmark {
+  margin: 0;
+  font-size: var(--fs-display);
+  font-weight: var(--font-weight-light);
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+}
+
+.tagline {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+/* --- The two options --------------------------------------------------- */
+
+.options {
+  display: grid;
+  gap: var(--sp-4);
+  width: 100%;
+  max-width: 420px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-tile);
+  background: var(--tile-bg);
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--tile-fg);
+}
+
+.cardHint {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.label {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.input {
+  width: 100%;
+  padding: var(--sp-3);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 1px;
+  border-color: var(--accent-focus);
+}
+
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Buttons ----------------------------------------------------------- */
+
+.primary,
+.secondary {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-control);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.primary {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--tile-fg);
+  border-color: var(--tile-fg);
+}
+
+.secondary {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+  background: var(--paper-sunk);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
+}
+
+/* --- Feedback ---------------------------------------------------------- */
+
+.error {
+  margin: 0;
+  color: var(--accent-negative);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.available {
+  margin: 0;
+  color: var(--accent-positive);
+  font-size: var(--fs-small);
+}
+
+.checking {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--fs-small);
+}
+
+.rules {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+/* --- Mode switch ------------------------------------------------------- */
+
+.switcher {
+  display: flex;
+  justify-content: center;
+}
+
+.switchLink {
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.switchLink:hover {
+  color: var(--ink);
+}
+
+.switchLink:focus-visible {
+  outline: 2px solid var(--accent-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
