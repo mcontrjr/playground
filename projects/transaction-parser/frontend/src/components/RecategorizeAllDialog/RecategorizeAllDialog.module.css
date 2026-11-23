@@ -1,0 +1,103 @@
+.body {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  margin: 0 0 var(--sp-5);
+  max-width: 62ch;
+}
+
+.muted {
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+  margin: 0 0 var(--sp-4);
+}
+
+.countBox {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--paper-sunk);
+  border-radius: var(--radius-control);
+  margin-bottom: var(--sp-4);
+}
+
+.bigNumber {
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-light);
+  composes: tabular-nums from global;
+}
+
+.countLabel {
+  composes: label-caps from global;
+  color: var(--ink-faint);
+}
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--sp-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  font-size: var(--fs-micro);
+}
+
+.desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.move {
+  white-space: nowrap;
+  color: var(--ink-faint);
+}
+
+.errorBanner {
+  border: 1px solid var(--accent-negative);
+  border-radius: var(--radius-control);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--accent-negative);
+  font-size: var(--fs-small);
+  margin-bottom: var(--sp-4);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}
+
+.cancelButton,
+.primaryButton {
+  font-size: var(--fs-small);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.cancelButton {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--ink);
+}
+
+.primaryButton {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: var(--font-weight-semibold);
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

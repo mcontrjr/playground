@@ -4,6 +4,7 @@ from app.models.audit_event import AuditEvent
 from app.models.bucket import Bucket
 from app.models.budget import BudgetExpense, budget_expense_categories
 from app.models.category import Category, CategoryKeyword
+from app.models.clash_dismissal import ClashDismissal
 from app.models.ingest import IngestBatch, ParseFailure
 from app.models.institution import Institution
 from app.models.preference import UserPreference
@@ -17,6 +18,7 @@ __all__ = [
     "budget_expense_categories",
     "Category",
     "CategoryKeyword",
+    "ClashDismissal",
     "IngestBatch",
     "Institution",
     "ParseFailure",

@@ -22,4 +22,6 @@ export const queryKeys = {
   auditAll: ['audit'] as const,
   budgetSummary: (month: string) => ['budget', 'summary', month] as const,
   budgetAll: ['budget'] as const,
+  clashes: (includeSettled: boolean) => ['categories', 'clashes', includeSettled] as const,
+  clashesAll: ['categories', 'clashes'] as const,
 }

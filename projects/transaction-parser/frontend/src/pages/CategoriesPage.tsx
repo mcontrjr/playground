@@ -5,7 +5,6 @@ import { useCategories } from '../api/hooks/useCategories'
 import {
   useAddKeyword,
   useCreateCategory,
-  useDeleteCategory,
   useDeleteKeyword,
   usePatchCategory,
 } from '../api/hooks/useCategoryMutations'
@@ -13,6 +12,11 @@ import type { Category } from '../api/types'
 import { ImpactPreviewDialog } from '../components/ImpactPreviewDialog/ImpactPreviewDialog'
 import { Modal } from '../components/Modal/Modal'
 import { PlusIcon } from '../components/icons'
+import { ClashReview } from '../components/ClashReview/ClashReview'
+import { DeleteCategoryDialog } from '../components/DeleteCategoryDialog/DeleteCategoryDialog'
+import { RecategorizeAllDialog } from '../components/RecategorizeAllDialog/RecategorizeAllDialog'
+import { PriorityPanel } from '../components/PriorityPanel/PriorityPanel'
+import { RecordsPanel } from '../components/RecordsPanel/RecordsPanel'
 import { Tabs } from '../components/Tabs/Tabs'
 import { BucketsPanel } from './CategoriesPage/BucketsPanel'
 import styles from './CategoriesPage.module.css'
@@ -37,9 +41,14 @@ interface PendingDelete {
 function CategoryRow({
   category,
   onToast,
+  recordsOpen,
+  onToggleRecords,
 }: {
   category: Category
   onToast: (message: string) => void
+  /** Whether this category's records drill-down is expanded. */
+  recordsOpen: boolean
+  onToggleRecords: (categoryId: number) => void
 }) {
   const [nameDraft, setNameDraft] = useState(category.name)
   const [keywordDraft, setKeywordDraft] = useState('')
@@ -48,7 +57,6 @@ function CategoryRow({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
 
   const patchCategory = usePatchCategory()
-  const deleteCategory = useDeleteCategory()
   const addKeyword = useAddKeyword()
   const deleteKeyword = useDeleteKeyword()
   const { data: buckets } = useBuckets()
@@ -87,6 +95,7 @@ function CategoryRow({
   }
 
   return (
+    <>
     <div className={styles.row} data-testid="category-row" data-category-name={category.name}>
       <div className={styles.nameCol}>
         <div className={styles.nameRow}>
@@ -109,8 +118,20 @@ function CategoryRow({
           )}
         </div>
         <span className={styles.meta}>
-          {category.transaction_count} transaction{category.transaction_count === 1 ? '' : 's'} ·{' '}
-          {category.keywords.length} keyword{category.keywords.length === 1 ? '' : 's'} · priority{' '}
+          {category.transaction_count > 0 ? (
+            <button
+              type="button"
+              className={styles.countButton}
+              onClick={() => onToggleRecords(category.id)}
+              aria-expanded={recordsOpen}
+              data-testid="category-count-button"
+            >
+              {category.transaction_count} transaction{category.transaction_count === 1 ? '' : 's'}
+            </button>
+          ) : (
+            <>0 transactions</>
+          )}{' '}
+          · {category.keywords.length} keyword{category.keywords.length === 1 ? '' : 's'} · priority{' '}
           {category.priority}
         </span>
         <select
@@ -260,49 +281,25 @@ function CategoryRow({
       )}
 
       {pendingDelete && (
-        <Modal title="Delete category?" onClose={() => setPendingDelete(null)} ariaLabel="Confirm delete category">
-          <p className={styles.confirmBody}>
-            Deleting <strong>{pendingDelete.category.name}</strong> will reassign its{' '}
-            {pendingDelete.category.transaction_count} transaction
-            {pendingDelete.category.transaction_count === 1 ? '' : 's'} to Uncategorized and remove
-            its {pendingDelete.category.keywords.length} keyword
-            {pendingDelete.category.keywords.length === 1 ? '' : 's'}. This cannot be undone.
-          </p>
-          {deleteCategory.isError && (
-            <p className={styles.errorBanner}>
-              {deleteCategory.error instanceof ApiError
-                ? deleteCategory.error.message
-                : 'Could not delete category.'}
-            </p>
-          )}
-          <div className={styles.confirmActions}>
-            <button type="button" className={styles.cancelButton} onClick={() => setPendingDelete(null)}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              className={styles.dangerButton}
-              disabled={deleteCategory.isPending}
-              data-testid="confirm-delete-category"
-              onClick={() =>
-                deleteCategory.mutate(pendingDelete.category.id, {
-                  onSuccess: (res) => {
-                    setPendingDelete(null)
-                    onToast(
-                      `Deleted "${pendingDelete.category.name}" — ${res.reassigned_transaction_count} transaction${
-                        res.reassigned_transaction_count === 1 ? '' : 's'
-                      } moved to Uncategorized.`,
-                    )
-                  },
-                })
-              }
-            >
-              {deleteCategory.isPending ? 'Deleting…' : 'Delete'}
-            </button>
-          </div>
-        </Modal>
+        <DeleteCategoryDialog
+          category={pendingDelete.category}
+          onCancel={() => setPendingDelete(null)}
+          onDone={(message) => {
+            setPendingDelete(null)
+            onToast(message)
+          }}
+        />
       )}
     </div>
+
+    {recordsOpen && (
+      <RecordsPanel
+        title={`${category.name} — records`}
+        filters={{ category_ids: [category.id], include_excluded: true }}
+        onClose={() => onToggleRecords(category.id)}
+      />
+    )}
+    </>
   )
 }
 
@@ -428,6 +425,8 @@ function sortCategories(categories: Category[], mode: SortMode): Category[] {
 
 const TAB_ITEMS = [
   { key: 'categories', label: 'Categories' },
+  { key: 'priority', label: 'Match order' },
+  { key: 'conflicts', label: 'Conflicts' },
   { key: 'buckets', label: 'Buckets' },
 ]
 
@@ -437,6 +436,10 @@ export function CategoriesPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<SortMode>('name')
   const [activeTab, setActiveTab] = useState<string>('categories')
+  // Which category's records drill-down is expanded (one at a time, like
+  // the Distribution/Time Series panels).
+  const [openRecordsId, setOpenRecordsId] = useState<number | null>(null)
+  const [showRecategorizeAll, setShowRecategorizeAll] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showToast = (message: string) => {
@@ -491,6 +494,15 @@ export function CategoriesPage() {
                 </div>
                 <button
                   type="button"
+                  className={styles.secondaryButton}
+                  onClick={() => setShowRecategorizeAll(true)}
+                  title="Re-check every existing record against the current rules"
+                  data-testid="open-recategorize-all"
+                >
+                  Re-run rules
+                </button>
+                <button
+                  type="button"
                   className={styles.addButton}
                   onClick={() => setShowAdd(true)}
                   data-testid="open-add-category"
@@ -510,12 +522,28 @@ export function CategoriesPage() {
               ) : (
                 <div className={styles.list}>
                   {sorted.map((category) => (
-                    <CategoryRow key={category.id} category={category} onToast={showToast} />
+                    <CategoryRow
+                      key={category.id}
+                      category={category}
+                      onToast={showToast}
+                      recordsOpen={openRecordsId === category.id}
+                      onToggleRecords={(id) =>
+                        setOpenRecordsId((current) => (current === id ? null : id))
+                      }
+                    />
                   ))}
                 </div>
               )}
 
               {showAdd && <AddCategoryDialog onClose={() => setShowAdd(false)} onToast={showToast} />}
+            </div>
+          ) : activeTab === 'priority' ? (
+            <div role="tabpanel" id="tabpanel-priority" aria-labelledby="tab-priority">
+              <PriorityPanel categories={categories ?? []} onToast={showToast} />
+            </div>
+          ) : activeTab === 'conflicts' ? (
+            <div role="tabpanel" id="tabpanel-conflicts" aria-labelledby="tab-conflicts">
+              <ClashReview />
             </div>
           ) : (
             <div role="tabpanel" id="tabpanel-buckets" aria-labelledby="tab-buckets">
@@ -524,6 +552,16 @@ export function CategoriesPage() {
           )}
         </div>
       </div>
+
+      {showRecategorizeAll && (
+        <RecategorizeAllDialog
+          onCancel={() => setShowRecategorizeAll(false)}
+          onDone={(message) => {
+            setShowRecategorizeAll(false)
+            showToast(message)
+          }}
+        />
+      )}
 
       {toast && (
         <div className={styles.toast} data-testid="categories-toast">

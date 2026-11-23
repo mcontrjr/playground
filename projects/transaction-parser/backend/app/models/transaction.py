@@ -74,6 +74,11 @@ class Transaction(TimestampMixin, Base):
         ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     category_source: Mapped[str] = mapped_column(String(16), nullable=False)
+    matched_keyword: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    """The keyword that won when category_source is 'keyword'/'transfer';
+    null for 'default' (nothing matched) and for 'manual'/'bulk' (a person
+    chose). Recorded at decision time so a row stays explainable even after
+    the keyword is renamed, reprioritized, or deleted."""
     content_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     occurrence_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     raw_row: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)

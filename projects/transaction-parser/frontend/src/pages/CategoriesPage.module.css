@@ -360,3 +360,38 @@
   gap: var(--sp-2);
   cursor: pointer;
 }
+
+/* The transaction count doubles as the drill-down trigger, so it reads
+   as a link inside the meta line rather than as another button. */
+.countButton {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.countButton:hover {
+  color: var(--ink);
+  text-decoration-style: solid;
+}
+
+/* Sits beside "Add category" but is not the primary action on the page. */
+.secondaryButton {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.secondaryButton:hover {
+  border-color: var(--ink);
+}

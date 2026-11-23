@@ -68,6 +68,9 @@ export interface CategoryPatchResponse {
 export interface CategoryDeleteResponse {
   deleted_category_id: number
   reassigned_transaction_count: number
+  /** Of those, how many the remaining rules claimed for a real category
+   * rather than leaving in Uncategorized. 0 when rematch wasn't asked for. */
+  rematched_transaction_count: number
 }
 
 export interface CategoryKeywordCreate {
@@ -140,6 +143,11 @@ export interface Transaction {
   category_id: number | null
   category_name: string | null
   category_source: CategorySource
+  /** The keyword that won when category_source is 'keyword'/'transfer'.
+   * Null for 'default' (nothing matched) and 'manual'/'bulk' (a person
+   * chose). Recorded at decision time, so it stays accurate even if the
+   * keyword is later renamed or deleted. */
+  matched_keyword: string | null
   is_recurring: boolean
   recurrence: Recurrence | null
   /** The original CSV row, keyed by that bank's own column names. Shape
@@ -484,4 +492,128 @@ export interface ValidationErrorItem {
 
 export interface HTTPValidationError {
   detail: ValidationErrorItem[]
+}
+
+// ---------------------------------------------------------------------------
+// Clash reconciliation
+//
+// A "clash" is a description whose keywords match two or more categories.
+// The categorizer always resolves it silently (transfer-first, then priority
+// ascending, then keyword length) — these types surface that hidden decision
+// so the user can confirm or override it.
+// ---------------------------------------------------------------------------
+
+export interface ClashClaim {
+  category_id: number
+  category_name: string
+  /** The matching keyword behind this claim. */
+  keyword: string
+  priority: number
+  /** 'transfer' claims are decided before priority is consulted. */
+  stage: 'transfer' | 'keyword'
+  is_winner: boolean
+}
+
+export interface TransactionClash {
+  transaction_id: number
+  description: string
+  txn_date: string
+  amount: string
+  current_category_id: number | null
+  current_category_name: string | null
+  category_source: CategorySource
+  /** manual/bulk — the user already decided; not actionable. */
+  is_settled: boolean
+  /** When true, no priority reorder can change this row's outcome. */
+  transfer_decided: boolean
+  claims: ClashClaim[]
+}
+
+export interface ClashListResponse {
+  total: number
+  settled_count: number
+  /** Rows hidden because the pairing was dismissed as correct. Surfaced
+   * so a suppressed queue never looks empty. */
+  dismissed_count: number
+  items: TransactionClash[]
+}
+
+export interface ClashDismissRequest {
+  winner_category_id: number
+  loser_category_id: number
+  /** Omit for a rule-level dismissal (covers future rows too); set to
+   * scope it to a single record. */
+  transaction_id?: number | null
+  note?: string | null
+}
+
+export interface ClashDismissal {
+  id: number
+  winner_category_id: number
+  winner_category_name: string
+  loser_category_id: number
+  loser_category_name: string
+  transaction_id: number | null
+  note: string | null
+  hidden_count: number
+}
+
+export interface ClashDismissalListResponse {
+  total: number
+  hidden_total: number
+  items: ClashDismissal[]
+}
+
+export interface ClashResolveRequest {
+  transaction_ids: number[]
+  category_id: number
+  /** 'row' pins just these rows; 'all_matching' also pins keyword siblings. */
+  scope: 'row' | 'all_matching'
+  keyword?: string | null
+}
+
+export interface ClashResolveResponse {
+  resolved_count: number
+  category_id: number
+  category_name: string
+}
+
+export interface ReprioritizeRequest {
+  /** category_id -> new priority. Only listed categories change. */
+  priorities: Record<number, number>
+  dry_run: boolean
+}
+
+export interface ReprioritizeMove {
+  transaction_id: number
+  description: string
+  from_category_name: string | null
+  to_category_name: string | null
+}
+
+export interface ReprioritizeResponse {
+  dry_run: boolean
+  candidate_count: number
+  affected_count: number
+  moves: ReprioritizeMove[]
+}
+
+export interface RecategorizeAllRequest {
+  dry_run: boolean
+}
+
+export interface RecategorizeAllMove {
+  transaction_id: number
+  description: string
+  from_category_name: string | null
+  to_category_name: string | null
+  to_source: string
+}
+
+export interface RecategorizeAllResponse {
+  dry_run: boolean
+  candidate_count: number
+  affected_count: number
+  skipped_sticky_count: number
+  moves: RecategorizeAllMove[]
 }

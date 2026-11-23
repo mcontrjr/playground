@@ -1,0 +1,247 @@
+.wrap {
+  margin-bottom: var(--sp-7);
+}
+
+.header {
+  margin-bottom: var(--sp-5);
+}
+
+.heading {
+  font-size: var(--fs-body);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--sp-2);
+}
+
+.sub {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 62ch;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.row {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  padding: var(--sp-4);
+  background: var(--paper-sunk);
+}
+
+.rowHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+
+.description {
+  font-size: var(--fs-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amount {
+  composes: tabular-nums from global;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* A transfer-stage win happens before priority is consulted, so telling
+   the user to "reorder priorities" would be actively wrong here. */
+.transferNote {
+  font-size: var(--fs-micro);
+  color: var(--ink-soft);
+  border-left: 2px solid var(--hairline-strong);
+  padding-left: var(--sp-3);
+  margin: 0 0 var(--sp-3);
+}
+
+.claims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.claim {
+  flex: 1 1 14rem;
+  text-align: left;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  border-radius: var(--radius-control);
+  padding: var(--sp-3);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.claim:hover {
+  border-color: var(--ink-faint);
+}
+
+.claimSelected {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+.claimName {
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+}
+
+.claimMeta {
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+}
+
+.claimMeta code {
+  font-size: inherit;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.primaryAction,
+.secondaryAction {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 6px 12px;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.primaryAction {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.secondaryAction {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--ink);
+}
+
+.primaryAction:disabled,
+.secondaryAction:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryAction:not(:disabled):hover {
+  border-color: var(--ink);
+}
+
+.empty {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  padding: var(--sp-5) 0;
+}
+
+.empty p {
+  margin: 0 0 var(--sp-2);
+}
+
+.muted {
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+}
+
+.error {
+  font-size: var(--fs-small);
+  color: var(--accent-negative);
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: var(--sp-2);
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.linkButton:hover {
+  text-decoration-style: solid;
+}
+
+.linkButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dismissedPanel {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-5);
+  background: var(--paper-sunk);
+}
+
+.dismissedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--sp-3);
+}
+
+.dismissedTitle {
+  composes: label-caps from global;
+  color: var(--ink-faint);
+}
+
+.dismissedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.dismissedRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-4);
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+
+.dismissedMeta {
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+}
+
+/* Marks a dismissal that covers one record rather than the pairing. */
+.scopeTag {
+  margin-left: var(--sp-2);
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 1px 6px;
+}

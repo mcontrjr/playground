@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ApiError } from '../../api/client'
 import { useImpactPreview } from '../../api/hooks/useCategoryMutations'
+import { usePreviewKeywordClashes } from '../../api/hooks/useClashes'
 import type { ImpactPreviewAction } from '../../api/types'
 import { Modal } from '../Modal/Modal'
 import styles from './ImpactPreviewDialog.module.css'
@@ -35,12 +36,20 @@ export function ImpactPreviewDialog({
   commitError,
 }: ImpactPreviewDialogProps) {
   const preview = useImpactPreview()
+  const clashPreview = usePreviewKeywordClashes()
   const [applyToExisting, setApplyToExisting] = useState(action === 'add_keyword')
 
   useEffect(() => {
     preview.mutate({ action, category_id: categoryId, keyword })
+    // Only an *added* keyword can create a new ambiguity; removing one
+    // can only ever reduce the set of competing categories.
+    if (action === 'add_keyword') {
+      clashPreview.mutate({ category_id: categoryId, keyword })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [action, categoryId, keyword])
+
+  const clashCount = clashPreview.data?.total ?? 0
 
   const verb = action === 'add_keyword' ? 'add' : 'remove'
   const applyLabel =
@@ -70,6 +79,33 @@ export function ImpactPreviewDialog({
           </>
         )}
       </p>
+
+      {clashCount > 0 && (
+        <div className={styles.clashWarning} data-testid="impact-clash-warning">
+          <p className={styles.clashTitle}>
+            {clashCount} record{clashCount === 1 ? '' : 's'} would match more than
+            one category
+          </p>
+          <p className={styles.clashBody}>
+            Match order decides the winner for{' '}
+            {clashCount === 1 ? 'it' : 'them'}, not you. Review under
+            Categories → Conflicts to choose per record.
+          </p>
+          <ul className={styles.clashList}>
+            {(clashPreview.data?.items ?? []).slice(0, 4).map((item) => {
+              const competing = item.claims.map((c) => c.category_name).join(' vs ')
+              return (
+                <li key={item.transaction_id} className={styles.clashItem}>
+                  <span className={styles.clashDesc} title={item.description}>
+                    {item.description}
+                  </span>
+                  <span className={styles.clashVs}>{competing}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {preview.isPending && <p className={styles.loading}>Checking impact…</p>}
 

@@ -52,3 +52,10 @@
   cursor: pointer;
   padding: var(--sp-2) var(--sp-5);
 }
+
+/* The literal text a rule matched on — monospace so it reads as a
+   stored value rather than as prose. */
+.keyword {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}

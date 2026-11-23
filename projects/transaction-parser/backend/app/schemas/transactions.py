@@ -51,7 +51,16 @@ class TransactionRead(BaseModel):
     bank_category: str | None
     category_id: int | None
     category_name: str | None = Field(description="Joined category name, null if uncategorized.")
-    category_source: str = Field(description="One of: keyword, manual, transfer, default.")
+    category_source: str = Field(description="One of: keyword, manual, transfer, default, bulk.")
+    matched_keyword: str | None = Field(
+        default=None,
+        description=(
+            "The keyword that won when category_source is 'keyword'/'transfer'. "
+            "Null for 'default' (nothing matched) and for 'manual'/'bulk' (a "
+            "person chose). Recorded at decision time, so it stays accurate "
+            "even if the keyword is later renamed or deleted."
+        ),
+    )
     is_recurring: bool = Field(description="Whether this transaction is flagged as a recurring bill/subscription.")
     recurrence: Literal["monthly", "yearly"] | None = Field(
         default=None, description="Recurrence cadence when is_recurring is true."

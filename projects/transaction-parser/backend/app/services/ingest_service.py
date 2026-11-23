@@ -262,6 +262,7 @@ def ingest_file(
                     bank_category=txn.bank_category,
                     category_id=categorization.category_id,
                     category_source=categorization.source,
+                    matched_keyword=categorization.matched_keyword,
                     content_hash=h,
                     occurrence_index=occurrence_index,
                     raw_row=txn.raw_row,

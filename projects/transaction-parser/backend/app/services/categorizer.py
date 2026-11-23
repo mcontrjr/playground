@@ -47,12 +47,63 @@ class CategorizationResult:
 
     category_id: int
     source: CategorySource
+    matched_keyword: str | None = None
+    """The keyword that actually won, for 'keyword'/'transfer' results.
+
+    None for 'default' (nothing matched) and for 'manual'/'bulk' (a person
+    chose, no rule involved). Persisted so a row can explain itself later
+    without re-deriving it against rules that may since have changed.
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class _KeywordRule:
     keyword: str
     category_id: int
+
+
+@dataclass(frozen=True, slots=True)
+class CategoryClaim:
+    """One category's claim on a description, and the keyword behind it.
+
+    ``stage`` distinguishes *why* the claim would win or lose: a
+    ``transfer`` claim is resolved before the priority scan runs at all,
+    so it beats every ``keyword`` claim regardless of priority — which
+    means a clash involving a transfer claim can never be fixed by
+    reordering priorities.
+    """
+
+    category_id: int
+    keyword: str
+    stage: Literal["transfer", "keyword"]
+
+
+@dataclass(frozen=True, slots=True)
+class ClashReport:
+    """Every category whose keywords match one description, in the order
+    the categorizer would consider them (winner first).
+
+    A clash exists when more than one *distinct* category claims the
+    same description; the categorizer silently resolves it via
+    transfer-first then priority, so this type is what lets the UI
+    surface that decision for the user to confirm or override.
+    """
+
+    claims: list[CategoryClaim]
+
+    @property
+    def winner(self) -> CategoryClaim | None:
+        return self.claims[0] if self.claims else None
+
+    @property
+    def is_clash(self) -> bool:
+        return len({c.category_id for c in self.claims}) > 1
+
+    @property
+    def transfer_decided(self) -> bool:
+        """True when the winner won at the transfer stage, meaning no
+        priority change could alter this outcome."""
+        return self.winner is not None and self.winner.stage == "transfer"
 
 
 class Categorizer:
@@ -138,12 +189,51 @@ class Categorizer:
         description string."""
         for rule in self._transfer_rules:
             if rule.keyword in normalized_description:
-                return CategorizationResult(category_id=rule.category_id, source="transfer")
+                return CategorizationResult(
+                    category_id=rule.category_id,
+                    source="transfer",
+                    matched_keyword=rule.keyword,
+                )
 
         for rule in self._general_rules:
             if rule.keyword in normalized_description:
-                return CategorizationResult(category_id=rule.category_id, source="keyword")
+                return CategorizationResult(
+                    category_id=rule.category_id,
+                    source="keyword",
+                    matched_keyword=rule.keyword,
+                )
 
         return CategorizationResult(
             category_id=self._uncategorized_category_id, source="default"
         )
+
+    def explain(self, normalized_description: str) -> ClashReport:
+        """Report *every* category that claims this description, in the
+        same order ``categorize`` considers them — so ``claims[0]`` is
+        always the category ``categorize`` actually returns.
+
+        ``categorize`` short-circuits on the first match; this does the
+        full scan instead, which is what makes a silent priority
+        resolution visible. Within a category only its strongest
+        (longest, earliest-considered) matching keyword is reported —
+        the competing *categories* are the decision, not every keyword.
+        """
+        claims: list[CategoryClaim] = []
+        seen: set[int] = set()
+
+        for stage, rules in (
+            ("transfer", self._transfer_rules),
+            ("keyword", self._general_rules),
+        ):
+            for rule in rules:
+                if rule.category_id in seen:
+                    continue
+                if rule.keyword in normalized_description:
+                    claims.append(
+                        CategoryClaim(
+                            category_id=rule.category_id, keyword=rule.keyword, stage=stage
+                        )
+                    )
+                    seen.add(rule.category_id)
+
+        return ClashReport(claims=claims)

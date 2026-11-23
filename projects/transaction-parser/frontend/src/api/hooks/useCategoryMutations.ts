@@ -52,7 +52,8 @@ export function usePatchCategory() {
 export function useDeleteCategory() {
   const invalidate = useInvalidateEverything()
   return useMutation({
-    mutationFn: (id: number) => api.delete<CategoryDeleteResponse>(`/categories/${id}`),
+    mutationFn: ({ id, rematch = false }: { id: number; rematch?: boolean }) =>
+      api.delete<CategoryDeleteResponse>(`/categories/${id}?rematch=${rematch}`),
     onSuccess: invalidate,
   })
 }

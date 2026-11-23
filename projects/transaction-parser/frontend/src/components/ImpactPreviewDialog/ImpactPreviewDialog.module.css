@@ -190,3 +190,55 @@
   color: var(--ink-faint);
   font-size: var(--fs-body);
 }
+
+/* Clash warning: these rows match this keyword AND another category's,
+   so match order silently picks the winner. Advisory, not blocking —
+   the add is still legitimate; the user just shouldn't be surprised. */
+.clashWarning {
+  border: 1px solid var(--hairline-strong);
+  border-left: 3px solid var(--accent-negative);
+  border-radius: var(--radius-control);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-5);
+  background: var(--paper-sunk);
+}
+
+.clashTitle {
+  font-size: var(--fs-small);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--sp-2);
+}
+
+.clashBody {
+  font-size: var(--fs-micro);
+  color: var(--ink-soft);
+  margin: 0 0 var(--sp-3);
+}
+
+.clashList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.clashItem {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  font-size: var(--fs-micro);
+}
+
+.clashDesc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.clashVs {
+  white-space: nowrap;
+  color: var(--ink-faint);
+}

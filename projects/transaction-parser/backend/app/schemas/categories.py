@@ -2,6 +2,8 @@
 keyword impact-preview dry-run."""
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -130,7 +132,15 @@ class CategoryDeleteResponse(BaseModel):
 
     deleted_category_id: int
     reassigned_transaction_count: int = Field(
-        description="Transactions moved to Uncategorized as a result of the delete."
+        description="Transactions moved off the deleted category."
+    )
+    rematched_transaction_count: int = Field(
+        default=0,
+        description=(
+            "Of those, how many the remaining rules claimed for a real "
+            "category rather than leaving in Uncategorized. 0 when "
+            "rematch was not requested."
+        ),
     )
 
 
@@ -286,3 +296,167 @@ class ErrorDetail(BaseModel):
     message: str
     owning_category_id: int | None = None
     owning_category_name: str | None = None
+
+
+# --- Clash reconciliation ---------------------------------------------------
+# A "clash" is a description claimed by more than one category. The
+# categorizer always resolves it silently (transfer-first, then priority),
+# so these schemas exist to surface that decision and let the user override.
+
+
+class ClashClaim(BaseModel):
+    """One category's competing claim on a transaction's description."""
+
+    category_id: int
+    category_name: str
+    keyword: str = Field(description="The matching keyword behind this claim.")
+    priority: int
+    stage: str = Field(description="'transfer' (decided pre-priority) or 'keyword'.")
+    is_winner: bool = Field(description="True for the claim the categorizer currently honors.")
+
+
+class TransactionClashRead(BaseModel):
+    """A transaction claimed by two or more categories."""
+
+    transaction_id: int
+    description: str
+    txn_date: date
+    amount: Decimal
+    current_category_id: int | None
+    current_category_name: str | None
+    category_source: str
+    is_settled: bool = Field(
+        description="True when manual/bulk — the user already decided; not actionable."
+    )
+    transfer_decided: bool = Field(
+        description=(
+            "True when the winner won at the transfer stage, which runs before "
+            "priority is consulted — so no reorder can change this one."
+        )
+    )
+    claims: list[ClashClaim]
+
+
+class ClashListResponse(BaseModel):
+    """Outstanding clashes: rows where priority silently chose for the user."""
+
+    total: int = Field(description="Clashing rows matching the requested scope.")
+    settled_count: int = Field(description="Clashing rows already settled manually/bulk.")
+    dismissed_count: int = Field(
+        default=0,
+        description=(
+            "Clashing rows hidden because the user judged the pairing "
+            "correct. Surfaced so a suppressed queue never looks empty."
+        ),
+    )
+    items: list[TransactionClashRead]
+
+
+class ClashResolveRequest(BaseModel):
+    """Settle a clash by explicit user choice, written as
+    category_source='manual' so it stays sticky forever.
+
+    scope='row' pins only the listed transactions. scope='all_matching'
+    also pins every other unsettled row sharing `keyword`, so a recurring
+    merchant needn't be resolved one row at a time.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"transaction_ids": [101], "category_id": 30, "scope": "row"}]
+        }
+    )
+
+    transaction_ids: list[int] = Field(min_length=1)
+    category_id: int = Field(description="The category the user chose.")
+    scope: Literal["row", "all_matching"] = "row"
+    keyword: str | None = Field(
+        default=None,
+        description="Required when scope='all_matching': the keyword to match siblings on.",
+    )
+
+
+class ClashResolveResponse(BaseModel):
+    resolved_count: int = Field(description="Rows pinned to the chosen category (manual).")
+    category_id: int
+    category_name: str
+
+
+class ReprioritizeRequest(BaseModel):
+    """Re-prioritize categories; lower numbers match first.
+
+    Defaults to a dry run, because priority is global: a reorder meant to
+    fix one merchant can move unrelated rows sharing a keyword.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"priorities": {"30": 2}, "dry_run": True}]}
+    )
+
+    priorities: dict[int, int] = Field(
+        description="category_id -> new priority. Only listed categories change."
+    )
+    dry_run: bool = Field(default=True, description="When true, report without writing.")
+
+
+class ReprioritizeMove(BaseModel):
+    transaction_id: int
+    description: str
+    from_category_name: str | None
+    to_category_name: str | None
+
+
+class ReprioritizeResponse(BaseModel):
+    dry_run: bool
+    candidate_count: int = Field(description="Rows whose category would change.")
+    affected_count: int = Field(description="Rows actually updated; 0 on a dry run.")
+    moves: list[ReprioritizeMove]
+
+
+class ClashDismissRequest(BaseModel):
+    """Mark a conflict as reviewed-and-fine so it stops being listed.
+
+    Scope is decided by `transaction_id`: omit it to dismiss the whole
+    winner-vs-loser pairing (covers future rows too, including ones a
+    re-import creates); pass it to dismiss just that one record.
+
+    This never changes the transaction's category. It records a judgment
+    about the rules, unlike resolving — which pins the row as 'manual'.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"winner_category_id": 1, "loser_category_id": 10}]
+        }
+    )
+
+    winner_category_id: int = Field(description="The category that currently wins.")
+    loser_category_id: int = Field(description="The competing category being overruled.")
+    transaction_id: int | None = Field(
+        default=None,
+        description="Omit for a rule-level dismissal; set to scope it to one record.",
+    )
+    note: str | None = Field(default=None, max_length=256)
+
+
+class ClashDismissalRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    winner_category_id: int
+    winner_category_name: str
+    loser_category_id: int
+    loser_category_name: str
+    transaction_id: int | None
+    note: str | None
+    hidden_count: int = Field(
+        description="Clashing records this dismissal currently hides."
+    )
+
+
+class ClashDismissalListResponse(BaseModel):
+    total: int = Field(description="Dismissal rules on record.")
+    hidden_total: int = Field(
+        description="Clashing records hidden across all dismissals."
+    )
+    items: list[ClashDismissalRead]

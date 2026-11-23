@@ -118,6 +118,7 @@ def _transaction_to_read(txn: Transaction) -> TransactionRead:
         category_id=txn.category_id,
         category_name=txn.category.name if txn.category else None,
         category_source=txn.category_source,
+        matched_keyword=txn.matched_keyword,
         is_recurring=txn.is_recurring,
         recurrence=txn.recurrence,
         raw_row=txn.raw_row,
@@ -325,7 +326,8 @@ def bulk_recategorize(
     result = db.execute(
         Transaction.__table__.update()
         .where(Transaction.id.in_(payload.transaction_ids))
-        .values(category_id=category.id, category_source="bulk")
+        # A person chose these; clear any keyword that previously decided them.
+        .values(category_id=category.id, category_source="bulk", matched_keyword=None)
     )
     affected_count = result.rowcount
 
@@ -475,6 +477,7 @@ def patch_transaction(
             )
         txn.category_id = category.id
         txn.category_source = "manual"
+        txn.matched_keyword = None
 
     if payload.is_recurring is not None:
         txn.is_recurring = payload.is_recurring
